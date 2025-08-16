@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Archive,
   RotateCcw,
@@ -12,112 +12,74 @@ import {
   MoreVertical,
   Eye,
   ExternalLink,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
+import useArchived from "../hooks/useArchived";
+import { useNotification } from "../hooks/useNotification";
 
 export default function Archived() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
   const [selectedItems, setSelectedItems] = useState([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  
+  const {
+    archivedItems,
+    stats,
+    loading,
+    error,
+    handleRestoreItem,
+    handleDeleteItem,
+    handleBulkRestore,
+    handleBulkDelete,
+    updateFilters,
+    clearError,
+  } = useArchived();
 
-  // Mock archived data
-  const archivedItems = [
-    {
-      id: 1,
-      type: "product",
-      name: "Discontinued Aspirin 100mg",
-      description: "Aspirin tablets 100mg - Discontinued product",
-      archivedDate: "2024-08-10",
-      archivedBy: "John Doe",
-      reason: "Product discontinued by manufacturer",
-      category: "Pain Relief",
-      originalStock: 150,
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 2,
-      type: "transaction",
-      name: "Sale Transaction #1205",
-      description: "Voided sale transaction - Customer return",
-      archivedDate: "2024-08-09",
-      archivedBy: "Jane Smith",
-      reason: "Customer return - refund processed",
-      category: "Sales",
-      amount: "₱2,450.00",
-      image: null,
-    },
-    {
-      id: 3,
-      type: "product",
-      name: "Old Brand Vitamins",
-      description: "Multivitamin tablets - Brand changed",
-      archivedDate: "2024-08-05",
-      archivedBy: "Mike Johnson",
-      reason: "Brand replacement available",
-      category: "Supplements",
-      originalStock: 75,
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 4,
-      type: "supplier",
-      name: "MedSupply Co.",
-      description: "Former pharmaceutical supplier",
-      archivedDate: "2024-08-01",
-      archivedBy: "Sarah Wilson",
-      reason: "Contract terminated",
-      category: "Suppliers",
-      contactInfo: "medsupply@example.com",
-      image: null,
-    },
-    {
-      id: 5,
-      type: "product",
-      name: "Expired Antibiotics",
-      description: "Amoxicillin 500mg - Expired batch",
-      archivedDate: "2024-07-28",
-      archivedBy: "Tom Brown",
-      reason: "Product expired",
-      category: "Antibiotics",
-      originalStock: 30,
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 6,
-      type: "transaction",
-      name: "Sale Transaction #1198",
-      description: "Cancelled bulk order",
-      archivedDate: "2024-07-25",
-      archivedBy: "Lisa Davis",
-      reason: "Order cancelled by customer",
-      category: "Sales",
-      amount: "₱15,200.00",
-      image: null,
-    },
-    {
-      id: 7,
-      type: "employee",
-      name: "Robert Martinez",
-      description: "Former pharmacy assistant",
-      archivedDate: "2024-07-20",
-      archivedBy: "Admin",
-      reason: "Employment terminated",
-      category: "Staff",
-      position: "Pharmacy Assistant",
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 8,
-      type: "product",
-      name: "Recalled Medicine Batch",
-      description: "Blood pressure medication - Recall notice",
-      archivedDate: "2024-07-15",
-      archivedBy: "Quality Control",
-      reason: "Manufacturer recall",
-      category: "Cardiovascular",
-      originalStock: 200,
-      image: "/api/placeholder/60/60",
-    },
-  ];
+  const { showNotification } = useNotification();
+
+  // Handle search input change with debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout
+    const newTimeout = setTimeout(() => {
+      updateFilters({ search: value, page: 1 });
+    }, 300);
+    
+    setSearchTimeout(newTimeout);
+  };
+
+  // Handle filter type change
+  const handleFilterChange = (e) => {
+    const value = e.target.value;
+    setFilterType(value);
+    updateFilters({ type: value, page: 1 });
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
+  // Clear error when component mounts
+  useEffect(() => {
+    if (error) {
+      showNotification(error, "error");
+      clearError();
+    }
+  }, [error, showNotification, clearError]);
 
   const getTypeIcon = (type) => {
     switch (type) {
@@ -149,27 +111,98 @@ export default function Archived() {
     }
   };
 
-  const filteredItems = archivedItems.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterType === "all" || item.type === filterType;
-    return matchesSearch && matchesFilter;
-  });
-
   const handleSelectItem = (id) => {
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
-  const typeStats = {
-    products: archivedItems.filter((item) => item.type === "product").length,
-    transactions: archivedItems.filter((item) => item.type === "transaction")
-      .length,
-    suppliers: archivedItems.filter((item) => item.type === "supplier").length,
-    employees: archivedItems.filter((item) => item.type === "employee").length,
+  const handleSelectAll = () => {
+    if (selectedItems.length === archivedItems.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(archivedItems.map((item) => item.id));
+    }
   };
+
+  const handleSingleRestore = async (id, type) => {
+    const result = await handleRestoreItem(id, type);
+    if (result.success) {
+      showNotification("Item restored successfully!", "success");
+      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+    } else {
+      showNotification(result.error || "Failed to restore item", "error");
+    }
+  };
+
+  const handleSingleDelete = async (id, type) => {
+    const result = await handleDeleteItem(id, type);
+    if (result.success) {
+      showNotification("Item permanently deleted!", "success");
+      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+    } else {
+      showNotification(result.error || "Failed to delete item", "error");
+    }
+  };
+
+  const handleBulkRestoreSelected = async () => {
+    const itemsToRestore = archivedItems
+      .filter(item => selectedItems.includes(item.id))
+      .map(item => ({ id: item.id, type: item.type }));
+
+    const result = await handleBulkRestore(itemsToRestore);
+    if (result.success) {
+      const { success, errors } = result.data;
+      showNotification(`${success.length} items restored successfully!`, "success");
+      if (errors.length > 0) {
+        showNotification(`${errors.length} items failed to restore`, "warning");
+      }
+      setSelectedItems([]);
+    } else {
+      showNotification(result.error || "Failed to restore items", "error");
+    }
+  };
+
+  const handleBulkDeleteSelected = async () => {
+    const itemsToDelete = archivedItems
+      .filter(item => selectedItems.includes(item.id))
+      .map(item => ({ id: item.id, type: item.type }));
+
+    const result = await handleBulkDelete(itemsToDelete);
+    if (result.success) {
+      const { success, errors } = result.data;
+      showNotification(`${success.length} items permanently deleted!`, "success");
+      if (errors.length > 0) {
+        showNotification(`${errors.length} items failed to delete`, "warning");
+      }
+      setSelectedItems([]);
+    } else {
+      showNotification(result.error || "Failed to delete items", "error");
+    }
+  };
+
+  const typeStats = {
+    products: stats.products || 0,
+    transactions: stats.transactions || 0,
+    suppliers: stats.suppliers || 0,
+    employees: stats.employees || 0,
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 size={48} className="mx-auto mb-4 text-blue-500 animate-spin" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              Loading archived items...
+            </h3>
+            <p className="text-gray-500">Please wait while we fetch your data</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -250,10 +283,16 @@ export default function Archived() {
           <p className="font-semibold text-gray-800 flex-grow">
             {selectedItems.length} selected
           </p>
-          <button className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold hover:bg-green-200">
-            <RotateCcw size={16} /> Restore
+          <button
+            onClick={handleBulkRestoreSelected}
+            className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold hover:bg-green-200 transition-colors"
+          >
+            <RotateCcw size={16} /> Restore Selected
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200">
+          <button
+            onClick={handleBulkDeleteSelected}
+            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 transition-colors"
+          >
             <Trash2 size={16} /> Delete Permanently
           </button>
         </div>
@@ -270,8 +309,8 @@ export default function Archived() {
             <input
               type="text"
               placeholder="Search archived items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchInput}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -280,7 +319,7 @@ export default function Archived() {
         <div className="flex items-center gap-2">
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={handleFilterChange}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All Types</option>
@@ -293,13 +332,22 @@ export default function Archived() {
             <Filter size={16} />
             More Filters
           </button>
+          {archivedItems.length > 0 && (
+            <button
+              onClick={handleSelectAll}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <CheckCircle size={16} />
+              {selectedItems.length === archivedItems.length ? "Deselect All" : "Select All"}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Archived Items */}
-      {filteredItems.length > 0 ? (
+      {archivedItems.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
+          {archivedItems.map((item) => (
             <div
               key={item.id}
               className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all"
@@ -365,14 +413,20 @@ export default function Archived() {
                   <strong>Reason:</strong> {item.reason}
                 </p>
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 flex-1">
+                  <button
+                    onClick={() => handleSingleRestore(item.id, item.type)}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 flex-1 transition-colors"
+                  >
                     <RotateCcw size={14} />
                     Restore
                   </button>
                   <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
                     <Eye size={16} />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                  <button
+                    onClick={() => handleSingleDelete(item.id, item.type)}
+                    className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                  >
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -393,11 +447,10 @@ export default function Archived() {
       )}
 
       {/* Pagination */}
-      {filteredItems.length > 0 && (
+      {archivedItems.length > 0 && (
         <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Showing {filteredItems.length} of {archivedItems.length} archived
-            items
+            Showing {archivedItems.length} of {stats.total || archivedItems.length} archived items
           </p>
           <div className="flex items-center gap-2">
             <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">

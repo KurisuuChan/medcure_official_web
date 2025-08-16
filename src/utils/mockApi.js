@@ -893,6 +893,438 @@ export async function mockImportProducts(productsArray) {
   }
 }
 
+// ================== ARCHIVED ITEMS MOCK API ==================
+
+// Sample archived data
+const SAMPLE_ARCHIVED_ITEMS = [
+  {
+    id: 1,
+    type: "product",
+    name: "Discontinued Aspirin 100mg",
+    description: "Aspirin tablets 100mg - Discontinued product",
+    archivedDate: "2024-08-10",
+    archivedBy: "John Doe",
+    reason: "Product discontinued by manufacturer",
+    category: "Pain Relief",
+    originalStock: 150,
+    image: "/api/placeholder/60/60",
+    created_at: "2024-08-10T10:00:00Z",
+    archived_at: "2024-08-10T10:00:00Z",
+  },
+  {
+    id: 2,
+    type: "transaction",
+    name: "Sale Transaction #1205",
+    description: "Voided sale transaction - Customer return",
+    archivedDate: "2024-08-09",
+    archivedBy: "Jane Smith",
+    reason: "Customer return - refund processed",
+    category: "Sales",
+    amount: "₱2,450.00",
+    image: null,
+    created_at: "2024-08-09T15:30:00Z",
+    archived_at: "2024-08-09T16:00:00Z",
+  },
+  {
+    id: 3,
+    type: "product",
+    name: "Old Brand Vitamins",
+    description: "Multivitamin tablets - Brand changed",
+    archivedDate: "2024-08-05",
+    archivedBy: "Mike Johnson",
+    reason: "Brand replacement available",
+    category: "Supplements",
+    originalStock: 75,
+    image: "/api/placeholder/60/60",
+    created_at: "2024-08-05T09:15:00Z",
+    archived_at: "2024-08-05T14:20:00Z",
+  },
+  {
+    id: 4,
+    type: "supplier",
+    name: "MedSupply Co.",
+    description: "Former pharmaceutical supplier",
+    archivedDate: "2024-08-01",
+    archivedBy: "Sarah Wilson",
+    reason: "Contract terminated",
+    category: "Suppliers",
+    contactInfo: "medsupply@example.com",
+    image: null,
+    created_at: "2024-08-01T08:00:00Z",
+    archived_at: "2024-08-01T17:00:00Z",
+  },
+  {
+    id: 5,
+    type: "product",
+    name: "Expired Antibiotics",
+    description: "Amoxicillin 500mg - Expired batch",
+    archivedDate: "2024-07-28",
+    archivedBy: "Tom Brown",
+    reason: "Product expired",
+    category: "Antibiotics",
+    originalStock: 30,
+    image: "/api/placeholder/60/60",
+    created_at: "2024-07-28T12:00:00Z",
+    archived_at: "2024-07-28T12:30:00Z",
+  },
+  {
+    id: 6,
+    type: "transaction",
+    name: "Sale Transaction #1198",
+    description: "Cancelled bulk order",
+    archivedDate: "2024-07-25",
+    archivedBy: "Lisa Davis",
+    reason: "Order cancelled by customer",
+    category: "Sales",
+    amount: "₱15,200.00",
+    image: null,
+    created_at: "2024-07-25T11:20:00Z",
+    archived_at: "2024-07-25T11:45:00Z",
+  },
+  {
+    id: 7,
+    type: "employee",
+    name: "Robert Martinez",
+    description: "Former pharmacy assistant",
+    archivedDate: "2024-07-20",
+    archivedBy: "Admin",
+    reason: "Employment terminated",
+    category: "Staff",
+    position: "Pharmacy Assistant",
+    image: "/api/placeholder/60/60",
+    created_at: "2024-07-20T13:00:00Z",
+    archived_at: "2024-07-20T17:30:00Z",
+  },
+  {
+    id: 8,
+    type: "product",
+    name: "Recalled Medicine Batch",
+    description: "Blood pressure medication - Recall notice",
+    archivedDate: "2024-07-15",
+    archivedBy: "Quality Control",
+    reason: "Manufacturer recall",
+    category: "Cardiovascular",
+    originalStock: 200,
+    image: "/api/placeholder/60/60",
+    created_at: "2024-07-15T14:30:00Z",
+    archived_at: "2024-07-15T15:00:00Z",
+  },
+];
+
+// Mock get archived items function
+export async function mockGetArchivedItems(filters = {}) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const {
+      type = "all",
+      search = "",
+      page = 1,
+      limit = 20,
+      sortBy = "archived_at",
+      sortOrder = "desc",
+    } = filters;
+
+    // Get archived products from SAMPLE_PRODUCTS (where is_active: false)
+    const archivedProducts = SAMPLE_PRODUCTS
+      .filter(product => product.is_active === false)
+      .map(product => ({
+        id: `product_${product.id}`,
+        type: "product",
+        name: product.name,
+        description: product.description || `${product.generic_name} - ${product.brand_name}`,
+        category: product.category || "Medicine",
+        archivedDate: product.updated_at ? new Date(product.updated_at).toLocaleDateString() : new Date().toLocaleDateString(),
+        archivedBy: "System User",
+        reason: "Archived from inventory",
+        originalStock: product.total_stock,
+        originalPrice: product.selling_price,
+        archived_at: product.updated_at || new Date().toISOString(),
+      }));
+
+    // Combine static archived items with actual archived products
+    let filteredItems = [...SAMPLE_ARCHIVED_ITEMS, ...archivedProducts];
+
+    // Filter by type
+    if (type !== "all") {
+      filteredItems = filteredItems.filter((item) => item.type === type);
+    }
+
+    // Filter by search term
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredItems = filteredItems.filter(
+        (item) =>
+          item.name.toLowerCase().includes(searchLower) ||
+          item.description.toLowerCase().includes(searchLower) ||
+          item.category.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sort items
+    filteredItems.sort((a, b) => {
+      const aValue = a[sortBy] || "";
+      const bValue = b[sortBy] || "";
+      
+      if (sortOrder === "desc") {
+        return bValue.localeCompare(aValue);
+      }
+      return aValue.localeCompare(bValue);
+    });
+
+    // Paginate
+    const offset = (page - 1) * limit;
+    const paginatedItems = filteredItems.slice(offset, offset + limit);
+
+    return {
+      data: paginatedItems,
+      count: filteredItems.length,
+      page,
+      limit,
+      totalPages: Math.ceil(filteredItems.length / limit),
+      error: null,
+    };
+  } catch (error) {
+    return { data: [], count: 0, page: 1, totalPages: 0, error: error.message };
+  }
+}
+
+// Mock get archived stats function
+export async function mockGetArchivedStats() {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Count archived products from SAMPLE_PRODUCTS (where is_active: false)
+    const archivedProductsCount = SAMPLE_PRODUCTS.filter(product => product.is_active === false).length;
+
+    // Count static archived items by type
+    const staticStats = {
+      products: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "product").length,
+      transactions: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "transaction").length,
+      suppliers: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "supplier").length,
+      employees: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "employee").length,
+    };
+
+    // Combine with actual archived products
+    const stats = {
+      products: staticStats.products + archivedProductsCount,
+      transactions: staticStats.transactions,
+      suppliers: staticStats.suppliers,
+      employees: staticStats.employees,
+    };
+
+    stats.total = stats.products + stats.transactions + stats.suppliers + stats.employees;
+
+    return { data: stats, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
+// Mock restore item function
+export async function mockRestoreItem(id, type) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Handle products archived from inventory (IDs like "product_1", "product_2")
+    if (type === "product" && typeof id === "string" && id.startsWith("product_")) {
+      const productId = parseInt(id.replace("product_", ""));
+      const productIndex = SAMPLE_PRODUCTS.findIndex((p) => p.id === productId);
+      
+      if (productIndex === -1) {
+        throw new Error("Product not found");
+      }
+
+      if (SAMPLE_PRODUCTS[productIndex].is_active === true) {
+        throw new Error("Product is already active");
+      }
+
+      // Restore product (mark as active)
+      SAMPLE_PRODUCTS[productIndex].is_active = true;
+      SAMPLE_PRODUCTS[productIndex].updated_at = new Date().toISOString();
+
+      return { 
+        data: { 
+          ...SAMPLE_PRODUCTS[productIndex], 
+          restored: true, 
+          restored_at: new Date().toISOString() 
+        }, 
+        error: null 
+      };
+    }
+
+    // Handle static archived items
+    const itemIndex = SAMPLE_ARCHIVED_ITEMS.findIndex(
+      (item) => item.id === parseInt(id) && item.type === type
+    );
+
+    if (itemIndex === -1) {
+      throw new Error(`${type.charAt(0).toUpperCase() + type.slice(1)} not found in archived items`);
+    }
+
+    const restoredItem = SAMPLE_ARCHIVED_ITEMS[itemIndex];
+    
+    // Remove from archived items (in real implementation, this would update the database)
+    SAMPLE_ARCHIVED_ITEMS.splice(itemIndex, 1);
+
+    // Add to the appropriate active collection
+    if (type === "product") {
+      // Add back to SAMPLE_PRODUCTS with is_active: true
+      const productData = {
+        ...restoredItem,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      };
+      SAMPLE_PRODUCTS.push(productData);
+    }
+
+    return { 
+      data: { 
+        ...restoredItem, 
+        restored: true, 
+        restored_at: new Date().toISOString() 
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
+// Mock permanent delete item function
+export async function mockPermanentDeleteItem(id, type) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // Handle products archived from inventory (IDs like "product_1", "product_2")
+    if (type === "product" && typeof id === "string" && id.startsWith("product_")) {
+      const productId = parseInt(id.replace("product_", ""));
+      const productIndex = SAMPLE_PRODUCTS.findIndex((p) => p.id === productId);
+      
+      if (productIndex === -1) {
+        throw new Error("Product not found");
+      }
+
+      if (SAMPLE_PRODUCTS[productIndex].is_active === true) {
+        throw new Error("Cannot delete active product. Archive it first.");
+      }
+
+      // Remove permanently from SAMPLE_PRODUCTS
+      SAMPLE_PRODUCTS.splice(productIndex, 1);
+
+      return { data: { success: true, deletedId: id, type }, error: null };
+    }
+
+    // Handle static archived items
+    const itemIndex = SAMPLE_ARCHIVED_ITEMS.findIndex(
+      (item) => item.id === parseInt(id) && item.type === type
+    );
+
+    if (itemIndex === -1) {
+      throw new Error(`${type.charAt(0).toUpperCase() + type.slice(1)} not found in archived items`);
+    }
+
+    // Remove permanently
+    SAMPLE_ARCHIVED_ITEMS.splice(itemIndex, 1);
+
+    return { data: { success: true, deletedId: id, type }, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
+// Mock archive transaction function
+export async function mockArchiveTransaction(transactionId, reason) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Create archived transaction entry
+    const archivedTransaction = {
+      id: Date.now(), // Generate unique ID
+      type: "transaction",
+      name: `Sale Transaction #${transactionId}`,
+      description: `Transaction archived - ${reason}`,
+      archivedDate: new Date().toISOString().split('T')[0],
+      archivedBy: "System",
+      reason,
+      category: "Sales",
+      amount: "₱" + (Math.random() * 10000).toFixed(2),
+      image: null,
+      created_at: new Date().toISOString(),
+      archived_at: new Date().toISOString(),
+    };
+
+    SAMPLE_ARCHIVED_ITEMS.push(archivedTransaction);
+
+    return { data: archivedTransaction, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
+// Mock archive supplier function
+export async function mockArchiveSupplier(supplierId, reason) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const archivedSupplier = {
+      id: Date.now(),
+      type: "supplier",
+      name: `Supplier #${supplierId}`,
+      description: `Supplier archived - ${reason}`,
+      archivedDate: new Date().toISOString().split('T')[0],
+      archivedBy: "System",
+      reason,
+      category: "Suppliers",
+      contactInfo: `supplier${supplierId}@example.com`,
+      image: null,
+      created_at: new Date().toISOString(),
+      archived_at: new Date().toISOString(),
+    };
+
+    SAMPLE_ARCHIVED_ITEMS.push(archivedSupplier);
+
+    return { data: archivedSupplier, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
+// Mock archive employee function
+export async function mockArchiveEmployee(employeeId, reason) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const archivedEmployee = {
+      id: Date.now(),
+      type: "employee",
+      name: `Employee #${employeeId}`,
+      description: `Employee archived - ${reason}`,
+      archivedDate: new Date().toISOString().split('T')[0],
+      archivedBy: "System",
+      reason,
+      category: "Staff",
+      position: "Staff Member",
+      image: null,
+      created_at: new Date().toISOString(),
+      archived_at: new Date().toISOString(),
+    };
+
+    SAMPLE_ARCHIVED_ITEMS.push(archivedEmployee);
+
+    return { data: archivedEmployee, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
 // Check if mock mode is enabled
 export function isMockMode() {
   console.log(

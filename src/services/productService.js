@@ -19,9 +19,59 @@ import {
 
 // Get all products with optional filtering
 export async function getProducts(filters = {}) {
-  // Force mock API for testing - bypass environment check
-  console.log("🔧 getProducts called - forcing mock mode");
-  return await mockFetchProducts(filters);
+  // Use mock API if enabled
+  if (isMockMode()) {
+    console.log("🔧 getProducts called - using mock mode");
+    return await mockFetchProducts(filters);
+  }
+
+  console.log("� getProducts called - using backend mode");
+
+  try {
+    let query = supabase
+      .from(TABLES.PRODUCTS)
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+
+    // Apply filters
+    if (filters.category && filters.category !== "all") {
+      query = query.eq("category", filters.category);
+    }
+
+    if (filters.search) {
+      query = query.or(
+        `name.ilike.%${filters.search}%, generic_name.ilike.%${filters.search}%`
+      );
+    }
+
+    if (filters.lowStock) {
+      query = query.lte("total_stock", supabase.raw("critical_level"));
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("❌ Error fetching products:", error);
+      throw error;
+    }
+
+    console.log("✅ Products fetched from backend:", data?.length || 0);
+
+    return {
+      data: data || [],
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    console.error("❌ Error in getProducts:", error);
+    return {
+      data: [],
+      error: error.message,
+      success: false,
+    };
+  }
+}
 
   /* Original Supabase code - temporarily disabled
   // Use mock API if enabled

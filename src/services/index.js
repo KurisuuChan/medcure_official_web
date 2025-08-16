@@ -7,6 +7,7 @@
 export * from "./productService.js";
 export * from "./salesService.js";
 export * from "./reportService.js";
+export * from "./archivedService.js";
 
 // Database Configuration
 export { supabase, TABLES } from "../lib/supabase.js";
@@ -18,6 +19,65 @@ export * from "../utils/csvUtils.js";
 export { default as ProductService } from "./productService.js";
 export { default as SalesService } from "./salesService.js";
 export { default as ReportService } from "./reportService.js";
+export { default as ArchivedService } from "./archivedService.js";
+
+/**
+ * Quick API Reference:
+ *
+ * Product Management:
+ * - getProducts(filters)
+ * - getProduct(id)
+ * - createProduct(productData)
+ * - updateProduct(id, updates)
+ * - updateProductStock(productId, newStock, movementType, reference)
+ * - deleteProduct(id)
+ * - importProducts(productsArray)
+ * - getCategories()
+ * - getInventorySummary()
+ * - archiveProduct(id)
+ *
+ * Sales Management:
+ * - createSale(saleData)
+ * - getSalesTransactions(filters)
+ * - getSaleTransaction(id)
+ * - getSalesSummary(period)
+ * - cancelTransaction(transactionId, reason)
+ * - getTopSellingProducts(limit, period)
+ * - getHourlySales(date)
+ *
+ * Archived Items Management:
+ * - getArchivedItems(filters)
+ * - getArchivedStats()
+ * - restoreItem(id, type)
+ * - permanentDeleteItem(id, type)
+ * - archiveTransaction(transactionId, reason)
+ * - archiveSupplier(supplierId, reason)
+ * - archiveEmployee(employeeId, reason)
+ * - bulkRestoreItems(items)
+ * - bulkDeleteItems(items)
+ *
+ * Reporting:
+ * - getSalesReport(startDate, endDate, groupBy)
+ * - getInventoryReport()
+ * - getLowStockReport()
+ * - getExpiringProductsReport(daysAhead)
+ * - getProductPerformanceReport(period)
+ * - getCustomerSalesReport(startDate, endDate)
+ * - getStockMovementReport(productId, startDate, endDate)
+ *
+ * Stock Management:
+ * - createStockMovement(movementData)
+ * - getStockMovements(productId, limit)
+ *
+ * CSV Utilities:
+ * - parseCSV(csvText)
+ * - convertCSVToProducts(csvData)
+ * - generateCSVTemplate()
+ * - downloadCSVTemplate()
+ * - exportProductsToCSV(products, filename)
+ * - formatCurrency(amount, currency)
+ * - calculatePackagingBreakdown(totalPieces, piecesPerSheet, sheetsPerBox)
+ */
 
 /**
  * Quick API Reference:

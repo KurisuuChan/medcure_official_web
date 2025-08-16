@@ -132,7 +132,7 @@ export default function Dashboard() {
       <div className="text-center space-y-3 sm:space-y-4">
         <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
           <Zap className="w-4 h-4" />
-          Real-time Dashboard
+          Real-time
         </div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">
           MedCure Dashboard

@@ -23,6 +23,7 @@ import {
   Building,
   Calendar,
 } from "lucide-react";
+import BackendStatus from "../components/BackendStatus";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
@@ -78,6 +79,7 @@ export default function Settings() {
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
     { id: "backup", label: "Backup & Data", icon: Database },
+    { id: "backend", label: "Backend Status", icon: Database },
   ];
 
   return (
@@ -745,6 +747,13 @@ export default function Settings() {
                 <Save size={18} />
                 Save Backup Settings
               </button>
+            </div>
+          )}
+
+          {/* Backend Status Tab */}
+          {activeTab === "backend" && (
+            <div className="space-y-6">
+              <BackendStatus />
             </div>
           )}
         </div>

@@ -1,10 +1,31 @@
 import React from "react";
+import { Archive, MoreVertical } from "lucide-react";
 import { useInventoryData } from "@/hooks/useInventoryData";
 import { useNotification } from "@/hooks/useNotification";
+import { archiveProduct } from "../services/productService";
 
 export default function Inventory() {
   const { addNotification } = useNotification();
   const { loading, error, products, refresh } = useInventoryData();
+
+  const handleArchiveProduct = async (productId, productName) => {
+    if (!window.confirm(`Are you sure you want to archive "${productName}"?`)) {
+      return;
+    }
+
+    try {
+      const result = await archiveProduct(productId);
+      
+      if (result.error) {
+        addNotification(`Failed to archive product: ${result.error}`, "error");
+      } else {
+        addNotification(`"${productName}" has been archived successfully`, "success");
+        refresh(); // Refresh the product list
+      }
+    } catch (error) {
+      addNotification(`Error archiving product: ${error.message}`, "error");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -49,6 +70,7 @@ export default function Inventory() {
                 <th className="text-right px-4 py-2">Stock</th>
                 <th className="text-right px-4 py-2">Cost</th>
                 <th className="text-right px-4 py-2">Value</th>
+                <th className="text-center px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -75,13 +97,30 @@ export default function Inventory() {
                     <td className="px-4 py-2 text-right tabular-nums font-medium">
                       ₱{value}
                     </td>
+                    <td className="px-4 py-2 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleArchiveProduct(p.id, p.name)}
+                          className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors"
+                          title="Archive Product"
+                        >
+                          <Archive size={16} />
+                        </button>
+                        <button
+                          className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-50 transition-colors"
+                          title="More Options"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
               {products.length === 0 && (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="px-4 py-10 text-center text-gray-500"
                   >
                     No products found.
