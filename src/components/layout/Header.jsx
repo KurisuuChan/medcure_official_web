@@ -155,7 +155,9 @@ export default function Header({ onLogout, user }) {
                 size={16}
                 className="group-hover:rotate-90 transition-transform duration-200"
               />
-              <span className="font-medium text-sm hidden xl:block">Quick Actions</span>
+              <span className="font-medium text-sm hidden xl:block">
+                Quick Actions
+              </span>
               <ChevronDown
                 size={14}
                 className={`transition-transform duration-200 ${
@@ -249,10 +251,12 @@ export default function Header({ onLogout, user }) {
           >
             <Plus
               size={18}
-              className={`${actionsOpen ? "rotate-45" : ""} transition-transform duration-200`}
+              className={`${
+                actionsOpen ? "rotate-45" : ""
+              } transition-transform duration-200`}
             />
           </button>
-          
+
           {actionsOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200/80 overflow-hidden z-50 backdrop-blur-sm">
               <div className="p-2">
@@ -270,7 +274,9 @@ export default function Header({ onLogout, user }) {
                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                       <DollarSign size={16} className="text-blue-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">New Sale</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      New Sale
+                    </span>
                   </button>
 
                   <button
@@ -283,7 +289,9 @@ export default function Header({ onLogout, user }) {
                     <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
                       <PackageX size={16} className="text-emerald-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Add Product</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Add Product
+                    </span>
                   </button>
 
                   <button
@@ -296,7 +304,9 @@ export default function Header({ onLogout, user }) {
                     <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
                       <BarChart3 size={16} className="text-indigo-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Analytics</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Analytics
+                    </span>
                   </button>
 
                   <button
@@ -309,7 +319,9 @@ export default function Header({ onLogout, user }) {
                     <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
                       <Clock size={16} className="text-orange-600" />
                     </div>
-                    <span className="text-sm font-medium text-gray-700">Patients</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Patients
+                    </span>
                   </button>
                 </div>
               </div>
@@ -372,7 +384,8 @@ export default function Header({ onLogout, user }) {
               </div>
 
               {/* Notifications List */}
-              <div className="max-h-72 sm:max-h-80 overflow-y-auto">{notifications.length > 0 ? (
+              <div className="max-h-72 sm:max-h-80 overflow-y-auto">
+                {notifications.length > 0 ? (
                   <div className="divide-y divide-gray-100/80">
                     {notifications.map((notification) => {
                       const IconComponent = notification.icon;

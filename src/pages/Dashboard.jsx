@@ -134,7 +134,9 @@ export default function Dashboard() {
           <Zap className="w-4 h-4" />
           Real-time Dashboard
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">MedCure Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">
+          MedCure Dashboard
+        </h1>
         <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto px-4">
           Your pharmacy management hub - monitor key metrics, track performance,
           and stay informed about critical alerts.
@@ -170,7 +172,9 @@ export default function Dashboard() {
                 <h3 className="text-xl sm:text-2xl font-bold text-gray-800">
                   Sales Performance
                 </h3>
-                <p className="text-gray-600 text-sm sm:text-base">Real-time hourly sales tracking</p>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Real-time hourly sales tracking
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-50 rounded-lg sm:rounded-xl">

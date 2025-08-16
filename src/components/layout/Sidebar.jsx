@@ -108,8 +108,8 @@ export default function Sidebar({ branding }) {
     };
 
     handleResize(); // Check on mount
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [expanded]);
 
   // Close mobile menu on route change
@@ -118,8 +118,8 @@ export default function Sidebar({ branding }) {
       setMobileMenuOpen(false);
     };
 
-    window.addEventListener('popstate', handleRouteChange);
-    return () => window.removeEventListener('popstate', handleRouteChange);
+    window.addEventListener("popstate", handleRouteChange);
+    return () => window.removeEventListener("popstate", handleRouteChange);
   }, []);
 
   useEffect(() => {
@@ -135,15 +135,21 @@ export default function Sidebar({ branding }) {
         aria-label="Toggle mobile menu"
       >
         {mobileMenuOpen ? (
-          <X size={20} className="group-hover:scale-110 transition-all duration-300" />
+          <X
+            size={20}
+            className="group-hover:scale-110 transition-all duration-300"
+          />
         ) : (
-          <Menu size={20} className="group-hover:scale-110 transition-all duration-300" />
+          <Menu
+            size={20}
+            className="group-hover:scale-110 transition-all duration-300"
+          />
         )}
       </button>
 
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -155,9 +161,10 @@ export default function Sidebar({ branding }) {
           h-full bg-white/98 backdrop-blur-md border-r border-gray-200/60 flex flex-col transition-all duration-500 ease-in-out relative shadow-xl
           ${expanded ? "w-72" : "w-20"}
           md:relative md:translate-x-0
-          ${mobileMenuOpen 
-            ? "fixed left-0 top-0 z-50 translate-x-0 w-80" 
-            : "fixed left-0 top-0 z-50 -translate-x-full md:translate-x-0"
+          ${
+            mobileMenuOpen
+              ? "fixed left-0 top-0 z-50 translate-x-0 w-80"
+              : "fixed left-0 top-0 z-50 -translate-x-full md:translate-x-0"
           }
         `}
         style={{
@@ -166,79 +173,87 @@ export default function Sidebar({ branding }) {
         }}
         aria-label="Navigation"
       >
-      {/* Header */}
-      <div
-        className={`h-16 flex items-center border-b border-gray-200/60 relative backdrop-blur-sm ${
-          expanded || mobileMenuOpen ? "justify-between px-6" : "justify-center"
-        } ${mobileMenuOpen ? "px-4" : ""}`}
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(59,130,246,0.03), rgba(99,102,241,0.03))",
-        }}
-      >
-        {expanded || mobileMenuOpen ? (
-          <>
-            <div className="flex items-center gap-4">
+        {/* Header */}
+        <div
+          className={`h-16 flex items-center border-b border-gray-200/60 relative backdrop-blur-sm ${
+            expanded || mobileMenuOpen
+              ? "justify-between px-6"
+              : "justify-center"
+          } ${mobileMenuOpen ? "px-4" : ""}`}
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(59,130,246,0.03), rgba(99,102,241,0.03))",
+          }}
+        >
+          {expanded || mobileMenuOpen ? (
+            <>
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                  <span className="drop-shadow-sm">M</span>
+                </div>
+                <div className="space-y-0.5">
+                  <div className="font-bold text-gray-900 text-lg tracking-tight">
+                    {branding?.name || "MedCure"}
+                  </div>
+                  <div className="text-xs text-gray-500 font-medium tracking-wide hidden sm:block">
+                    Pharmacy Management System
+                  </div>
+                </div>
+              </div>
+              {/* Toggle Button - Inside header when expanded or mobile */}
+              <button
+                onClick={() => {
+                  if (window.innerWidth < 768) {
+                    setMobileMenuOpen(false);
+                  } else {
+                    setExpanded((c) => !c);
+                  }
+                }}
+                className="w-10 h-10 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-300 hover:border-gray-400 rounded-2xl flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-300 group shadow-md hover:shadow-lg transform hover:scale-105"
+                aria-label={
+                  mobileMenuOpen ? "Close mobile menu" : "Collapse sidebar"
+                }
+              >
+                {mobileMenuOpen ? (
+                  <X
+                    size={18}
+                    className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
+                  />
+                ) : (
+                  <ChevronLeft
+                    size={18}
+                    className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
+                  />
+                )}
+              </button>
+            </>
+          ) : (
+            <>
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                 <span className="drop-shadow-sm">M</span>
               </div>
-              <div className="space-y-0.5">
-                <div className="font-bold text-gray-900 text-lg tracking-tight">
-                  {branding?.name || "MedCure"}
-                </div>
-                <div className="text-xs text-gray-500 font-medium tracking-wide hidden sm:block">
-                  Pharmacy Management System
-                </div>
-              </div>
-            </div>
-            {/* Toggle Button - Inside header when expanded or mobile */}
-            <button
-              onClick={() => {
-                if (window.innerWidth < 768) {
-                  setMobileMenuOpen(false);
-                } else {
-                  setExpanded((c) => !c);
-                }
-              }}
-              className="w-10 h-10 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-300 hover:border-gray-400 rounded-2xl flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-300 group shadow-md hover:shadow-lg transform hover:scale-105"
-              aria-label={mobileMenuOpen ? "Close mobile menu" : "Collapse sidebar"}
-            >
-              {mobileMenuOpen ? (
-                <X
-                  size={18}
+              {/* Enhanced Toggle Button - Floating when collapsed (desktop only) */}
+              <button
+                onClick={() => setExpanded((c) => !c)}
+                className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400 rounded-full items-center justify-center text-blue-600 hover:text-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl z-20 group transform hover:scale-110"
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight
+                  size={16}
                   className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
                 />
-              ) : (
-                <ChevronLeft
-                  size={18}
-                  className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
-                />
-              )}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <span className="drop-shadow-sm">M</span>
-            </div>
-            {/* Enhanced Toggle Button - Floating when collapsed (desktop only) */}
-            <button
-              onClick={() => setExpanded((c) => !c)}
-              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400 rounded-full items-center justify-center text-blue-600 hover:text-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl z-20 group transform hover:scale-110"
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight
-                size={16}
-                className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
-              />
-            </button>
-          </>
-        )}
-      </div>
+              </button>
+            </>
+          )}
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 py-8 overflow-hidden">
-          <ul className={`space-y-3 ${expanded || mobileMenuOpen ? "px-5" : "px-3"}`}>
+          <ul
+            className={`space-y-3 ${
+              expanded || mobileMenuOpen ? "px-5" : "px-3"
+            }`}
+          >
             {menu.map((item, index) => {
               const IconComponent = item.icon;
               const colorClasses = {
@@ -394,8 +409,8 @@ export default function Sidebar({ branding }) {
               </div>
             </div>
           )}
-      </div>
-    </aside>
+        </div>
+      </aside>
     </>
   );
 }
