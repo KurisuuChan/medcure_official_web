@@ -5,6 +5,7 @@ import {
   mockFetchProduct,
   mockCreateProduct,
   mockUpdateProduct,
+  mockArchiveProduct,
   mockDeleteProduct,
   mockImportProducts,
   mockGetInventorySummary,
@@ -206,7 +207,37 @@ export async function updateProductStock(
   }
 }
 
-// Soft delete product
+// Archive product (soft delete)
+export async function archiveProduct(id) {
+  // Force mock API for testing - bypass environment check
+  console.log("🔧 archiveProduct called - forcing mock mode");
+  return await mockArchiveProduct(id);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockArchiveProduct(id);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.PRODUCTS)
+      .update({ is_active: false })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error archiving product:", error);
+    return { data: null, error: error.message };
+  }
+  */
+}
+
+// Hard delete product (only for archived products)
 export async function deleteProduct(id) {
   // Force mock API for testing - bypass environment check
   console.log("🔧 deleteProduct called - forcing mock mode");
@@ -221,10 +252,9 @@ export async function deleteProduct(id) {
   try {
     const { data, error } = await supabase
       .from(TABLES.PRODUCTS)
-      .update({ is_active: false })
+      .delete()
       .eq("id", id)
-      .select()
-      .single();
+      .eq("is_active", false); // Only delete already archived products
 
     if (error) throw error;
 

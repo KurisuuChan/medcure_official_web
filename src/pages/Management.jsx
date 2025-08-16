@@ -9,7 +9,6 @@ import {
   Package,
   Eye,
   Edit,
-  Trash2,
   Grid3X3,
   List,
   MoreVertical,
@@ -27,7 +26,6 @@ import { BulkActionsModal } from "../components/modals/BulkActionsModal.jsx";
 import {
   ConfirmationModal,
   ArchiveProductModal,
-  DeleteProductModal,
 } from "../components/modals/ConfirmationModal.jsx";
 import { exportProductsToCSV } from "../utils/csvUtils.js";
 import {
@@ -48,11 +46,9 @@ export default function Management() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showBulkActionsModal, setShowBulkActionsModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [productToArchive, setProductToArchive] = useState(null);
-  const [productToDelete, setProductToDelete] = useState(null);
   const [categories, setCategories] = useState([]);
   const [currentFilters, setCurrentFilters] = useState({});
   const { addNotification } = useNotification();
@@ -64,10 +60,11 @@ export default function Management() {
     error,
     addProduct,
     updateProduct,
-    removeProduct,
+    archiveProduct,
     importProductsFromCSV,
     applyFilters,
     getInventoryStats,
+    refresh,
   } = useProducts();
 
   // Load categories
@@ -81,14 +78,41 @@ export default function Management() {
     loadCategories();
   }, []);
 
-  // Filter products based on search term
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.generic_name &&
-        product.generic_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Combine search term with applied filters
+  const allFilters = {
+    ...currentFilters,
+    search: searchTerm,
+  };
+
+  // Filter products based on search term and filters
+  // The backend filtering is done in the useProducts hook via applyFilters
+  // This is additional client-side filtering for immediate feedback
+  const filteredProducts = products.filter((product) => {
+    // If we have a search term, filter by it
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      const matchesSearch =
+        product.name.toLowerCase().includes(search) ||
+        product.category.toLowerCase().includes(search) ||
+        (product.generic_name &&
+          product.generic_name.toLowerCase().includes(search));
+
+      if (!matchesSearch) return false;
+    }
+
+    return true;
+  });
+
+  // Effect to apply backend filters when search term or filters change
+  React.useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (searchTerm || Object.keys(currentFilters).length > 0) {
+        applyFilters(allFilters);
+      }
+    }, 300); // Debounce search
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, currentFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectItem = (id) => {
     setSelectedItems((prev) =>
@@ -116,24 +140,11 @@ export default function Management() {
     setShowArchiveModal(true);
   };
 
-  const handleDeleteProduct = (product) => {
-    setProductToDelete(product);
-    setShowDeleteModal(true);
-  };
-
   const handleConfirmArchive = async () => {
     if (productToArchive) {
-      await removeProduct(productToArchive.id);
+      await archiveProduct(productToArchive.id);
       setProductToArchive(null);
       setShowArchiveModal(false);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (productToDelete) {
-      await removeProduct(productToDelete.id);
-      setProductToDelete(null);
-      setShowDeleteModal(false);
     }
   };
 
@@ -170,7 +181,7 @@ export default function Management() {
 
   const handleBulkArchive = async () => {
     for (const id of selectedItems) {
-      await removeProduct(id);
+      await archiveProduct(id);
     }
     setSelectedItems([]);
   };
@@ -402,6 +413,13 @@ export default function Management() {
                       <Edit size={14} />
                       Edit
                     </button>
+                    <button
+                      onClick={() => handleArchiveProduct(product)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                    >
+                      <Archive size={14} />
+                      Archive
+                    </button>
                   </div>
                 </div>
               </div>
@@ -512,6 +530,12 @@ export default function Management() {
                         >
                           <Edit size={16} />
                         </button>
+                        <button
+                          onClick={() => handleArchiveProduct(product)}
+                          className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                        >
+                          <Archive size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -584,16 +608,6 @@ export default function Management() {
         selectedProducts={selectedItems}
         onBulkUpdate={handleBulkUpdate}
         onBulkArchive={handleBulkArchive}
-        onBulkDelete={async (selectedProducts) => {
-          for (const productId of selectedProducts) {
-            await removeProduct(productId);
-          }
-          setSelectedItems([]);
-          addNotification(
-            `${selectedProducts.length} products deleted successfully`,
-            "success"
-          );
-        }}
         categories={categories}
       />
 
@@ -605,16 +619,6 @@ export default function Management() {
         }}
         onConfirm={handleConfirmArchive}
         productName={productToArchive?.name || ""}
-      />
-
-      <DeleteProductModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setProductToDelete(null);
-        }}
-        onConfirm={handleConfirmDelete}
-        productName={productToDelete?.name || ""}
       />
     </div>
   );

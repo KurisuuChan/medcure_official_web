@@ -182,20 +182,28 @@ export async function mockFetchProducts(filters = {}) {
   await delay();
   let products = [...SAMPLE_PRODUCTS];
 
-  // Apply filters
+  // Only show active products by default (for management page)
+  if (filters.showArchived !== true) {
+    products = products.filter((p) => p.is_active === true);
+  }
+
+  // Apply category filter
   if (filters.category && filters.category !== "all") {
     products = products.filter((p) => p.category === filters.category);
   }
 
+  // Apply search filter
   if (filters.search) {
     const search = filters.search.toLowerCase();
     products = products.filter(
       (p) =>
         p.name.toLowerCase().includes(search) ||
-        p.generic_name.toLowerCase().includes(search)
+        (p.generic_name && p.generic_name.toLowerCase().includes(search)) ||
+        p.category.toLowerCase().includes(search)
     );
   }
 
+  // Apply stock filters
   if (filters.lowStock) {
     products = products.filter(
       (p) => p.total_stock <= p.critical_level && p.total_stock > 0
@@ -423,7 +431,30 @@ export async function mockUpdateProduct(id, updates) {
   }
 }
 
-// Mock delete product function
+// Mock archive product function (soft delete)
+export async function mockArchiveProduct(id) {
+  try {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const productIndex = SAMPLE_PRODUCTS.findIndex(
+      (p) => p.id === parseInt(id)
+    );
+    if (productIndex === -1) {
+      throw new Error("Product not found");
+    }
+
+    // Archive product (mark as inactive)
+    SAMPLE_PRODUCTS[productIndex].is_active = false;
+    SAMPLE_PRODUCTS[productIndex].updated_at = new Date().toISOString();
+
+    return { data: SAMPLE_PRODUCTS[productIndex], error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+}
+
+// Mock delete product function (hard delete - only for archived page)
 export async function mockDeleteProduct(id) {
   try {
     // Simulate API delay
@@ -436,11 +467,15 @@ export async function mockDeleteProduct(id) {
       throw new Error("Product not found");
     }
 
-    // Soft delete (mark as inactive)
-    SAMPLE_PRODUCTS[productIndex].is_active = false;
-    SAMPLE_PRODUCTS[productIndex].updated_at = new Date().toISOString();
+    // Only allow deletion if product is already archived
+    if (SAMPLE_PRODUCTS[productIndex].is_active) {
+      throw new Error("Cannot delete active product. Archive it first.");
+    }
 
-    return { data: SAMPLE_PRODUCTS[productIndex], error: null };
+    // Remove product completely
+    SAMPLE_PRODUCTS.splice(productIndex, 1);
+
+    return { data: { success: true }, error: null };
   } catch (error) {
     return { data: null, error: error.message };
   }

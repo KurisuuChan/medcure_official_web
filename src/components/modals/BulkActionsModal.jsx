@@ -17,7 +17,7 @@ export function BulkActionsModal({
   selectedProducts = [],
   onBulkUpdate,
   onBulkArchive,
-  onBulkDelete,
+  onBulkDelete = null, // Made optional
   categories = [],
 }) {
   const [activeAction, setActiveAction] = useState(null);
@@ -191,20 +191,22 @@ export function BulkActionsModal({
                   </p>
                 </button>
 
-                <button
-                  onClick={() => setActiveAction("delete")}
-                  className="p-4 border-2 border-gray-200 rounded-xl hover:border-red-300 hover:bg-red-50 transition-all text-left"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Trash2 size={20} className="text-red-600" />
-                    <span className="font-semibold text-gray-800">
-                      Delete Products
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Permanently delete selected products
-                  </p>
-                </button>
+                {onBulkDelete && (
+                  <button
+                    onClick={() => setActiveAction("delete")}
+                    className="p-4 border-2 border-gray-200 rounded-xl hover:border-red-300 hover:bg-red-50 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <Trash2 size={20} className="text-red-600" />
+                      <span className="font-semibold text-gray-800">
+                        Delete Products
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Permanently delete selected products
+                    </p>
+                  </button>
+                )}
               </div>
             </div>
           ) : activeAction === "update" ? (
@@ -367,7 +369,7 @@ export function BulkActionsModal({
                 </div>
               </div>
             </div>
-          ) : (
+          ) : activeAction === "delete" && onBulkDelete ? (
             /* Delete Confirmation */
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -399,6 +401,13 @@ export function BulkActionsModal({
                   </p>
                 </div>
               </div>
+            </div>
+          ) : (
+            /* No action selected or unsupported action */
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                Please select an action from above.
+              </p>
             </div>
           )}
         </div>
@@ -433,7 +442,7 @@ export function BulkActionsModal({
             </button>
           )}
 
-          {activeAction === "delete" && (
+          {activeAction === "delete" && onBulkDelete && (
             <button
               onClick={handleBulkDelete}
               disabled={isProcessing}

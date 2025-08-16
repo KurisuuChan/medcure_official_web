@@ -3,6 +3,7 @@ import {
   getProducts,
   createProduct,
   updateProduct,
+  archiveProduct,
   deleteProduct,
   importProducts,
 } from "../services/productService.js";
@@ -90,7 +91,31 @@ export function useProducts(initialFilters = {}) {
     }
   };
 
-  // Delete product
+  // Archive product (soft delete)
+  const archiveProductData = async (id) => {
+    setLoading(true);
+
+    try {
+      const { error: archiveError } = await archiveProduct(id);
+
+      if (archiveError) {
+        throw new Error(archiveError);
+      }
+
+      setProducts((prev) => prev.filter((product) => product.id !== id));
+      addNotification("Product archived successfully", "success");
+      return { error: null };
+    } catch (err) {
+      const errorMsg = err.message || "Failed to archive product";
+      setError(errorMsg);
+      addNotification(errorMsg, "error");
+      return { error: errorMsg };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete product (hard delete - only for archived products)
   const removeProduct = async (id) => {
     setLoading(true);
 
@@ -102,10 +127,10 @@ export function useProducts(initialFilters = {}) {
       }
 
       setProducts((prev) => prev.filter((product) => product.id !== id));
-      addNotification("Product archived successfully", "success");
+      addNotification("Product deleted successfully", "success");
       return { error: null };
     } catch (err) {
-      const errorMsg = err.message || "Failed to archive product";
+      const errorMsg = err.message || "Failed to delete product";
       setError(errorMsg);
       addNotification(errorMsg, "error");
       return { error: errorMsg };
@@ -240,6 +265,7 @@ export function useProducts(initialFilters = {}) {
     fetchProducts,
     addProduct,
     updateProduct: updateProductData,
+    archiveProduct: archiveProductData,
     removeProduct,
     importProductsFromCSV,
 
