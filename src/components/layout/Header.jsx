@@ -22,11 +22,14 @@ import PropTypes from "prop-types";
 import { useNotification } from "@/hooks/useNotification";
 
 export default function Header({ onLogout, user }) {
+  const navigate = useNavigate();
   const { addNotification } = useNotification();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const menuRef = useRef(null);
   const notifRef = useRef(null);
+  const actionsRef = useRef(null);
 
   // Mock notification data with pharmacy-specific content
   const notifications = [
@@ -117,6 +120,8 @@ export default function Header({ onLogout, user }) {
         setMenuOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target))
         setNotifOpen(false);
+      if (actionsRef.current && !actionsRef.current.contains(e.target))
+        setActionsOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -139,30 +144,102 @@ export default function Header({ onLogout, user }) {
           />
         </div>
 
-        {/* Quick Stats */}
-        <div className="hidden lg:flex items-center gap-5 text-sm">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-100">
-            <Activity size={16} className="text-green-600" />
-            <div className="text-green-700 font-medium">₱24.5K</div>
-            <div className="text-green-600 text-xs">Today</div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
-            <Package size={16} className="text-blue-600" />
-            <div className="text-blue-700 font-medium">148</div>
-            <div className="text-blue-600 text-xs">Items</div>
+        {/* Quick Actions */}
+        <div className="hidden lg:flex items-center gap-3">
+          <div ref={actionsRef} className="relative">
+            <button
+              onClick={() => setActionsOpen((o) => !o)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-200 shadow-sm hover:shadow-md group"
+            >
+              <Plus
+                size={18}
+                className="group-hover:rotate-90 transition-transform duration-200"
+              />
+              <span className="font-medium text-sm">Quick Actions</span>
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-200 ${
+                  actionsOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {actionsOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-200/80 overflow-hidden z-50 backdrop-blur-sm">
+                <div className="p-3">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 px-2">
+                    Quick Actions
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        navigate("/point-of-sales");
+                        setActionsOpen(false);
+                      }}
+                      className="flex flex-col items-center gap-2 p-3 hover:bg-blue-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-blue-200"
+                    >
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <DollarSign size={18} className="text-blue-600" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-700">
+                        New Sale
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/management");
+                        setActionsOpen(false);
+                      }}
+                      className="flex flex-col items-center gap-2 p-3 hover:bg-emerald-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-emerald-200"
+                    >
+                      <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                        <PackageX size={18} className="text-emerald-600" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-700">
+                        Add Product
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/analytics");
+                        setActionsOpen(false);
+                      }}
+                      className="flex flex-col items-center gap-2 p-3 hover:bg-indigo-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-indigo-200"
+                    >
+                      <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                        <BarChart3 size={18} className="text-indigo-600" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-700">
+                        Analytics
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        navigate("/contacts");
+                        setActionsOpen(false);
+                      }}
+                      className="flex flex-col items-center gap-2 p-3 hover:bg-orange-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-orange-200"
+                    >
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                        <Clock size={18} className="text-orange-600" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-700">
+                        Patients
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-2">
-        {/* System Status */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-600 font-medium">
-            System Online
-          </span>
-        </div>
+      <div className="flex items-center gap-3">
         {/* Notifications */}
         <div ref={notifRef} className="relative">
           <button

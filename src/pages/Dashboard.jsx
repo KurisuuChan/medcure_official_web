@@ -159,7 +159,7 @@ export default function Dashboard() {
 
       {/* Analytics Section */}
       <div className="space-y-8">
-        {/* Sales Performance Chart */}
+        {/* Analytics Section - Full Width */}
         <div className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
@@ -183,107 +183,117 @@ export default function Dashboard() {
           <SalesByHourChart data={salesByHourData} />
         </div>
 
-        {/* Quick Actions & Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Quick Actions */}
-          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-gray-200/50">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+        {/* Recent Activity - Enhanced */}
+        <div className="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-lg border border-gray-200/50">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                <TrendingUp className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800">Quick Actions</h3>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Recent Sales Activity
+                </h3>
+                <p className="text-gray-600">
+                  Latest transactions and performance metrics
+                </p>
+              </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => navigate("/point-of-sales")}
-                className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-2xl transition-all duration-300 group border border-blue-200"
-              >
-                <div className="text-blue-600 mb-2 group-hover:scale-110 transition-transform">
-                  <DollarSign className="w-6 h-6" />
-                </div>
-                <div className="text-sm font-semibold text-blue-800">
-                  New Sale
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate("/management")}
-                className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 rounded-2xl transition-all duration-300 group border border-emerald-200"
-              >
-                <div className="text-emerald-600 mb-2 group-hover:scale-110 transition-transform">
-                  <PackageX className="w-6 h-6" />
-                </div>
-                <div className="text-sm font-semibold text-emerald-800">
-                  Add Product
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate("/analytics")}
-                className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 rounded-2xl transition-all duration-300 group border border-indigo-200"
-              >
-                <div className="text-indigo-600 mb-2 group-hover:scale-110 transition-transform">
-                  <BarChart3 className="w-6 h-6" />
-                </div>
-                <div className="text-sm font-semibold text-indigo-800">
-                  Analytics
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate("/contacts")}
-                className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 rounded-2xl transition-all duration-300 group border border-orange-200"
-              >
-                <div className="text-orange-600 mb-2 group-hover:scale-110 transition-transform">
-                  <Clock3 className="w-6 h-6" />
-                </div>
-                <div className="text-sm font-semibold text-orange-800">
-                  Patient List
-                </div>
-              </button>
-            </div>
+            <button
+              onClick={() => navigate("/reports")}
+              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 font-medium rounded-xl transition-all duration-200 border border-indigo-200"
+            >
+              View all reports →
+            </button>
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-gray-200/50">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-800">
-                  Recent Sales
-                </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Recent Sales List */}
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                Latest Transactions
+              </h4>
+              <div className="space-y-3">
+                {recentSales.slice(0, 6).map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-100/80 rounded-xl transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <DollarSign size={18} className="text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-800 text-sm">
+                          {sale.product}
+                        </div>
+                        <div className="text-xs text-gray-500">{sale.time}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-800">
+                        ₱{sale.price.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-md">
+                        Qty: {sale.qty}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <button
-                onClick={() => navigate("/reports")}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium hover:underline"
-              >
-                View all →
-              </button>
             </div>
 
-            <div className="space-y-3">
-              {recentSales.slice(0, 5).map((sale) => (
-                <div
-                  key={sale.id}
-                  className="flex items-center justify-between p-3 bg-gray-50/50 hover:bg-gray-100/80 rounded-xl transition-colors"
-                >
-                  <div>
-                    <div className="font-medium text-gray-800 text-sm">
-                      {sale.product}
-                    </div>
-                    <div className="text-xs text-gray-500">{sale.time}</div>
+            {/* Quick Metrics */}
+            <div>
+              <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                Performance Summary
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200">
+                  <div className="text-2xl font-bold text-emerald-600 mb-1">
+                    ₱24.5K
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-gray-800">
-                      ₱{sale.price.toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-500">Qty: {sale.qty}</div>
+                  <div className="text-sm font-medium text-emerald-800">
+                    Today's Revenue
+                  </div>
+                  <div className="text-xs text-emerald-600 mt-1">
+                    ↗ +12% from yesterday
                   </div>
                 </div>
-              ))}
+                <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-600 mb-1">
+                    148
+                  </div>
+                  <div className="text-sm font-medium text-blue-800">
+                    Products Sold
+                  </div>
+                  <div className="text-xs text-blue-600 mt-1">
+                    ↗ +8% from yesterday
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl border border-orange-200">
+                  <div className="text-2xl font-bold text-orange-600 mb-1">
+                    23
+                  </div>
+                  <div className="text-sm font-medium text-orange-800">
+                    Avg/Hour
+                  </div>
+                  <div className="text-xs text-orange-600 mt-1">
+                    Peak: 2-3 PM
+                  </div>
+                </div>
+                <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">
+                    98%
+                  </div>
+                  <div className="text-sm font-medium text-purple-800">
+                    Satisfaction
+                  </div>
+                  <div className="text-xs text-purple-600 mt-1">
+                    Based on feedback
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

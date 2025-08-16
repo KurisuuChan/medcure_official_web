@@ -11,25 +11,81 @@ import {
   Settings,
   ChevronLeft,
   BarChart3,
+  ChevronRight,
 } from "lucide-react";
 import PropTypes from "prop-types";
 
 const menu = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, color: "blue" },
-  { to: "/analytics", label: "Analytics", icon: BarChart3, color: "indigo" },
-  { to: "/management", label: "Inventory", icon: Pill, color: "emerald" },
+  {
+    to: "/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    color: "blue",
+    description: "Overview & Analytics",
+  },
+  {
+    to: "/analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    color: "indigo",
+    description: "Detailed Reports",
+  },
+  {
+    to: "/management",
+    label: "Inventory",
+    icon: Pill,
+    color: "emerald",
+    description: "Stock Management",
+  },
   {
     to: "/point-of-sales",
     label: "Point of Sale",
     icon: ShoppingCart,
     color: "orange",
+    description: "Sales Terminal",
   },
-  { to: "/archived", label: "Archived", icon: Archive, color: "gray" },
-  { to: "/contacts", label: "Patients", icon: Contact, color: "purple" },
-  { to: "/notifications", label: "Notifications", icon: Bell, color: "red" },
-  { to: "/financials", label: "Financials", icon: Banknote, color: "green" },
-  { to: "/reports", label: "Reports", icon: BarChart3, color: "slate" },
-  { to: "/settings", label: "Settings", icon: Settings, color: "slate" },
+  {
+    to: "/archived",
+    label: "Archived",
+    icon: Archive,
+    color: "gray",
+    description: "Archived Records",
+  },
+  {
+    to: "/contacts",
+    label: "Patients",
+    icon: Contact,
+    color: "purple",
+    description: "Patient Database",
+  },
+  {
+    to: "/notifications",
+    label: "Notifications",
+    icon: Bell,
+    color: "red",
+    description: "System Alerts",
+  },
+  {
+    to: "/financials",
+    label: "Financials",
+    icon: Banknote,
+    color: "green",
+    description: "Financial Overview",
+  },
+  {
+    to: "/reports",
+    label: "Reports",
+    icon: BarChart3,
+    color: "slate",
+    description: "Business Reports",
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: Settings,
+    color: "slate",
+    description: "System Configuration",
+  },
 ];
 
 export default function Sidebar({ branding }) {
@@ -37,6 +93,7 @@ export default function Sidebar({ branding }) {
     const stored = localStorage.getItem("mc-sidebar-expanded");
     return stored ? JSON.parse(stored) : true;
   });
+  const [hoveredItem, setHoveredItem] = useState(null);
 
   useEffect(() => {
     localStorage.setItem("mc-sidebar-expanded", JSON.stringify(expanded));
@@ -44,58 +101,66 @@ export default function Sidebar({ branding }) {
 
   return (
     <aside
-      className={`h-full bg-white/95 backdrop-blur-sm border-r border-gray-200/80 flex flex-col transition-all duration-300 relative shadow-sm ${
-        expanded ? "w-72" : "w-18"
+      className={`h-full bg-white/98 backdrop-blur-md border-r border-gray-200/60 flex flex-col transition-all duration-500 ease-in-out relative shadow-xl ${
+        expanded ? "w-72" : "w-20"
       }`}
+      style={{
+        background:
+          "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(248,250,252,0.95))",
+      }}
       aria-label="Navigation"
     >
       {/* Header */}
       <div
-        className={`h-16 flex items-center border-b border-gray-200/80 relative ${
+        className={`h-16 flex items-center border-b border-gray-200/60 relative backdrop-blur-sm ${
           expanded ? "justify-between px-6" : "justify-center"
         }`}
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(59,130,246,0.03), rgba(99,102,241,0.03))",
+        }}
       >
         {expanded ? (
           <>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                M
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <span className="drop-shadow-sm">M</span>
               </div>
-              <div>
-                <div className="font-bold text-gray-900 text-lg">
+              <div className="space-y-0.5">
+                <div className="font-bold text-gray-900 text-lg tracking-tight">
                   {branding?.name || "MedCure"}
                 </div>
-                <div className="text-xs text-gray-500 font-medium">
-                  Pharmacy System
+                <div className="text-xs text-gray-500 font-medium tracking-wide">
+                  Pharmacy Management System
                 </div>
               </div>
             </div>
             {/* Toggle Button - Inside header when expanded */}
             <button
               onClick={() => setExpanded((c) => !c)}
-              className="w-9 h-9 bg-gray-100 hover:bg-gray-200 border border-gray-300 hover:border-gray-400 rounded-xl flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-200 group shadow-sm hover:shadow"
+              className="w-10 h-10 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-300 hover:border-gray-400 rounded-2xl flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-300 group shadow-md hover:shadow-lg transform hover:scale-105"
               aria-label="Collapse sidebar"
             >
               <ChevronLeft
                 size={18}
-                className="group-hover:scale-110 transition-transform"
+                className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
               />
             </button>
           </>
         ) : (
           <>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-              M
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+              <span className="drop-shadow-sm">M</span>
             </div>
-            {/* Toggle Button - Floating when collapsed */}
+            {/* Enhanced Toggle Button - Floating when collapsed */}
             <button
               onClick={() => setExpanded((c) => !c)}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400 rounded-full flex items-center justify-center text-blue-600 hover:text-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl z-10 group"
+              className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400 rounded-full flex items-center justify-center text-blue-600 hover:text-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl z-20 group transform hover:scale-110"
               aria-label="Expand sidebar"
             >
-              <ChevronLeft
+              <ChevronRight
                 size={16}
-                className="rotate-180 group-hover:scale-110 transition-transform"
+                className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
               />
             </button>
           </>
@@ -103,20 +168,26 @@ export default function Sidebar({ branding }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 overflow-hidden">
-        <ul className={`space-y-2 ${expanded ? "px-4" : "px-2"}`}>
-          {menu.map((item) => {
+      <nav className="flex-1 py-8 overflow-hidden">
+        <ul className={`space-y-3 ${expanded ? "px-5" : "px-3"}`}>
+          {menu.map((item, index) => {
             const IconComponent = item.icon;
             const colorClasses = {
-              blue: "text-blue-600 bg-blue-50 border-blue-200",
-              emerald: "text-emerald-600 bg-emerald-50 border-emerald-200",
-              orange: "text-orange-600 bg-orange-50 border-orange-200",
-              gray: "text-gray-600 bg-gray-50 border-gray-200",
-              purple: "text-purple-600 bg-purple-50 border-purple-200",
-              red: "text-red-600 bg-red-50 border-red-200",
-              green: "text-green-600 bg-green-50 border-green-200",
-              indigo: "text-indigo-600 bg-indigo-50 border-indigo-200",
-              slate: "text-slate-600 bg-slate-50 border-slate-200",
+              blue: "text-blue-700 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-blue-100",
+              emerald:
+                "text-emerald-700 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-emerald-100",
+              orange:
+                "text-orange-700 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-orange-100",
+              gray: "text-gray-700 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 shadow-gray-100",
+              purple:
+                "text-purple-700 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-purple-100",
+              red: "text-red-700 bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-red-100",
+              green:
+                "text-green-700 bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-green-100",
+              indigo:
+                "text-indigo-700 bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-indigo-100",
+              slate:
+                "text-slate-700 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 shadow-slate-100",
             };
 
             return (
@@ -124,36 +195,63 @@ export default function Sidebar({ branding }) {
                 <NavLink
                   to={item.to}
                   end={item.to === "/"}
+                  onMouseEnter={() => setHoveredItem(index)}
+                  onMouseLeave={() => setHoveredItem(null)}
                   className={({ isActive }) =>
-                    `flex items-center transition-all duration-200 relative overflow-hidden ${
+                    `flex items-center transition-all duration-300 ease-out relative overflow-hidden transform hover:scale-[1.02] active:scale-[0.98] ${
                       expanded
-                        ? "gap-3 rounded-xl px-4 py-3 text-sm font-medium"
-                        : "justify-center rounded-xl p-3"
+                        ? "gap-4 rounded-2xl px-5 py-4 text-sm font-medium"
+                        : "justify-center rounded-2xl p-4"
                     } ${
                       isActive
-                        ? `${colorClasses[item.color]} border shadow-sm`
-                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-50/80"
+                        ? `${colorClasses[item.color]} border shadow-lg`
+                        : "text-gray-600 hover:text-gray-800 hover:bg-gradient-to-br hover:from-gray-50/80 hover:to-gray-100/80 border border-transparent hover:border-gray-200/50 hover:shadow-md"
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
+                      {/* Animated background shimmer effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out"></div>
+
                       <div
-                        className={`flex items-center justify-center transition-transform duration-200 ${
-                          isActive ? "scale-110" : "group-hover:scale-105"
+                        className={`flex items-center justify-center transition-all duration-300 relative z-10 ${
+                          isActive
+                            ? "scale-110 drop-shadow-sm"
+                            : hoveredItem === index
+                            ? "scale-105 rotate-3"
+                            : "group-hover:scale-105"
                         } ${expanded ? "" : "w-6 h-6"}`}
                       >
-                        <IconComponent size={20} className="flex-shrink-0" />
+                        <IconComponent
+                          size={20}
+                          className="flex-shrink-0 drop-shadow-sm"
+                        />
                       </div>
+
                       {expanded && (
-                        <span className="truncate font-semibold">
-                          {item.label}
-                        </span>
+                        <div className="flex flex-col relative z-10">
+                          <span
+                            className={`truncate font-semibold tracking-tight transition-all duration-300 ${
+                              hoveredItem === index ? "translate-x-1" : ""
+                            }`}
+                          >
+                            {item.label}
+                          </span>
+                          {isActive && (
+                            <span className="text-xs opacity-70 font-medium tracking-wide">
+                              {item.description}
+                            </span>
+                          )}
+                        </div>
                       )}
 
-                      {/* Active indicator */}
+                      {/* Enhanced active indicator */}
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-current rounded-r-full opacity-60"></div>
+                        <>
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-current rounded-r-full opacity-80 shadow-sm"></div>
+                          <div className="absolute right-3 w-2 h-2 rounded-full bg-current opacity-60 animate-pulse"></div>
+                        </>
                       )}
                     </>
                   )}
@@ -161,10 +259,17 @@ export default function Sidebar({ branding }) {
 
                 {/* Enhanced Tooltip for collapsed state */}
                 {!expanded && (
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-2 bg-gray-900/95 backdrop-blur-sm text-white text-sm rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none shadow-xl border border-gray-700">
-                    <div className="font-semibold">{item.label}</div>
-                    {/* Arrow pointing to sidebar */}
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900/95"></div>
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-6 px-4 py-3 bg-gray-900/95 backdrop-blur-sm text-white text-sm rounded-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-out whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-gray-700/50 transform group-hover:translate-x-1">
+                    <div className="space-y-1">
+                      <div className="font-semibold tracking-tight">
+                        {item.label}
+                      </div>
+                      <div className="text-xs opacity-80 font-medium">
+                        {item.description}
+                      </div>
+                    </div>
+                    {/* Enhanced arrow */}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-gray-900/95 drop-shadow-sm"></div>
                   </div>
                 )}
               </li>
@@ -175,25 +280,43 @@ export default function Sidebar({ branding }) {
 
       {/* Enhanced Footer */}
       <div
-        className={`border-t border-gray-200/80 ${expanded ? "p-5" : "p-3"}`}
+        className={`border-t border-gray-200/60 backdrop-blur-sm ${
+          expanded ? "p-6" : "p-4"
+        }`}
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(59,130,246,0.02), rgba(99,102,241,0.02))",
+        }}
       >
         {expanded ? (
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-gray-500 font-medium">
+          <div className="text-center space-y-3">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="relative">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
+                <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-30"></div>
+              </div>
+              <span className="text-sm text-gray-600 font-semibold tracking-tight">
                 System Online
               </span>
             </div>
-            <div className="text-xs text-gray-500 font-medium">
-              © {new Date().getFullYear()} MedCure Pharmacy
+            <div className="space-y-1">
+              <div className="text-xs text-gray-500 font-medium tracking-wide">
+                © {new Date().getFullYear()} MedCure Pharmacy
+              </div>
+              <div className="text-xs text-gray-400 font-medium">
+                Version 2.1.0 • Professional Edition
+              </div>
             </div>
-            <div className="text-xs text-gray-400">Version 2.1.0</div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-            <div className="text-xs text-gray-400 font-bold">v2.1</div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="relative">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
+              <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-30"></div>
+            </div>
+            <div className="text-xs text-gray-400 font-bold tracking-wider">
+              v2.1
+            </div>
           </div>
         )}
       </div>
