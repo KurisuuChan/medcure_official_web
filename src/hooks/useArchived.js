@@ -45,7 +45,7 @@ export default function useArchived() {
 
       const currentFilters = customFilters || filtersRef.current;
       const response = await getArchivedItems(currentFilters);
-      
+
       if (response.error) {
         throw new Error(response.error);
       }
@@ -66,18 +66,20 @@ export default function useArchived() {
   const fetchStats = useCallback(async () => {
     try {
       const response = await getArchivedStats();
-      
+
       if (response.error) {
         throw new Error(response.error);
       }
 
-      setStats(response.data || {
-        products: 0,
-        transactions: 0,
-        suppliers: 0,
-        employees: 0,
-        total: 0,
-      });
+      setStats(
+        response.data || {
+          products: 0,
+          transactions: 0,
+          suppliers: 0,
+          employees: 0,
+          total: 0,
+        }
+      );
 
       return response;
     } catch (err) {
@@ -88,135 +90,150 @@ export default function useArchived() {
   }, []);
 
   // Update filters and fetch new data
-  const updateFilters = useCallback(async (newFilters) => {
-    const updatedFilters = { ...filtersRef.current, ...newFilters };
-    setFilters(updatedFilters);
-    return await fetchArchivedItems(updatedFilters);
-  }, [fetchArchivedItems]);
+  const updateFilters = useCallback(
+    async (newFilters) => {
+      const updatedFilters = { ...filtersRef.current, ...newFilters };
+      setFilters(updatedFilters);
+      return await fetchArchivedItems(updatedFilters);
+    },
+    [fetchArchivedItems]
+  );
 
   // Restore single item
-  const handleRestoreItem = useCallback(async (id, type) => {
-    try {
-      setError(null);
-      const response = await restoreItem(id, type);
-      
-      if (response.error) {
-        throw new Error(response.error);
+  const handleRestoreItem = useCallback(
+    async (id, type) => {
+      try {
+        setError(null);
+        const response = await restoreItem(id, type);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // Refresh data after successful restore
+        await Promise.all([fetchArchivedItems(), fetchStats()]);
+
+        return { success: true, data: response.data };
+      } catch (err) {
+        console.error("Error restoring item:", err);
+        setError(err.message);
+        return { success: false, error: err.message };
       }
-
-      // Refresh data after successful restore
-      await Promise.all([
-        fetchArchivedItems(),
-        fetchStats(),
-      ]);
-
-      return { success: true, data: response.data };
-    } catch (err) {
-      console.error("Error restoring item:", err);
-      setError(err.message);
-      return { success: false, error: err.message };
-    }
-  }, [fetchArchivedItems, fetchStats]);
+    },
+    [fetchArchivedItems, fetchStats]
+  );
 
   // Permanently delete single item
-  const handleDeleteItem = useCallback(async (id, type) => {
-    try {
-      setError(null);
-      const response = await permanentDeleteItem(id, type);
-      
-      if (response.error) {
-        throw new Error(response.error);
+  const handleDeleteItem = useCallback(
+    async (id, type) => {
+      try {
+        setError(null);
+        const response = await permanentDeleteItem(id, type);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // Refresh data after successful deletion
+        await Promise.all([fetchArchivedItems(), fetchStats()]);
+
+        return { success: true, data: response.data };
+      } catch (err) {
+        console.error("Error deleting item:", err);
+        setError(err.message);
+        return { success: false, error: err.message };
       }
-
-      // Refresh data after successful deletion
-      await Promise.all([
-        fetchArchivedItems(),
-        fetchStats(),
-      ]);
-
-      return { success: true, data: response.data };
-    } catch (err) {
-      console.error("Error deleting item:", err);
-      setError(err.message);
-      return { success: false, error: err.message };
-    }
-  }, [fetchArchivedItems, fetchStats]);
+    },
+    [fetchArchivedItems, fetchStats]
+  );
 
   // Bulk restore items
-  const handleBulkRestore = useCallback(async (items) => {
-    try {
-      setError(null);
-      const response = await bulkRestoreItems(items);
-      
-      if (response.error) {
-        throw new Error(response.error);
+  const handleBulkRestore = useCallback(
+    async (items) => {
+      try {
+        setError(null);
+        const response = await bulkRestoreItems(items);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // Refresh data after bulk operation
+        await Promise.all([fetchArchivedItems(), fetchStats()]);
+
+        return { success: true, data: response.data };
+      } catch (err) {
+        console.error("Error in bulk restore:", err);
+        setError(err.message);
+        return { success: false, error: err.message };
       }
-
-      // Refresh data after bulk operation
-      await Promise.all([
-        fetchArchivedItems(),
-        fetchStats(),
-      ]);
-
-      return { success: true, data: response.data };
-    } catch (err) {
-      console.error("Error in bulk restore:", err);
-      setError(err.message);
-      return { success: false, error: err.message };
-    }
-  }, [fetchArchivedItems, fetchStats]);
+    },
+    [fetchArchivedItems, fetchStats]
+  );
 
   // Bulk delete items
-  const handleBulkDelete = useCallback(async (items) => {
-    try {
-      setError(null);
-      const response = await bulkDeleteItems(items);
-      
-      if (response.error) {
-        throw new Error(response.error);
+  const handleBulkDelete = useCallback(
+    async (items) => {
+      try {
+        setError(null);
+        const response = await bulkDeleteItems(items);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // Refresh data after bulk operation
+        await Promise.all([fetchArchivedItems(), fetchStats()]);
+
+        return { success: true, data: response.data };
+      } catch (err) {
+        console.error("Error in bulk delete:", err);
+        setError(err.message);
+        return { success: false, error: err.message };
       }
-
-      // Refresh data after bulk operation
-      await Promise.all([
-        fetchArchivedItems(),
-        fetchStats(),
-      ]);
-
-      return { success: true, data: response.data };
-    } catch (err) {
-      console.error("Error in bulk delete:", err);
-      setError(err.message);
-      return { success: false, error: err.message };
-    }
-  }, [fetchArchivedItems, fetchStats]);
+    },
+    [fetchArchivedItems, fetchStats]
+  );
 
   // Search functionality
-  const handleSearch = useCallback(async (searchTerm) => {
-    return await updateFilters({ search: searchTerm, page: 1 });
-  }, [updateFilters]);
+  const handleSearch = useCallback(
+    async (searchTerm) => {
+      return await updateFilters({ search: searchTerm, page: 1 });
+    },
+    [updateFilters]
+  );
 
   // Filter by type
-  const handleFilterByType = useCallback(async (type) => {
-    return await updateFilters({ type, page: 1 });
-  }, [updateFilters]);
+  const handleFilterByType = useCallback(
+    async (type) => {
+      return await updateFilters({ type, page: 1 });
+    },
+    [updateFilters]
+  );
 
   // Pagination
-  const handlePageChange = useCallback(async (page) => {
-    return await updateFilters({ page });
-  }, [updateFilters]);
+  const handlePageChange = useCallback(
+    async (page) => {
+      return await updateFilters({ page });
+    },
+    [updateFilters]
+  );
 
   // Sorting
-  const handleSort = useCallback(async (sortBy, sortOrder = "desc") => {
-    return await updateFilters({ sortBy, sortOrder, page: 1 });
-  }, [updateFilters]);
+  const handleSort = useCallback(
+    async (sortBy, sortOrder = "desc") => {
+      return await updateFilters({ sortBy, sortOrder, page: 1 });
+    },
+    [updateFilters]
+  );
 
   // Initial data fetch - only runs once
   useEffect(() => {
     let mounted = true;
-    
+
     const initializeData = async () => {
       if (!mounted) return;
-      
+
       try {
         setLoading(true);
         const [itemsResponse, statsResponse] = await Promise.all([
@@ -273,7 +290,10 @@ export default function useArchived() {
     handleSort,
 
     // Utilities
-    refreshData: useCallback(() => Promise.all([fetchArchivedItems(), fetchStats()]), [fetchArchivedItems, fetchStats]),
+    refreshData: useCallback(
+      () => Promise.all([fetchArchivedItems(), fetchStats()]),
+      [fetchArchivedItems, fetchStats]
+    ),
     clearError: useCallback(() => setError(null), []),
   };
 }

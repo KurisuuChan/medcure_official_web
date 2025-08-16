@@ -15,11 +15,14 @@ export default function Inventory() {
 
     try {
       const result = await archiveProduct(productId);
-      
+
       if (result.error) {
         addNotification(`Failed to archive product: ${result.error}`, "error");
       } else {
-        addNotification(`"${productName}" has been archived successfully`, "success");
+        addNotification(
+          `"${productName}" has been archived successfully`,
+          "success"
+        );
         refresh(); // Refresh the product list
       }
     } catch (error) {

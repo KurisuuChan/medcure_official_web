@@ -7,7 +7,9 @@ import { supabase, TABLES } from "../lib/supabase.js";
 
 // Environment check for backend availability
 export function isBackendAvailable() {
-  return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+  return !!(
+    import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+  );
 }
 
 // Check if we should use mock API
@@ -33,7 +35,7 @@ export async function checkBackendHealth() {
           sales: false,
           archived: false,
         },
-        error: "Missing Supabase environment variables"
+        error: "Missing Supabase environment variables",
       };
     }
 
@@ -58,9 +60,8 @@ export async function checkBackendHealth() {
         sales: true,
         archived: true,
       },
-      error: null
+      error: null,
     };
-
   } catch (error) {
     console.error("❌ Backend health check failed:", error);
 
@@ -73,7 +74,7 @@ export async function checkBackendHealth() {
         sales: false,
         archived: false,
       },
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -94,7 +95,7 @@ export async function initializeBackend() {
         success: false,
         mode: "mock",
         health: healthCheck,
-        message: "Using mock API - backend unavailable"
+        message: "Using mock API - backend unavailable",
       };
     }
 
@@ -105,7 +106,7 @@ export async function initializeBackend() {
       testArchivedOperations(),
     ]);
 
-    const allTestsPassed = tests.every(test => test.success);
+    const allTestsPassed = tests.every((test) => test.success);
 
     if (allTestsPassed) {
       console.log("✅ Backend initialization successful");
@@ -114,7 +115,7 @@ export async function initializeBackend() {
         mode: "backend",
         health: healthCheck,
         tests: tests,
-        message: "Backend services ready"
+        message: "Backend services ready",
       };
     } else {
       console.warn("⚠️ Some backend tests failed, falling back to mock mode");
@@ -123,17 +124,16 @@ export async function initializeBackend() {
         mode: "mock",
         health: healthCheck,
         tests: tests,
-        message: "Backend tests failed - using mock API"
+        message: "Backend tests failed - using mock API",
       };
     }
-
   } catch (error) {
     console.error("❌ Backend initialization failed:", error);
     return {
       success: false,
       mode: "mock",
       error: error.message,
-      message: "Backend initialization failed - using mock API"
+      message: "Backend initialization failed - using mock API",
     };
   }
 }
@@ -159,16 +159,15 @@ async function testProductOperations() {
       service: "products",
       success: true,
       operations: ["read"],
-      error: null
+      error: null,
     };
-
   } catch (error) {
     console.error("❌ Product operations test failed:", error);
     return {
       service: "products",
       success: false,
       operations: [],
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -194,16 +193,15 @@ async function testSalesOperations() {
       service: "sales",
       success: true,
       operations: ["read"],
-      error: null
+      error: null,
     };
-
   } catch (error) {
     console.error("❌ Sales operations test failed:", error);
     return {
       service: "sales",
       success: false,
       operations: [],
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -230,16 +228,15 @@ async function testArchivedOperations() {
       service: "archived",
       success: true,
       operations: ["read"],
-      error: null
+      error: null,
     };
-
   } catch (error) {
     console.error("❌ Archived operations test failed:", error);
     return {
       service: "archived",
       success: false,
       operations: [],
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -260,9 +257,9 @@ export async function getSystemStats() {
           archivedProducts: 5,
           totalTransactions: 100,
           archivedTransactions: 10,
-          mode: "mock"
+          mode: "mock",
         },
-        error: null
+        error: null,
       };
     }
 
@@ -270,7 +267,7 @@ export async function getSystemStats() {
       productsResult,
       archivedProductsResult,
       transactionsResult,
-      archivedTransactionsResult
+      archivedTransactionsResult,
     ] = await Promise.all([
       supabase
         .from(TABLES.PRODUCTS)
@@ -287,30 +284,32 @@ export async function getSystemStats() {
       supabase
         .from(TABLES.SALES_TRANSACTIONS)
         .select("id", { count: "exact" })
-        .in("status", ["cancelled", "refunded"])
+        .in("status", ["cancelled", "refunded"]),
     ]);
 
     const stats = {
-      totalProducts: (productsResult.count || 0) + (archivedProductsResult.count || 0),
+      totalProducts:
+        (productsResult.count || 0) + (archivedProductsResult.count || 0),
       activeProducts: productsResult.count || 0,
       archivedProducts: archivedProductsResult.count || 0,
-      totalTransactions: (transactionsResult.count || 0) + (archivedTransactionsResult.count || 0),
+      totalTransactions:
+        (transactionsResult.count || 0) +
+        (archivedTransactionsResult.count || 0),
       archivedTransactions: archivedTransactionsResult.count || 0,
-      mode: "backend"
+      mode: "backend",
     };
 
     console.log("✅ System statistics fetched:", stats);
 
     return {
       data: stats,
-      error: null
+      error: null,
     };
-
   } catch (error) {
     console.error("❌ Error fetching system statistics:", error);
     return {
       data: null,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -331,27 +330,26 @@ export async function migrateToBackend() {
 
     // Check if we have any data in the backend
     const stats = await getSystemStats();
-    
+
     console.log("✅ Migration assessment complete:", {
       backendReady: initResult.success,
       currentMode: initResult.mode,
-      systemStats: stats.data
+      systemStats: stats.data,
     });
 
     return {
       success: true,
       mode: "backend",
       stats: stats.data,
-      message: "Migration to backend completed successfully"
+      message: "Migration to backend completed successfully",
     };
-
   } catch (error) {
     console.error("❌ Migration to backend failed:", error);
     return {
       success: false,
       mode: "mock",
       error: error.message,
-      message: "Migration failed - staying in mock mode"
+      message: "Migration failed - staying in mock mode",
     };
   }
 }

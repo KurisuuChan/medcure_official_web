@@ -46,7 +46,12 @@ export async function getArchivedItems(filters = {}) {
       sortOrder = "desc",
     } = filters;
 
-    console.log("🔄 Fetching archived items from Supabase:", { type, search, page, limit });
+    console.log("🔄 Fetching archived items from Supabase:", {
+      type,
+      search,
+      page,
+      limit,
+    });
 
     const offset = (page - 1) * limit;
     let allArchivedItems = [];
@@ -55,22 +60,29 @@ export async function getArchivedItems(filters = {}) {
       // Get archived products
       let productQuery = supabase
         .from(TABLES.PRODUCTS)
-        .select("id, name, generic_name, brand_name, category, description, total_stock, cost_price, selling_price, expiry_date, updated_at, created_at")
+        .select(
+          "id, name, generic_name, brand_name, category, description, total_stock, cost_price, selling_price, expiry_date, updated_at, created_at"
+        )
         .eq("is_active", false);
 
       if (search) {
-        productQuery = productQuery.or(`name.ilike.%${search}%,generic_name.ilike.%${search}%,category.ilike.%${search}%`);
+        productQuery = productQuery.or(
+          `name.ilike.%${search}%,generic_name.ilike.%${search}%,category.ilike.%${search}%`
+        );
       }
 
       const { data: products, error: productError } = await productQuery;
-      
+
       if (productError) {
         console.error("Error fetching archived products:", productError);
       } else {
-        const formattedProducts = products.map(product => ({
+        const formattedProducts = products.map((product) => ({
           id: `product_${product.id}`,
           name: product.name,
-          description: product.generic_name || product.description || `${product.category} medication`,
+          description:
+            product.generic_name ||
+            product.description ||
+            `${product.category} medication`,
           type: "product",
           category: product.category,
           originalStock: product.total_stock,
@@ -81,7 +93,7 @@ export async function getArchivedItems(filters = {}) {
           archivedBy: "System Admin",
           reason: "Product archived from inventory",
           rawId: product.id,
-          rawData: product
+          rawData: product,
         }));
         allArchivedItems.push(...formattedProducts);
       }
@@ -91,22 +103,32 @@ export async function getArchivedItems(filters = {}) {
       // Get archived transactions (cancelled, refunded)
       let transactionQuery = supabase
         .from(TABLES.SALES_TRANSACTIONS)
-        .select("id, transaction_number, total_amount, customer_name, payment_method, status, created_at, updated_at")
+        .select(
+          "id, transaction_number, total_amount, customer_name, payment_method, status, created_at, updated_at"
+        )
         .in("status", ["cancelled", "refunded"]);
 
       if (search) {
-        transactionQuery = transactionQuery.or(`transaction_number.ilike.%${search}%,customer_name.ilike.%${search}%`);
+        transactionQuery = transactionQuery.or(
+          `transaction_number.ilike.%${search}%,customer_name.ilike.%${search}%`
+        );
       }
 
-      const { data: transactions, error: transactionError } = await transactionQuery;
-      
+      const { data: transactions, error: transactionError } =
+        await transactionQuery;
+
       if (transactionError) {
-        console.error("Error fetching archived transactions:", transactionError);
+        console.error(
+          "Error fetching archived transactions:",
+          transactionError
+        );
       } else {
-        const formattedTransactions = transactions.map(transaction => ({
+        const formattedTransactions = transactions.map((transaction) => ({
           id: `transaction_${transaction.id}`,
           name: `Transaction ${transaction.transaction_number}`,
-          description: `${transaction.status} transaction for ${transaction.customer_name || 'Walk-in customer'}`,
+          description: `${transaction.status} transaction for ${
+            transaction.customer_name || "Walk-in customer"
+          }`,
           type: "transaction",
           amount: `₱${transaction.total_amount}`,
           paymentMethod: transaction.payment_method,
@@ -115,7 +137,7 @@ export async function getArchivedItems(filters = {}) {
           archivedBy: "System Admin",
           reason: `Transaction ${transaction.status}`,
           rawId: transaction.id,
-          rawData: transaction
+          rawData: transaction,
         }));
         allArchivedItems.push(...formattedTransactions);
       }
@@ -125,7 +147,7 @@ export async function getArchivedItems(filters = {}) {
     allArchivedItems.sort((a, b) => {
       const aValue = a.rawData[sortBy] || a.archivedDate;
       const bValue = b.rawData[sortBy] || b.archivedDate;
-      
+
       if (sortOrder === "asc") {
         return new Date(aValue) - new Date(bValue);
       }
@@ -139,7 +161,7 @@ export async function getArchivedItems(filters = {}) {
     console.log("✅ Archived items fetched successfully:", {
       total: totalCount,
       page: page,
-      items: paginatedItems.length
+      items: paginatedItems.length,
     });
 
     return {
@@ -149,15 +171,14 @@ export async function getArchivedItems(filters = {}) {
       totalPages: Math.ceil(totalCount / limit),
       error: null,
     };
-
   } catch (error) {
     console.error("❌ Error fetching archived items:", error);
-    return { 
-      data: [], 
-      count: 0, 
-      page: 1, 
-      totalPages: 0, 
-      error: error.message 
+    return {
+      data: [],
+      count: 0,
+      page: 1,
+      totalPages: 0,
+      error: error.message,
     };
   }
 }
@@ -183,7 +204,7 @@ export async function getArchivedStats() {
       supabase
         .from(TABLES.SALES_TRANSACTIONS)
         .select("id", { count: "exact" })
-        .in("status", ["cancelled", "refunded"])
+        .in("status", ["cancelled", "refunded"]),
     ]);
 
     const productsCount = productsResult.count || 0;
@@ -204,18 +225,17 @@ export async function getArchivedStats() {
       data: stats,
       error: null,
     };
-
   } catch (error) {
     console.error("❌ Error fetching archived stats:", error);
-    return { 
+    return {
       data: {
         products: 0,
         transactions: 0,
         suppliers: 0,
         employees: 0,
         total: 0,
-      }, 
-      error: error.message 
+      },
+      error: error.message,
     };
   }
 }
@@ -236,10 +256,13 @@ export async function restoreItem(id, type) {
     console.log("🔄 Restoring item from Supabase:", { id, type });
 
     // Extract real ID from formatted ID (e.g., "product_123" -> 123)
-    const realId = id.toString().includes('_') ? id.split('_')[1] : id;
+    const realId = id.toString().includes("_") ? id.split("_")[1] : id;
 
     let query;
-    const updateData = { is_active: true, updated_at: new Date().toISOString() };
+    const updateData = {
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    };
 
     switch (type) {
       case "product":
@@ -253,9 +276,9 @@ export async function restoreItem(id, type) {
       case "transaction":
         query = supabase
           .from(TABLES.SALES_TRANSACTIONS)
-          .update({ 
-            status: "completed", 
-            updated_at: new Date().toISOString() 
+          .update({
+            status: "completed",
+            updated_at: new Date().toISOString(),
           })
           .eq("id", realId)
           .select()
@@ -278,7 +301,6 @@ export async function restoreItem(id, type) {
     console.log("✅ Item restored successfully:", data);
 
     return { data, error: null };
-
   } catch (error) {
     console.error("❌ Error restoring item:", error);
     return { data: null, error: error.message };
@@ -301,7 +323,7 @@ export async function permanentDeleteItem(id, type) {
     console.log("🔄 Permanently deleting item from Supabase:", { id, type });
 
     // Extract real ID from formatted ID (e.g., "product_123" -> 123)
-    const realId = id.toString().includes('_') ? id.split('_')[1] : id;
+    const realId = id.toString().includes("_") ? id.split("_")[1] : id;
 
     let query;
 
@@ -339,7 +361,6 @@ export async function permanentDeleteItem(id, type) {
     console.log("✅ Item permanently deleted successfully");
 
     return { data: { success: true }, error: null };
-
   } catch (error) {
     console.error("❌ Error permanently deleting item:", error);
     return { data: null, error: error.message };
@@ -359,7 +380,10 @@ export async function archiveTransaction(transactionId, reason) {
   }
 
   try {
-    console.log("🔄 Archiving transaction in Supabase:", { transactionId, reason });
+    console.log("🔄 Archiving transaction in Supabase:", {
+      transactionId,
+      reason,
+    });
 
     const { data, error } = await supabase
       .from(TABLES.SALES_TRANSACTIONS)
@@ -376,7 +400,6 @@ export async function archiveTransaction(transactionId, reason) {
     console.log("✅ Transaction archived successfully:", data);
 
     return { data, error: null };
-
   } catch (error) {
     console.error("❌ Error archiving transaction:", error);
     return { data: null, error: error.message };
@@ -399,7 +422,9 @@ export async function archiveSupplier(supplierId, reason) {
     console.log("🔄 Archiving supplier in Supabase:", { supplierId, reason });
 
     // TODO: Implement when suppliers table is available in schema
-    throw new Error("Supplier archiving not yet implemented - table not available");
+    throw new Error(
+      "Supplier archiving not yet implemented - table not available"
+    );
 
     /* Future implementation when suppliers table exists:
     const { data, error } = await supabase
@@ -419,7 +444,6 @@ export async function archiveSupplier(supplierId, reason) {
     console.log("✅ Supplier archived successfully:", data);
     return { data, error: null };
     */
-
   } catch (error) {
     console.error("❌ Error archiving supplier:", error);
     return { data: null, error: error.message };
@@ -442,7 +466,9 @@ export async function archiveEmployee(employeeId, reason) {
     console.log("🔄 Archiving employee in Supabase:", { employeeId, reason });
 
     // TODO: Implement when employees table is available in schema
-    throw new Error("Employee archiving not yet implemented - table not available");
+    throw new Error(
+      "Employee archiving not yet implemented - table not available"
+    );
 
     /* Future implementation when employees table exists:
     const { data, error } = await supabase
@@ -462,7 +488,6 @@ export async function archiveEmployee(employeeId, reason) {
     console.log("✅ Employee archived successfully:", data);
     return { data, error: null };
     */
-
   } catch (error) {
     console.error("❌ Error archiving employee:", error);
     return { data: null, error: error.message };
@@ -502,23 +527,20 @@ export async function archiveProduct(productId, reason = "Product archived") {
     if (error) throw error;
 
     // Create a stock movement record for archiving
-    await supabase
-      .from(TABLES.STOCK_MOVEMENTS)
-      .insert({
-        product_id: productId,
-        movement_type: 'archived',
-        quantity_change: 0,
-        remaining_stock: data.total_stock,
-        reference_type: 'archive',
-        reference_id: null,
-        notes: reason,
-        created_at: new Date().toISOString()
-      });
+    await supabase.from(TABLES.STOCK_MOVEMENTS).insert({
+      product_id: productId,
+      movement_type: "archived",
+      quantity_change: 0,
+      remaining_stock: data.total_stock,
+      reference_type: "archive",
+      reference_id: null,
+      notes: reason,
+      created_at: new Date().toISOString(),
+    });
 
     console.log("✅ Product archived successfully:", data);
 
     return { data, error: null };
-
   } catch (error) {
     console.error("❌ Error archiving product:", error);
     return { data: null, error: error.message };
@@ -556,7 +578,9 @@ export async function getArchivedProducts(filters = {}) {
       .eq("is_active", false);
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,generic_name.ilike.%${search}%,category.ilike.%${search}%`);
+      query = query.or(
+        `name.ilike.%${search}%,generic_name.ilike.%${search}%,category.ilike.%${search}%`
+      );
     }
 
     const { data, error, count } = await query
@@ -567,7 +591,7 @@ export async function getArchivedProducts(filters = {}) {
 
     console.log("✅ Archived products fetched successfully:", {
       count: data?.length || 0,
-      total: count
+      total: count,
     });
 
     return {
@@ -577,15 +601,14 @@ export async function getArchivedProducts(filters = {}) {
       totalPages: Math.ceil((count || 0) / limit),
       error: null,
     };
-
   } catch (error) {
     console.error("❌ Error fetching archived products:", error);
-    return { 
-      data: [], 
-      count: 0, 
-      page: 1, 
-      totalPages: 0, 
-      error: error.message 
+    return {
+      data: [],
+      count: 0,
+      page: 1,
+      totalPages: 0,
+      error: error.message,
     };
   }
 }

@@ -1027,21 +1027,25 @@ export async function mockGetArchivedItems(filters = {}) {
     } = filters;
 
     // Get archived products from SAMPLE_PRODUCTS (where is_active: false)
-    const archivedProducts = SAMPLE_PRODUCTS
-      .filter(product => product.is_active === false)
-      .map(product => ({
-        id: `product_${product.id}`,
-        type: "product",
-        name: product.name,
-        description: product.description || `${product.generic_name} - ${product.brand_name}`,
-        category: product.category || "Medicine",
-        archivedDate: product.updated_at ? new Date(product.updated_at).toLocaleDateString() : new Date().toLocaleDateString(),
-        archivedBy: "System User",
-        reason: "Archived from inventory",
-        originalStock: product.total_stock,
-        originalPrice: product.selling_price,
-        archived_at: product.updated_at || new Date().toISOString(),
-      }));
+    const archivedProducts = SAMPLE_PRODUCTS.filter(
+      (product) => product.is_active === false
+    ).map((product) => ({
+      id: `product_${product.id}`,
+      type: "product",
+      name: product.name,
+      description:
+        product.description ||
+        `${product.generic_name} - ${product.brand_name}`,
+      category: product.category || "Medicine",
+      archivedDate: product.updated_at
+        ? new Date(product.updated_at).toLocaleDateString()
+        : new Date().toLocaleDateString(),
+      archivedBy: "System User",
+      reason: "Archived from inventory",
+      originalStock: product.total_stock,
+      originalPrice: product.selling_price,
+      archived_at: product.updated_at || new Date().toISOString(),
+    }));
 
     // Combine static archived items with actual archived products
     let filteredItems = [...SAMPLE_ARCHIVED_ITEMS, ...archivedProducts];
@@ -1066,7 +1070,7 @@ export async function mockGetArchivedItems(filters = {}) {
     filteredItems.sort((a, b) => {
       const aValue = a[sortBy] || "";
       const bValue = b[sortBy] || "";
-      
+
       if (sortOrder === "desc") {
         return bValue.localeCompare(aValue);
       }
@@ -1097,14 +1101,23 @@ export async function mockGetArchivedStats() {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     // Count archived products from SAMPLE_PRODUCTS (where is_active: false)
-    const archivedProductsCount = SAMPLE_PRODUCTS.filter(product => product.is_active === false).length;
+    const archivedProductsCount = SAMPLE_PRODUCTS.filter(
+      (product) => product.is_active === false
+    ).length;
 
     // Count static archived items by type
     const staticStats = {
-      products: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "product").length,
-      transactions: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "transaction").length,
-      suppliers: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "supplier").length,
-      employees: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "employee").length,
+      products: SAMPLE_ARCHIVED_ITEMS.filter((item) => item.type === "product")
+        .length,
+      transactions: SAMPLE_ARCHIVED_ITEMS.filter(
+        (item) => item.type === "transaction"
+      ).length,
+      suppliers: SAMPLE_ARCHIVED_ITEMS.filter(
+        (item) => item.type === "supplier"
+      ).length,
+      employees: SAMPLE_ARCHIVED_ITEMS.filter(
+        (item) => item.type === "employee"
+      ).length,
     };
 
     // Combine with actual archived products
@@ -1115,7 +1128,8 @@ export async function mockGetArchivedStats() {
       employees: staticStats.employees,
     };
 
-    stats.total = stats.products + stats.transactions + stats.suppliers + stats.employees;
+    stats.total =
+      stats.products + stats.transactions + stats.suppliers + stats.employees;
 
     return { data: stats, error: null };
   } catch (error) {
@@ -1130,10 +1144,14 @@ export async function mockRestoreItem(id, type) {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Handle products archived from inventory (IDs like "product_1", "product_2")
-    if (type === "product" && typeof id === "string" && id.startsWith("product_")) {
+    if (
+      type === "product" &&
+      typeof id === "string" &&
+      id.startsWith("product_")
+    ) {
       const productId = parseInt(id.replace("product_", ""));
       const productIndex = SAMPLE_PRODUCTS.findIndex((p) => p.id === productId);
-      
+
       if (productIndex === -1) {
         throw new Error("Product not found");
       }
@@ -1146,13 +1164,13 @@ export async function mockRestoreItem(id, type) {
       SAMPLE_PRODUCTS[productIndex].is_active = true;
       SAMPLE_PRODUCTS[productIndex].updated_at = new Date().toISOString();
 
-      return { 
-        data: { 
-          ...SAMPLE_PRODUCTS[productIndex], 
-          restored: true, 
-          restored_at: new Date().toISOString() 
-        }, 
-        error: null 
+      return {
+        data: {
+          ...SAMPLE_PRODUCTS[productIndex],
+          restored: true,
+          restored_at: new Date().toISOString(),
+        },
+        error: null,
       };
     }
 
@@ -1162,11 +1180,15 @@ export async function mockRestoreItem(id, type) {
     );
 
     if (itemIndex === -1) {
-      throw new Error(`${type.charAt(0).toUpperCase() + type.slice(1)} not found in archived items`);
+      throw new Error(
+        `${
+          type.charAt(0).toUpperCase() + type.slice(1)
+        } not found in archived items`
+      );
     }
 
     const restoredItem = SAMPLE_ARCHIVED_ITEMS[itemIndex];
-    
+
     // Remove from archived items (in real implementation, this would update the database)
     SAMPLE_ARCHIVED_ITEMS.splice(itemIndex, 1);
 
@@ -1181,13 +1203,13 @@ export async function mockRestoreItem(id, type) {
       SAMPLE_PRODUCTS.push(productData);
     }
 
-    return { 
-      data: { 
-        ...restoredItem, 
-        restored: true, 
-        restored_at: new Date().toISOString() 
-      }, 
-      error: null 
+    return {
+      data: {
+        ...restoredItem,
+        restored: true,
+        restored_at: new Date().toISOString(),
+      },
+      error: null,
     };
   } catch (error) {
     return { data: null, error: error.message };
@@ -1201,10 +1223,14 @@ export async function mockPermanentDeleteItem(id, type) {
     await new Promise((resolve) => setTimeout(resolve, 400));
 
     // Handle products archived from inventory (IDs like "product_1", "product_2")
-    if (type === "product" && typeof id === "string" && id.startsWith("product_")) {
+    if (
+      type === "product" &&
+      typeof id === "string" &&
+      id.startsWith("product_")
+    ) {
       const productId = parseInt(id.replace("product_", ""));
       const productIndex = SAMPLE_PRODUCTS.findIndex((p) => p.id === productId);
-      
+
       if (productIndex === -1) {
         throw new Error("Product not found");
       }
@@ -1225,7 +1251,11 @@ export async function mockPermanentDeleteItem(id, type) {
     );
 
     if (itemIndex === -1) {
-      throw new Error(`${type.charAt(0).toUpperCase() + type.slice(1)} not found in archived items`);
+      throw new Error(
+        `${
+          type.charAt(0).toUpperCase() + type.slice(1)
+        } not found in archived items`
+      );
     }
 
     // Remove permanently
@@ -1249,7 +1279,7 @@ export async function mockArchiveTransaction(transactionId, reason) {
       type: "transaction",
       name: `Sale Transaction #${transactionId}`,
       description: `Transaction archived - ${reason}`,
-      archivedDate: new Date().toISOString().split('T')[0],
+      archivedDate: new Date().toISOString().split("T")[0],
       archivedBy: "System",
       reason,
       category: "Sales",
@@ -1278,7 +1308,7 @@ export async function mockArchiveSupplier(supplierId, reason) {
       type: "supplier",
       name: `Supplier #${supplierId}`,
       description: `Supplier archived - ${reason}`,
-      archivedDate: new Date().toISOString().split('T')[0],
+      archivedDate: new Date().toISOString().split("T")[0],
       archivedBy: "System",
       reason,
       category: "Suppliers",
@@ -1307,7 +1337,7 @@ export async function mockArchiveEmployee(employeeId, reason) {
       type: "employee",
       name: `Employee #${employeeId}`,
       description: `Employee archived - ${reason}`,
-      archivedDate: new Date().toISOString().split('T')[0],
+      archivedDate: new Date().toISOString().split("T")[0],
       archivedBy: "System",
       reason,
       category: "Staff",

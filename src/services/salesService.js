@@ -28,11 +28,13 @@ function generateTransactionNumber() {
 
 // Create a new sale transaction
 export async function createSale(saleData) {
-  // Force mock mode for POS functionality
-  console.log("🔧 createSale called - using mock POS backend");
-  return await mockCreateSale(saleData);
+  if (isMockMode()) {
+    console.log("🔧 createSale called - using mock mode");
+    return await mockCreateSale(saleData);
+  }
 
-  /* Original Supabase code - temporarily disabled for mock mode
+  console.log("🔄 createSale called - using backend mode");
+
   try {
     const { cart, discount, isPwdSenior, customerInfo = {} } = saleData;
 
@@ -50,22 +52,22 @@ export async function createSale(saleData) {
     const totalDiscountAmount = discountAmount + pwdSeniorDiscount;
     const totalAmount = subtotal - totalDiscountAmount;
 
-    // Generate transaction number
+    // Start transaction
     const transactionNumber = generateTransactionNumber();
 
-    // Create transaction record
+    // Create sales transaction
     const { data: transaction, error: transactionError } = await supabase
       .from(TABLES.SALES_TRANSACTIONS)
       .insert([
         {
           transaction_number: transactionNumber,
-          subtotal: subtotal,
+          subtotal,
           discount_percentage: discount || 0,
           discount_amount: discountAmount,
           pwd_senior_discount: pwdSeniorDiscount,
           total_amount: totalAmount,
           is_pwd_senior: isPwdSenior,
-          customer_name: customerInfo.name || null,
+          customer_name: customerInfo.customerName || null,
           payment_method: customerInfo.paymentMethod || "cash",
           amount_paid: customerInfo.amountPaid || totalAmount,
           change_amount: customerInfo.changeAmount || 0,
@@ -75,100 +77,84 @@ export async function createSale(saleData) {
       .select()
       .single();
 
-    if (transactionError) throw transactionError;
+    if (transactionError) {
+      console.error("❌ Error creating transaction:", transactionError);
+      throw transactionError;
+    }
 
     // Create sales items and update stock
-    const saleItems = [];
-
     for (const item of cart) {
-      // Create sales item record
-      const { data: saleItem, error: itemError } = await supabase
+      // Create sales item
+      const { error: itemError } = await supabase
         .from(TABLES.SALES_ITEMS)
         .insert([
           {
             transaction_id: transaction.id,
             product_id: item.id,
-            boxes_sold: item.packaging?.boxes_sold || 0,
-            sheets_sold: item.packaging?.sheets_sold || 0,
-            pieces_sold: item.packaging?.pieces_sold || 0,
             total_pieces: item.quantity,
             unit_price: item.price,
             line_total: item.price * item.quantity,
           },
-        ])
-        .select()
-        .single();
+        ]);
 
-      if (itemError) throw itemError;
-      saleItems.push(saleItem);
+      if (itemError) {
+        console.error("❌ Error creating sales item:", itemError);
+        throw itemError;
+      }
 
       // Update product stock
-      const { error: stockError } = await updateProductStock(
+      const stockResult = await updateProductStock(
         item.id,
-        item.stock - item.quantity, // new stock = current stock - sold quantity
-        "sale",
+        item.currentStock - item.quantity,
+        "out",
         {
-          type: "sale",
-          id: transaction.id,
-          notes: `Sale transaction ${transactionNumber}`,
+          reference_type: "sale",
+          reference_id: transaction.id,
+          notes: `Sale: ${transactionNumber}`,
         }
       );
 
-      if (stockError)
-        throw new Error(
-          `Failed to update stock for ${item.name}: ${stockError}`
-        );
+      if (!stockResult.success) {
+        console.error("❌ Error updating stock:", stockResult.error);
+        throw new Error(stockResult.error);
+      }
     }
+
+    console.log("✅ Sale created in backend:", transaction);
 
     return {
       data: {
         transaction,
-        items: saleItems,
-        summary: {
-          transactionNumber,
-          subtotal,
-          discountAmount,
-          pwdSeniorDiscount,
-          totalAmount,
-          itemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
-        },
+        transactionNumber,
+        totalAmount,
+        success: true,
       },
       error: null,
+      success: true,
     };
   } catch (error) {
-    console.error("Error creating sale:", error);
-    return { data: null, error: error.message };
+    console.error("❌ Error in createSale:", error);
+    return {
+      data: null,
+      error: error.message,
+      success: false,
+    };
   }
-  */
 }
 
-// Get sale transactions with optional filtering
+// Get sales transactions with filtering
 export async function getSalesTransactions(filters = {}) {
-  // Force mock API for testing
-  console.log("🔧 getSalesTransactions called - forcing mock mode");
-  return await mockGetSalesTransactions(filters);
-
-  /* Original Supabase code - temporarily disabled
-  // Use mock API if enabled
   if (isMockMode()) {
+    console.log("🔧 getSalesTransactions called - using mock mode");
     return await mockGetSalesTransactions(filters);
   }
+
+  console.log("🔄 getSalesTransactions called - using backend mode");
 
   try {
     let query = supabase
       .from(TABLES.SALES_TRANSACTIONS)
-      .select(
-        `
-        *,
-        sales_items (
-          *,
-          products (
-            name,
-            generic_name
-          )
-        )
-      `
-      )
+      .select("*")
       .order("created_at", { ascending: false });
 
     // Apply filters
@@ -184,70 +170,37 @@ export async function getSalesTransactions(filters = {}) {
       query = query.eq("status", filters.status);
     }
 
-    if (filters.transactionNumber) {
-      query = query.ilike(
-        "transaction_number",
-        `%${filters.transactionNumber}%`
-      );
-    }
-
     if (filters.limit) {
       query = query.limit(filters.limit);
     }
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Error fetching sales transactions:", error);
+      throw error;
+    }
 
-    return { data, error: null };
+    console.log(
+      "✅ Sales transactions fetched from backend:",
+      data?.length || 0
+    );
+
+    return { data: data || [], error: null, success: true };
   } catch (error) {
-    console.error("Error fetching sales transactions:", error);
-    return { data: null, error: error.message };
-  }
-  */
-}
-
-// Get single sale transaction
-export async function getSaleTransaction(id) {
-  try {
-    const { data, error } = await supabase
-      .from(TABLES.SALES_TRANSACTIONS)
-      .select(
-        `
-        *,
-        sales_items (
-          *,
-          products (
-            name,
-            generic_name,
-            category
-          )
-        )
-      `
-      )
-      .eq("id", id)
-      .single();
-
-    if (error) throw error;
-
-    return { data, error: null };
-  } catch (error) {
-    console.error("Error fetching sale transaction:", error);
-    return { data: null, error: error.message };
+    console.error("❌ Error in getSalesTransactions:", error);
+    return { data: [], error: error.message, success: false };
   }
 }
 
-// Get sales summary/statistics
+// Get sales summary for a period
 export async function getSalesSummary(period = "today") {
-  // Force mock API for testing
-  console.log("🔧 getSalesSummary called - forcing mock mode");
-  return await mockGetSalesSummary(period);
-
-  /* Original Supabase code - temporarily disabled
-  // Use mock API if enabled
   if (isMockMode()) {
+    console.log("🔧 getSalesSummary called - using mock mode");
     return await mockGetSalesSummary(period);
   }
+
+  console.log("🔄 getSalesSummary called - using backend mode");
 
   try {
     let startDate, endDate;
@@ -256,35 +209,19 @@ export async function getSalesSummary(period = "today") {
     switch (period) {
       case "today":
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() + 1
-        );
+        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
         break;
-      case "week": {
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        startDate = new Date(
-          weekStart.getFullYear(),
-          weekStart.getMonth(),
-          weekStart.getDate()
-        );
-        endDate = new Date();
+      case "week":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        endDate = now;
         break;
-      }
-      case "month": {
+      case "month":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
-      }
       default:
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() + 1
-        );
+        endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
     }
 
     const { data: transactions, error } = await supabase
@@ -294,195 +231,44 @@ export async function getSalesSummary(period = "today") {
       .gte("created_at", startDate.toISOString())
       .lt("created_at", endDate.toISOString());
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Error fetching sales summary:", error);
+      throw error;
+    }
 
     const summary = transactions.reduce(
       (acc, transaction) => {
-        acc.totalSales += transaction.total_amount;
-        acc.totalTransactions += 1;
+        acc.totalSales += 1;
+        acc.totalRevenue += transaction.total_amount;
         acc.totalDiscounts +=
           transaction.discount_amount + transaction.pwd_senior_discount;
         return acc;
       },
       {
         totalSales: 0,
-        totalTransactions: 0,
+        totalRevenue: 0,
         totalDiscounts: 0,
-        averageSale: 0,
+        period,
       }
     );
 
-    summary.averageSale =
-      summary.totalTransactions > 0
-        ? summary.totalSales / summary.totalTransactions
-        : 0;
+    console.log("✅ Sales summary fetched from backend:", summary);
 
-    return { data: summary, error: null };
+    return { data: summary, error: null, success: true };
   } catch (error) {
-    console.error("Error getting sales summary:", error);
-    return { data: null, error: error.message };
-  }
-  */
-}
-
-// Get transaction history for POS
-export async function getTransactionHistory(filters = {}) {
-  console.log("🔧 getTransactionHistory called - using mock POS backend");
-  return await mockGetTransactionHistory(filters);
-}
-
-// Print receipt for a transaction
-export async function printReceipt(transactionId) {
-  console.log("🔧 printReceipt called - using mock POS backend");
-  return await mockPrintReceipt(transactionId);
-}
-
-// Enhanced cancel transaction for POS
-export async function cancelPOSTransaction(transactionId, reason = "") {
-  console.log("🔧 cancelPOSTransaction called - using mock POS backend");
-  return await mockCancelTransaction(transactionId, reason);
-}
-
-// Cancel/void a transaction
-export async function cancelTransaction(transactionId, reason = "") {
-  try {
-    // Get transaction with items
-    const { data: transaction, error: getError } = await getSaleTransaction(
-      transactionId
-    );
-    if (getError) throw new Error(getError);
-
-    if (transaction.status !== "completed") {
-      throw new Error("Only completed transactions can be cancelled");
-    }
-
-    // Restore stock for each item
-    for (const item of transaction.sales_items) {
-      const { error: stockError } = await updateProductStock(
-        item.product_id,
-        item.products.total_stock + item.total_pieces, // restore the sold quantity
-        "adjustment",
-        {
-          type: "cancellation",
-          id: transactionId,
-          notes: `Transaction cancellation: ${reason}`,
-        }
-      );
-
-      if (stockError) throw new Error(`Failed to restore stock: ${stockError}`);
-    }
-
-    // Update transaction status
-    const { data: updatedTransaction, error: updateError } = await supabase
-      .from(TABLES.SALES_TRANSACTIONS)
-      .update({
-        status: "cancelled",
-        notes: reason,
-      })
-      .eq("id", transactionId)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    return { data: updatedTransaction, error: null };
-  } catch (error) {
-    console.error("Error cancelling transaction:", error);
-    return { data: null, error: error.message };
+    console.error("❌ Error in getSalesSummary:", error);
+    return { data: null, error: error.message, success: false };
   }
 }
 
-// Get top selling products
-export async function getTopSellingProducts(limit = 10, period = "month") {
-  // Force mock API for testing
-  console.log("🔧 getTopSellingProducts called - forcing mock mode");
-  return await mockGetTopSellingProducts(limit, period);
-
-  /* Original Supabase code - temporarily disabled
-  // Use mock API if enabled
-  if (isMockMode()) {
-    return await mockGetTopSellingProducts(limit, period);
-  }
-
-  try {
-    let startDate;
-    const now = new Date();
-
-    switch (period) {
-      case "week":
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "month":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case "year":
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-
-    const { data, error } = await supabase
-      .from(TABLES.SALES_ITEMS)
-      .select(
-        `
-        total_pieces,
-        line_total,
-        products (
-          id,
-          name,
-          category
-        ),
-        sales_transactions!inner (
-          created_at,
-          status
-        )
-      `
-      )
-      .eq("sales_transactions.status", "completed")
-      .gte("sales_transactions.created_at", startDate.toISOString());
-
-    if (error) throw error;
-
-    // Aggregate by product
-    const productSales = data.reduce((acc, item) => {
-      const productId = item.products.id;
-      if (!acc[productId]) {
-        acc[productId] = {
-          product: item.products,
-          totalQuantity: 0,
-          totalRevenue: 0,
-        };
-      }
-      acc[productId].totalQuantity += item.total_pieces;
-      acc[productId].totalRevenue += item.line_total;
-      return acc;
-    }, {});
-
-    // Convert to array and sort
-    const topProducts = Object.values(productSales)
-      .sort((a, b) => b.totalQuantity - a.totalQuantity)
-      .slice(0, limit);
-
-    return { data: topProducts, error: null };
-  } catch (error) {
-    console.error("Error getting top selling products:", error);
-    return { data: null, error: error.message };
-  }
-  */
-}
-
-// Get hourly sales data for charts
+// Get hourly sales data
 export async function getHourlySales(date = new Date()) {
-  // Force mock API for testing
-  console.log("🔧 getHourlySales called - forcing mock mode");
-  return await mockGetHourlySales(date);
-
-  /* Original Supabase code - temporarily disabled
-  // Use mock API if enabled
   if (isMockMode()) {
+    console.log("🔧 getHourlySales called - using mock mode");
     return await mockGetHourlySales(date);
   }
+
+  console.log("🔄 getHourlySales called - using backend mode");
 
   try {
     const startDate = new Date(
@@ -490,39 +276,268 @@ export async function getHourlySales(date = new Date()) {
       date.getMonth(),
       date.getDate()
     );
-    const endDate = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate() + 1
-    );
+    const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
 
-    const { data, error } = await supabase
+    const { data: transactions, error } = await supabase
       .from(TABLES.SALES_TRANSACTIONS)
       .select("total_amount, created_at")
       .eq("status", "completed")
       .gte("created_at", startDate.toISOString())
-      .lt("created_at", endDate.toISOString())
-      .order("created_at");
+      .lt("created_at", endDate.toISOString());
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Error fetching hourly sales:", error);
+      throw error;
+    }
 
     // Group by hour
     const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
       hour: `${hour.toString().padStart(2, "0")}:00`,
       sales: 0,
-      transactions: 0,
+      revenue: 0,
     }));
 
-    data.forEach((transaction) => {
+    transactions.forEach((transaction) => {
       const hour = new Date(transaction.created_at).getHours();
-      hourlyData[hour].sales += transaction.total_amount;
-      hourlyData[hour].transactions += 1;
+      hourlyData[hour].sales += 1;
+      hourlyData[hour].revenue += transaction.total_amount;
     });
 
-    return { data: hourlyData, error: null };
+    console.log("✅ Hourly sales fetched from backend");
+
+    return { data: hourlyData, error: null, success: true };
   } catch (error) {
-    console.error("Error getting hourly sales:", error);
-    return { data: null, error: error.message };
+    console.error("❌ Error in getHourlySales:", error);
+    return { data: [], error: error.message, success: false };
   }
-  */
 }
+
+// Get top selling products
+export async function getTopSellingProducts(limit = 10, period = "month") {
+  if (isMockMode()) {
+    console.log("🔧 getTopSellingProducts called - using mock mode");
+    return await mockGetTopSellingProducts(limit, period);
+  }
+
+  console.log("🔄 getTopSellingProducts called - using backend mode");
+
+  try {
+    let startDate;
+    const now = new Date();
+
+    switch (period) {
+      case "today":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "week":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    const { data: salesItems, error } = await supabase
+      .from(TABLES.SALES_ITEMS)
+      .select(
+        `
+        product_id,
+        total_pieces,
+        line_total,
+        products:product_id (
+          name,
+          generic_name,
+          category
+        ),
+        sales_transactions:transaction_id (
+          created_at,
+          status
+        )
+      `
+      )
+      .gte("sales_transactions.created_at", startDate.toISOString())
+      .eq("sales_transactions.status", "completed");
+
+    if (error) {
+      console.error("❌ Error fetching top selling products:", error);
+      throw error;
+    }
+
+    // Group by product and calculate totals
+    const productSales = {};
+
+    salesItems.forEach((item) => {
+      const productId = item.product_id;
+      if (!productSales[productId]) {
+        productSales[productId] = {
+          product: item.products,
+          totalQuantity: 0,
+          totalRevenue: 0,
+          salesCount: 0,
+        };
+      }
+
+      productSales[productId].totalQuantity += item.total_pieces;
+      productSales[productId].totalRevenue += item.line_total;
+      productSales[productId].salesCount += 1;
+    });
+
+    // Convert to array and sort by quantity
+    const topProducts = Object.values(productSales)
+      .sort((a, b) => b.totalQuantity - a.totalQuantity)
+      .slice(0, limit);
+
+    console.log(
+      "✅ Top selling products fetched from backend:",
+      topProducts.length
+    );
+
+    return { data: topProducts, error: null, success: true };
+  } catch (error) {
+    console.error("❌ Error in getTopSellingProducts:", error);
+    return { data: [], error: error.message, success: false };
+  }
+}
+
+// Cancel a transaction
+export async function cancelTransaction(
+  transactionId,
+  reason = "Cancelled by user"
+) {
+  if (isMockMode()) {
+    console.log("🔧 cancelTransaction called - using mock mode");
+    return await mockCancelTransaction(transactionId, reason);
+  }
+
+  console.log("🔄 cancelTransaction called - using backend mode");
+
+  try {
+    // Update transaction status
+    const { data: transaction, error: transactionError } = await supabase
+      .from(TABLES.SALES_TRANSACTIONS)
+      .update({
+        status: "cancelled",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", transactionId)
+      .select()
+      .single();
+
+    if (transactionError) {
+      console.error("❌ Error cancelling transaction:", transactionError);
+      throw transactionError;
+    }
+
+    // Get sales items to restore stock
+    const { data: salesItems, error: itemsError } = await supabase
+      .from(TABLES.SALES_ITEMS)
+      .select("product_id, total_pieces")
+      .eq("transaction_id", transactionId);
+
+    if (itemsError) {
+      console.error("❌ Error fetching sales items:", itemsError);
+      throw itemsError;
+    }
+
+    // Restore stock for each item
+    for (const item of salesItems) {
+      // Get current product stock
+      const { data: product, error: productError } = await supabase
+        .from(TABLES.PRODUCTS)
+        .select("total_stock")
+        .eq("id", item.product_id)
+        .single();
+
+      if (productError) {
+        console.error("❌ Error fetching product:", productError);
+        continue; // Don't fail the whole operation
+      }
+
+      // Restore stock
+      await updateProductStock(
+        item.product_id,
+        product.total_stock + item.total_pieces,
+        "in",
+        {
+          reference_type: "cancellation",
+          reference_id: transactionId,
+          notes: `Cancelled transaction: ${transaction.transaction_number}`,
+        }
+      );
+    }
+
+    console.log("✅ Transaction cancelled in backend:", transaction);
+
+    return { data: transaction, error: null, success: true };
+  } catch (error) {
+    console.error("❌ Error in cancelTransaction:", error);
+    return { data: null, error: error.message, success: false };
+  }
+}
+
+// Print receipt (placeholder for backend integration)
+export async function printReceipt(transactionId) {
+  if (isMockMode()) {
+    console.log("🔧 printReceipt called - using mock mode");
+    return await mockPrintReceipt(transactionId);
+  }
+
+  console.log("🔄 printReceipt called - using backend mode");
+
+  try {
+    // Get transaction details
+    const { data: transaction, error } = await supabase
+      .from(TABLES.SALES_TRANSACTIONS)
+      .select(
+        `
+        *,
+        sales_items (
+          *,
+          products (
+            name,
+            generic_name
+          )
+        )
+      `
+      )
+      .eq("id", transactionId)
+      .single();
+
+    if (error) {
+      console.error("❌ Error fetching transaction for receipt:", error);
+      throw error;
+    }
+
+    console.log("✅ Receipt data fetched from backend");
+
+    return { data: transaction, error: null, success: true };
+  } catch (error) {
+    console.error("❌ Error in printReceipt:", error);
+    return { data: null, error: error.message, success: false };
+  }
+}
+
+// Get transaction history
+export async function getTransactionHistory(filters = {}) {
+  if (isMockMode()) {
+    console.log("🔧 getTransactionHistory called - using mock mode");
+    return await mockGetTransactionHistory(filters);
+  }
+
+  console.log("🔄 getTransactionHistory called - using backend mode");
+
+  return await getSalesTransactions(filters);
+}
+
+export default {
+  createSale,
+  getSalesTransactions,
+  getSalesSummary,
+  getHourlySales,
+  getTopSellingProducts,
+  cancelTransaction,
+  printReceipt,
+  getTransactionHistory,
+};

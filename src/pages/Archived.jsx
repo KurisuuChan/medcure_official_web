@@ -23,7 +23,7 @@ export default function Archived() {
   const [searchInput, setSearchInput] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [searchTimeout, setSearchTimeout] = useState(null);
-  
+
   const {
     archivedItems,
     stats,
@@ -43,17 +43,17 @@ export default function Archived() {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchInput(value);
-    
+
     // Clear existing timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
-    
+
     // Set new timeout
     const newTimeout = setTimeout(() => {
       updateFilters({ search: value, page: 1 });
     }, 300);
-    
+
     setSearchTimeout(newTimeout);
   };
 
@@ -129,7 +129,7 @@ export default function Archived() {
     const result = await handleRestoreItem(id, type);
     if (result.success) {
       showNotification("Item restored successfully!", "success");
-      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+      setSelectedItems((prev) => prev.filter((itemId) => itemId !== id));
     } else {
       showNotification(result.error || "Failed to restore item", "error");
     }
@@ -139,7 +139,7 @@ export default function Archived() {
     const result = await handleDeleteItem(id, type);
     if (result.success) {
       showNotification("Item permanently deleted!", "success");
-      setSelectedItems(prev => prev.filter(itemId => itemId !== id));
+      setSelectedItems((prev) => prev.filter((itemId) => itemId !== id));
     } else {
       showNotification(result.error || "Failed to delete item", "error");
     }
@@ -147,13 +147,16 @@ export default function Archived() {
 
   const handleBulkRestoreSelected = async () => {
     const itemsToRestore = archivedItems
-      .filter(item => selectedItems.includes(item.id))
-      .map(item => ({ id: item.id, type: item.type }));
+      .filter((item) => selectedItems.includes(item.id))
+      .map((item) => ({ id: item.id, type: item.type }));
 
     const result = await handleBulkRestore(itemsToRestore);
     if (result.success) {
       const { success, errors } = result.data;
-      showNotification(`${success.length} items restored successfully!`, "success");
+      showNotification(
+        `${success.length} items restored successfully!`,
+        "success"
+      );
       if (errors.length > 0) {
         showNotification(`${errors.length} items failed to restore`, "warning");
       }
@@ -165,13 +168,16 @@ export default function Archived() {
 
   const handleBulkDeleteSelected = async () => {
     const itemsToDelete = archivedItems
-      .filter(item => selectedItems.includes(item.id))
-      .map(item => ({ id: item.id, type: item.type }));
+      .filter((item) => selectedItems.includes(item.id))
+      .map((item) => ({ id: item.id, type: item.type }));
 
     const result = await handleBulkDelete(itemsToDelete);
     if (result.success) {
       const { success, errors } = result.data;
-      showNotification(`${success.length} items permanently deleted!`, "success");
+      showNotification(
+        `${success.length} items permanently deleted!`,
+        "success"
+      );
       if (errors.length > 0) {
         showNotification(`${errors.length} items failed to delete`, "warning");
       }
@@ -193,11 +199,16 @@ export default function Archived() {
       <div className="bg-white p-8 rounded-2xl shadow-lg">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <Loader2 size={48} className="mx-auto mb-4 text-blue-500 animate-spin" />
+            <Loader2
+              size={48}
+              className="mx-auto mb-4 text-blue-500 animate-spin"
+            />
             <h3 className="text-lg font-semibold text-gray-600 mb-2">
               Loading archived items...
             </h3>
-            <p className="text-gray-500">Please wait while we fetch your data</p>
+            <p className="text-gray-500">
+              Please wait while we fetch your data
+            </p>
           </div>
         </div>
       </div>
@@ -338,7 +349,9 @@ export default function Archived() {
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <CheckCircle size={16} />
-              {selectedItems.length === archivedItems.length ? "Deselect All" : "Select All"}
+              {selectedItems.length === archivedItems.length
+                ? "Deselect All"
+                : "Select All"}
             </button>
           )}
         </div>
@@ -450,7 +463,8 @@ export default function Archived() {
       {archivedItems.length > 0 && (
         <div className="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Showing {archivedItems.length} of {stats.total || archivedItems.length} archived items
+            Showing {archivedItems.length} of{" "}
+            {stats.total || archivedItems.length} archived items
           </p>
           <div className="flex items-center gap-2">
             <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
