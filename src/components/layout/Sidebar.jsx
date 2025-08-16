@@ -1,43 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Pill,
   ShoppingCart,
-  Contact,
-  Bell,
-  Banknote,
-  Archive,
+  BarChart3,
+  Users,
   Settings,
   ChevronLeft,
-  BarChart3,
   ChevronRight,
   Menu,
   X,
 } from "lucide-react";
 import PropTypes from "prop-types";
 
+// Streamlined menu with primary functions only
 const menu = [
   {
     to: "/",
     label: "Dashboard",
     icon: LayoutDashboard,
     color: "blue",
-    description: "Overview & Analytics",
-  },
-  {
-    to: "/analytics",
-    label: "Analytics",
-    icon: BarChart3,
-    color: "indigo",
-    description: "Detailed Reports",
+    description: "Overview & Insights",
+    badge: null,
   },
   {
     to: "/management",
     label: "Inventory",
     icon: Pill,
     color: "emerald",
-    description: "Stock Management",
+    description: "Stock & Products",
+    badge: null,
   },
   {
     to: "/point-of-sales",
@@ -45,41 +38,23 @@ const menu = [
     icon: ShoppingCart,
     color: "orange",
     description: "Sales Terminal",
+    badge: null,
   },
   {
-    to: "/archived",
-    label: "Archived",
-    icon: Archive,
-    color: "gray",
-    description: "Archived Records",
+    to: "/analytics",
+    label: "Reports",
+    icon: BarChart3,
+    color: "indigo",
+    description: "Analytics & Reports",
+    badge: null,
   },
   {
     to: "/contacts",
-    label: "Patients",
-    icon: Contact,
+    label: "Contacts",
+    icon: Users,
     color: "purple",
-    description: "Patient Database",
-  },
-  {
-    to: "/notifications",
-    label: "Notifications",
-    icon: Bell,
-    color: "red",
-    description: "System Alerts",
-  },
-  {
-    to: "/financials",
-    label: "Financials",
-    icon: Banknote,
-    color: "green",
-    description: "Financial Overview",
-  },
-  {
-    to: "/reports",
-    label: "Reports",
-    icon: BarChart3,
-    color: "slate",
-    description: "Business Reports",
+    description: "Customer Directory",
+    badge: null,
   },
   {
     to: "/settings",
@@ -87,15 +62,16 @@ const menu = [
     icon: Settings,
     color: "slate",
     description: "System Configuration",
+    badge: null,
   },
 ];
 
 export default function Sidebar({ branding }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(() => {
     const stored = localStorage.getItem("mc-sidebar-expanded");
     return stored ? JSON.parse(stored) : true;
   });
-  const [hoveredItem, setHoveredItem] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Auto-collapse sidebar on mobile screens
@@ -131,20 +107,10 @@ export default function Sidebar({ branding }) {
       {/* Mobile Menu Button - Only visible on mobile */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 w-12 h-12 bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400 rounded-xl flex items-center justify-center text-blue-600 hover:text-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl group"
+        className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg flex items-center justify-center text-gray-600 hover:text-gray-700 transition-all duration-200 shadow-sm"
         aria-label="Toggle mobile menu"
       >
-        {mobileMenuOpen ? (
-          <X
-            size={20}
-            className="group-hover:scale-110 transition-all duration-300"
-          />
-        ) : (
-          <Menu
-            size={20}
-            className="group-hover:scale-110 transition-all duration-300"
-          />
-        )}
+        {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
 
       {/* Mobile Overlay */}
@@ -158,49 +124,47 @@ export default function Sidebar({ branding }) {
       {/* Sidebar */}
       <aside
         className={`
-          h-full bg-white/98 backdrop-blur-md border-r border-gray-200/60 flex flex-col transition-all duration-500 ease-in-out relative shadow-xl
-          ${expanded ? "w-72" : "w-20"}
+          h-full bg-white/95 backdrop-blur-lg border-r border-gray-200/50 flex flex-col transition-all duration-300 ease-out relative
+          ${expanded ? "w-72" : "w-16"}
           md:relative md:translate-x-0
           ${
             mobileMenuOpen
-              ? "fixed left-0 top-0 z-50 translate-x-0 w-80"
+              ? "fixed left-0 top-0 z-50 translate-x-0 w-80 shadow-2xl"
               : "fixed left-0 top-0 z-50 -translate-x-full md:translate-x-0"
           }
         `}
         style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(248,250,252,0.95))",
+          background: "linear-gradient(to bottom, #ffffff, #f8fafc)",
+          boxShadow: mobileMenuOpen
+            ? "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+            : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
         }}
         aria-label="Navigation"
       >
         {/* Header */}
         <div
-          className={`h-16 flex items-center border-b border-gray-200/60 relative backdrop-blur-sm ${
+          className={`h-16 flex items-center border-b border-gray-100 relative ${
             expanded || mobileMenuOpen
               ? "justify-between px-6"
               : "justify-center"
           } ${mobileMenuOpen ? "px-4" : ""}`}
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(59,130,246,0.03), rgba(99,102,241,0.03))",
-          }}
         >
           {expanded || mobileMenuOpen ? (
             <>
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                  <span className="drop-shadow-sm">M</span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  <span>M</span>
                 </div>
                 <div className="space-y-0.5">
-                  <div className="font-bold text-gray-900 text-lg tracking-tight">
+                  <div className="font-semibold text-gray-900 text-base">
                     {branding?.name || "MedCure"}
                   </div>
-                  <div className="text-xs text-gray-500 font-medium tracking-wide hidden sm:block">
-                    Pharmacy Management System
+                  <div className="text-xs text-gray-500 hidden sm:block">
+                    Pharmacy System
                   </div>
                 </div>
               </div>
-              {/* Toggle Button - Inside header when expanded or mobile */}
+              {/* Toggle Button */}
               <button
                 onClick={() => {
                   if (window.innerWidth < 768) {
@@ -209,204 +173,216 @@ export default function Sidebar({ branding }) {
                     setExpanded((c) => !c);
                   }
                 }}
-                className="w-10 h-10 bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-300 hover:border-gray-400 rounded-2xl flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-300 group shadow-md hover:shadow-lg transform hover:scale-105"
+                className="w-8 h-8 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg flex items-center justify-center text-gray-600 hover:text-gray-800 transition-all duration-200"
                 aria-label={
                   mobileMenuOpen ? "Close mobile menu" : "Collapse sidebar"
                 }
               >
-                {mobileMenuOpen ? (
-                  <X
-                    size={18}
-                    className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
-                  />
-                ) : (
-                  <ChevronLeft
-                    size={18}
-                    className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
-                  />
-                )}
+                {mobileMenuOpen ? <X size={16} /> : <ChevronLeft size={16} />}
               </button>
             </>
           ) : (
             <>
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <span className="drop-shadow-sm">M</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                <span>M</span>
               </div>
-              {/* Enhanced Toggle Button - Floating when collapsed (desktop only) */}
+              {/* Toggle Button - Floating when collapsed */}
               <button
                 onClick={() => setExpanded((c) => !c)}
-                className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white hover:bg-blue-50 border-2 border-blue-200 hover:border-blue-400 rounded-full items-center justify-center text-blue-600 hover:text-blue-700 transition-all duration-300 shadow-xl hover:shadow-2xl z-20 group transform hover:scale-110"
+                className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-full items-center justify-center text-gray-600 hover:text-gray-700 transition-all duration-200 shadow-sm z-20"
                 aria-label="Expand sidebar"
               >
-                <ChevronRight
-                  size={16}
-                  className="group-hover:scale-110 transition-all duration-300 drop-shadow-sm"
-                />
+                <ChevronRight size={14} />
               </button>
             </>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-8 overflow-hidden">
+        <nav className="flex-1 py-6 overflow-hidden">
           <ul
-            className={`space-y-3 ${
-              expanded || mobileMenuOpen ? "px-5" : "px-3"
+            className={`space-y-1 ${
+              expanded || mobileMenuOpen ? "px-3" : "px-2"
             }`}
           >
-            {menu.map((item, index) => {
+            {menu.map((item) => {
               const IconComponent = item.icon;
               const colorClasses = {
-                blue: "text-blue-700 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-blue-100",
+                blue: "text-blue-600 bg-blue-50/80 border-blue-100/50 hover:bg-blue-100/60 hover:border-blue-200",
                 emerald:
-                  "text-emerald-700 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-emerald-100",
+                  "text-emerald-600 bg-emerald-50/80 border-emerald-100/50 hover:bg-emerald-100/60 hover:border-emerald-200",
                 orange:
-                  "text-orange-700 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-orange-100",
-                gray: "text-gray-700 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 shadow-gray-100",
+                  "text-orange-600 bg-orange-50/80 border-orange-100/50 hover:bg-orange-100/60 hover:border-orange-200",
+                gray: "text-gray-600 bg-gray-50/80 border-gray-100/50 hover:bg-gray-100/60 hover:border-gray-200",
                 purple:
-                  "text-purple-700 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-purple-100",
-                red: "text-red-700 bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-red-100",
+                  "text-purple-600 bg-purple-50/80 border-purple-100/50 hover:bg-purple-100/60 hover:border-purple-200",
+                red: "text-red-600 bg-red-50/80 border-red-100/50 hover:bg-red-100/60 hover:border-red-200",
                 green:
-                  "text-green-700 bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-green-100",
+                  "text-green-600 bg-green-50/80 border-green-100/50 hover:bg-green-100/60 hover:border-green-200",
                 indigo:
-                  "text-indigo-700 bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-indigo-100",
+                  "text-indigo-600 bg-indigo-50/80 border-indigo-100/50 hover:bg-indigo-100/60 hover:border-indigo-200",
                 slate:
-                  "text-slate-700 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 shadow-slate-100",
+                  "text-slate-600 bg-slate-50/80 border-slate-100/50 hover:bg-slate-100/60 hover:border-slate-200",
               };
 
               return (
-                <li key={item.to} className="group relative">
+                <li key={item.to} className="group">
                   <NavLink
                     to={item.to}
                     end={item.to === "/"}
-                    onMouseEnter={() => setHoveredItem(index)}
-                    onMouseLeave={() => setHoveredItem(null)}
                     onClick={() => {
-                      // Close mobile menu when navigating
                       if (window.innerWidth < 768) {
                         setMobileMenuOpen(false);
                       }
                     }}
                     className={({ isActive }) =>
-                      `flex items-center transition-all duration-300 ease-out relative overflow-hidden transform hover:scale-[1.02] active:scale-[0.98] ${
+                      `flex items-center transition-all duration-200 relative group ${
                         expanded || mobileMenuOpen
-                          ? "gap-4 rounded-2xl px-5 py-4 text-sm font-medium"
-                          : "justify-center rounded-2xl p-4"
+                          ? "gap-3 rounded-lg px-3 py-2.5 text-sm"
+                          : "justify-center rounded-lg p-2.5"
                       } ${
                         isActive
-                          ? `${colorClasses[item.color]} border shadow-lg`
-                          : "text-gray-600 hover:text-gray-800 hover:bg-gradient-to-br hover:from-gray-50/80 hover:to-gray-100/80 border border-transparent hover:border-gray-200/50 hover:shadow-md"
+                          ? `${
+                              colorClasses[item.color]
+                            } border font-medium shadow-sm`
+                          : "text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 border border-transparent hover:border-gray-100/50"
                       }`
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        {/* Animated background shimmer effect */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out"></div>
-
                         <div
-                          className={`flex items-center justify-center transition-all duration-300 relative z-10 ${
-                            isActive
-                              ? "scale-110 drop-shadow-sm"
-                              : hoveredItem === index
-                              ? "scale-105 rotate-3"
-                              : "group-hover:scale-105"
-                          } ${expanded || mobileMenuOpen ? "" : "w-6 h-6"}`}
+                          className={`flex items-center justify-center transition-all duration-200 ${
+                            isActive ? "scale-105" : "group-hover:scale-105"
+                          } ${expanded || mobileMenuOpen ? "" : "w-5 h-5"}`}
                         >
-                          <IconComponent
-                            size={20}
-                            className="flex-shrink-0 drop-shadow-sm"
-                          />
+                          <IconComponent size={18} className="flex-shrink-0" />
                         </div>
 
                         {(expanded || mobileMenuOpen) && (
-                          <div className="flex flex-col relative z-10">
-                            <span
-                              className={`truncate font-semibold tracking-tight transition-all duration-300 ${
-                                hoveredItem === index ? "translate-x-1" : ""
-                              }`}
-                            >
-                              {item.label}
-                            </span>
-                            {isActive && (
-                              <span className="text-xs opacity-70 font-medium tracking-wide">
-                                {item.description}
+                          <div className="flex-1 flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="truncate font-medium leading-tight">
+                                {item.label}
+                              </span>
+                              {isActive && (
+                                <span className="text-xs opacity-75 font-normal">
+                                  {item.description}
+                                </span>
+                              )}
+                            </div>
+                            {item.badge && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full">
+                                {item.badge}
                               </span>
                             )}
                           </div>
                         )}
 
-                        {/* Enhanced active indicator */}
+                        {/* Clean active indicator */}
                         {isActive && (
-                          <>
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-current rounded-r-full opacity-80 shadow-sm"></div>
-                            <div className="absolute right-3 w-2 h-2 rounded-full bg-current opacity-60 animate-pulse"></div>
-                          </>
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-current rounded-r-sm opacity-80"></div>
                         )}
                       </>
                     )}
                   </NavLink>
 
-                  {/* Enhanced Tooltip for collapsed state (desktop only) */}
+                  {/* Tooltip for collapsed state */}
                   {!expanded && !mobileMenuOpen && (
-                    <div className="hidden md:block absolute left-full top-1/2 -translate-y-1/2 ml-6 px-4 py-3 bg-gray-900/95 backdrop-blur-sm text-white text-sm rounded-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 ease-out whitespace-nowrap z-50 pointer-events-none shadow-2xl border border-gray-700/50 transform group-hover:translate-x-1">
-                      <div className="space-y-1">
-                        <div className="font-semibold tracking-tight">
-                          {item.label}
-                        </div>
-                        <div className="text-xs opacity-80 font-medium">
-                          {item.description}
-                        </div>
-                      </div>
-                      {/* Enhanced arrow */}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-8 border-transparent border-r-gray-900/95 drop-shadow-sm"></div>
+                    <div className="hidden md:block absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
+                      {item.label}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-3 border-transparent border-r-gray-900"></div>
                     </div>
                   )}
                 </li>
               );
             })}
           </ul>
+
+          {/* Quick Access Section - Only when expanded */}
+          {(expanded || mobileMenuOpen) && (
+            <div className="mt-8 px-3">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-1">
+                Quick Access
+              </div>
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    // Navigate to notifications page
+                    navigate("/notifications");
+                    // Close mobile menu if open
+                    if (window.innerWidth < 768) {
+                      setMobileMenuOpen(false);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 rounded-lg transition-all duration-200"
+                >
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="font-medium">Notifications</span>
+                  <span className="ml-auto px-1.5 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full">
+                    3
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Navigate to financials page
+                    navigate("/financials");
+                    // Close mobile menu if open
+                    if (window.innerWidth < 768) {
+                      setMobileMenuOpen(false);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 rounded-lg transition-all duration-200"
+                >
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="font-medium">Financials</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Navigate to archived items page
+                    navigate("/archived");
+                    // Close mobile menu if open
+                    if (window.innerWidth < 768) {
+                      setMobileMenuOpen(false);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 rounded-lg transition-all duration-200"
+                >
+                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                  <span className="font-medium">Archived Items</span>
+                </button>
+              </div>
+            </div>
+          )}
         </nav>
 
-        {/* Enhanced Footer */}
+        {/* Footer */}
         <div
-          className={`border-t border-gray-200/60 backdrop-blur-sm ${
-            expanded || mobileMenuOpen ? "p-6" : "p-4"
+          className={`border-t border-gray-100 ${
+            expanded || mobileMenuOpen ? "p-4" : "p-3"
           }`}
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(59,130,246,0.02), rgba(99,102,241,0.02))",
-          }}
         >
           {expanded || mobileMenuOpen ? (
-            <div className="text-center space-y-3">
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <div className="relative">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
-                  <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-30"></div>
-                </div>
-                <span className="text-sm text-gray-600 font-semibold tracking-tight">
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs text-gray-600 font-medium">
                   System Online
                 </span>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-gray-500 font-medium tracking-wide">
-                  © {new Date().getFullYear()} MedCure Pharmacy
+                <div className="text-xs text-gray-500">
+                  © {new Date().getFullYear()} MedCure
                 </div>
-                <div className="text-xs text-gray-400 font-medium">
-                  Version 2.1.0 • Professional Edition
-                </div>
+                <div className="text-xs text-gray-400">Version 2.1.0</div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
-                <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-30"></div>
-              </div>
-              <div className="text-xs text-gray-400 font-bold tracking-wider">
-                v2.1
-              </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div className="text-xs text-gray-400 font-medium">v2.1</div>
             </div>
           )}
         </div>
