@@ -1,5 +1,10 @@
 // Mock API layer so we can demonstrate professional structure without backend
 
+// Utility function to simulate API delay
+function mockDelay(ms = 500) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 let SAMPLE_PRODUCTS = [
   {
     id: 1,
@@ -1352,6 +1357,184 @@ export async function mockArchiveEmployee(employeeId, reason) {
     return { data: archivedEmployee, error: null };
   } catch (error) {
     return { data: null, error: error.message };
+  }
+}
+
+// Settings Mock API
+let MOCK_SETTINGS = {
+  // General Settings
+  businessName: "MedCure Pharmacy",
+  businessAddress: "123 Health Street, Medical District, City",
+  businessPhone: "+63 912 345 6789",
+  businessEmail: "contact@medcure.com",
+  primaryColor: "#2563eb",
+  timezone: "Asia/Manila",
+  currency: "PHP",
+  language: "en",
+
+  // Notification Settings
+  lowStockThreshold: 10,
+  criticalStockThreshold: 5,
+  expiryAlertDays: 30,
+  emailNotifications: true,
+  smsNotifications: false,
+  pushNotifications: true,
+  dailyReports: true,
+  weeklyReports: true,
+
+  // Security Settings
+  twoFactorAuth: false,
+  sessionTimeout: 30,
+  passwordExpiry: 90,
+
+  // Backup Settings
+  autoBackup: true,
+  backupFrequency: "daily",
+  backupRetention: 30,
+  cloudBackup: false,
+};
+
+export async function mockGetSettings() {
+  await mockDelay();
+
+  try {
+    console.log("📋 Mock: Getting settings");
+
+    return {
+      data: MOCK_SETTINGS,
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.message,
+      success: false,
+    };
+  }
+}
+
+export async function mockUpdateSettings(settingsData, section = "all") {
+  await mockDelay();
+
+  try {
+    console.log(`📋 Mock: Updating settings (${section}):`, settingsData);
+
+    // Merge with existing settings
+    MOCK_SETTINGS = { ...MOCK_SETTINGS, ...settingsData };
+
+    return {
+      data: MOCK_SETTINGS,
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.message,
+      success: false,
+    };
+  }
+}
+
+export async function mockResetSettings() {
+  await mockDelay();
+
+  try {
+    console.log("📋 Mock: Resetting settings to defaults");
+
+    // Reset to defaults
+    MOCK_SETTINGS = {
+      businessName: "MedCure Pharmacy",
+      businessAddress: "123 Health Street, Medical District, City",
+      businessPhone: "+63 912 345 6789",
+      businessEmail: "contact@medcure.com",
+      primaryColor: "#2563eb",
+      timezone: "Asia/Manila",
+      currency: "PHP",
+      language: "en",
+      lowStockThreshold: 10,
+      criticalStockThreshold: 5,
+      expiryAlertDays: 30,
+      emailNotifications: true,
+      smsNotifications: false,
+      pushNotifications: true,
+      dailyReports: true,
+      weeklyReports: true,
+      twoFactorAuth: false,
+      sessionTimeout: 30,
+      passwordExpiry: 90,
+      autoBackup: true,
+      backupFrequency: "daily",
+      backupRetention: 30,
+      cloudBackup: false,
+    };
+
+    return {
+      data: MOCK_SETTINGS,
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.message,
+      success: false,
+    };
+  }
+}
+
+export async function mockExportSettings() {
+  await mockDelay();
+
+  try {
+    console.log("📋 Mock: Exporting settings");
+
+    const exportData = {
+      settings: MOCK_SETTINGS,
+      exported_at: new Date().toISOString(),
+      version: "1.0",
+      application: "MedCure Pharmacy Management System",
+    };
+
+    return {
+      data: exportData,
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.message,
+      success: false,
+    };
+  }
+}
+
+export async function mockImportSettings(importData) {
+  await mockDelay();
+
+  try {
+    console.log("📋 Mock: Importing settings:", importData);
+
+    if (!importData || !importData.settings) {
+      throw new Error("Invalid import data format");
+    }
+
+    // Update settings with imported data
+    MOCK_SETTINGS = { ...MOCK_SETTINGS, ...importData.settings };
+
+    return {
+      data: MOCK_SETTINGS,
+      error: null,
+      success: true,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: error.message,
+      success: false,
+    };
   }
 }
 

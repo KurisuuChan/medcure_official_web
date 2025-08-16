@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Settings as SettingsIcon,
   Save,
@@ -24,10 +24,22 @@ import {
   Calendar,
 } from "lucide-react";
 import BackendStatus from "../components/BackendStatus";
+import {
+  getSettings,
+  updateSettings,
+  resetSettings,
+  exportSettings,
+  importSettings,
+} from "../services/settingsService";
+import { useNotification } from "../hooks/useNotification";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { showNotification } = useNotification();
+
   const [settings, setSettings] = useState({
     // General Settings
     businessName: "MedCure Pharmacy",
@@ -68,10 +80,116 @@ export default function Settings() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = (section) => {
-    // Simulate save operation
-    console.log(`Saving ${section} settings:`, settings);
-    // Here you would typically make an API call
+  const loadSettings = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await getSettings();
+      if (result.success && result.data) {
+        setSettings(result.data);
+      } else {
+        showNotification("Failed to load settings", "error");
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      showNotification("Error loading settings", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showNotification]);
+
+  // Load settings on component mount
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const handleSave = async (section) => {
+    setIsSaving(true);
+    try {
+      const result = await updateSettings(settings, section);
+      if (result.success) {
+        showNotification(`${section} settings saved successfully`, "success");
+      } else {
+        showNotification(`Failed to save ${section} settings`, "error");
+      }
+    } catch (error) {
+      console.error(`Error saving ${section} settings:`, error);
+      showNotification(`Error saving ${section} settings`, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (confirm("Are you sure you want to reset all settings to defaults?")) {
+      setIsLoading(true);
+      try {
+        const result = await resetSettings();
+        if (result.success) {
+          setSettings(result.data);
+          showNotification("Settings reset to defaults", "success");
+        } else {
+          showNotification("Failed to reset settings", "error");
+        }
+      } catch (error) {
+        console.error("Error resetting settings:", error);
+        showNotification("Error resetting settings", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const result = await exportSettings();
+      if (result.success) {
+        const blob = new Blob([JSON.stringify(result.data, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `medcure-settings-${
+          new Date().toISOString().split("T")[0]
+        }.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showNotification("Settings exported successfully", "success");
+      } else {
+        showNotification("Failed to export settings", "error");
+      }
+    } catch (error) {
+      console.error("Error exporting settings:", error);
+      showNotification("Error exporting settings", "error");
+    }
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+
+      const result = await importSettings(importData);
+      if (result.success) {
+        setSettings(result.data);
+        showNotification("Settings imported successfully", "success");
+      } else {
+        showNotification("Failed to import settings", "error");
+      }
+    } catch (error) {
+      console.error("Error importing settings:", error);
+      showNotification(
+        "Error importing settings - Invalid file format",
+        "error"
+      );
+    }
+    // Reset file input
+    event.target.value = "";
   };
 
   const tabs = [
@@ -266,10 +384,15 @@ export default function Settings() {
 
               <button
                 onClick={() => handleSave("general")}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                disabled={isSaving || isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                  isSaving || isLoading
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
               >
                 <Save size={18} />
-                Save General Settings
+                {isSaving ? "Saving..." : "Save General Settings"}
               </button>
             </div>
           )}
@@ -449,10 +572,15 @@ export default function Settings() {
 
               <button
                 onClick={() => handleSave("notifications")}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                disabled={isSaving || isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                  isSaving || isLoading
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
               >
                 <Save size={18} />
-                Save Notification Settings
+                {isSaving ? "Saving..." : "Save Notification Settings"}
               </button>
             </div>
           )}
@@ -602,10 +730,15 @@ export default function Settings() {
 
               <button
                 onClick={() => handleSave("security")}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                disabled={isSaving || isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                  isSaving || isLoading
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
               >
                 <Save size={18} />
-                Save Security Settings
+                {isSaving ? "Saving..." : "Save Security Settings"}
               </button>
             </div>
           )}
@@ -697,55 +830,83 @@ export default function Settings() {
                   Manual Operations
                 </h3>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <button className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
+                  <button
+                    onClick={handleExport}
+                    disabled={isLoading || isSaving}
+                    className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Download size={20} className="text-blue-500" />
                     <div>
                       <p className="font-medium text-gray-800">
                         Create Backup Now
                       </p>
                       <p className="text-sm text-gray-500">
-                        Generate immediate backup
+                        Export current settings
                       </p>
                     </div>
                   </button>
-                  <button className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
-                    <Upload size={20} className="text-green-500" />
-                    <div>
-                      <p className="font-medium text-gray-800">
-                        Restore Backup
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Upload and restore data
-                      </p>
-                    </div>
-                  </button>
-                  <button className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left">
-                    <Download size={20} className="text-purple-500" />
-                    <div>
-                      <p className="font-medium text-gray-800">Export Data</p>
-                      <p className="text-sm text-gray-500">
-                        Export to CSV/Excel
-                      </p>
-                    </div>
-                  </button>
-                  <button className="flex items-center gap-2 p-4 bg-white border border-red-300 rounded-lg hover:bg-red-50 text-left">
+                  <button
+                    onClick={handleReset}
+                    disabled={isLoading || isSaving}
+                    className="flex items-center gap-2 p-4 bg-white border border-red-300 rounded-lg hover:bg-red-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     <Trash2 size={20} className="text-red-500" />
                     <div>
-                      <p className="font-medium text-red-800">Clear Old Data</p>
+                      <p className="font-medium text-red-800">Reset Settings</p>
                       <p className="text-sm text-red-500">
-                        Remove archived records
+                        Restore all defaults
                       </p>
                     </div>
                   </button>
+                  <button
+                    onClick={handleExport}
+                    disabled={isLoading || isSaving}
+                    className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download size={20} className="text-purple-500" />
+                    <div>
+                      <p className="font-medium text-gray-800">
+                        Export Settings
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Download settings as JSON
+                      </p>
+                    </div>
+                  </button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImport}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                      disabled={isLoading || isSaving}
+                    />
+                    <button className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left w-full disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Upload size={20} className="text-green-500" />
+                      <div>
+                        <p className="font-medium text-gray-800">
+                          Import Settings
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Upload settings JSON file
+                        </p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <button
                 onClick={() => handleSave("backup")}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                disabled={isSaving || isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                  isSaving || isLoading
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
               >
                 <Save size={18} />
-                Save Backup Settings
+                {isSaving ? "Saving..." : "Save Backup Settings"}
               </button>
             </div>
           )}

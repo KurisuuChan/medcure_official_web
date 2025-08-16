@@ -116,6 +116,14 @@ CREATE TABLE IF NOT EXISTS categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 6. Settings Table - Application configuration and preferences
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    data JSONB NOT NULL, -- Store all settings as JSON for flexibility
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Insert default categories
 INSERT INTO categories (name, description) VALUES 
 ('Pain Relief', 'Analgesics and pain management medications'),
@@ -154,6 +162,9 @@ CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_sales_transactions_updated_at BEFORE UPDATE ON sales_transactions 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_settings_updated_at BEFORE UPDATE ON settings 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to automatically update total_pieces_per_box when packaging info changes
