@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import {
   X,
   Package,
@@ -58,7 +59,7 @@ export function QuantitySelectionModal({
   const totalAmount = totalPieces * (product?.selling_price || 0);
   const availableStock = (product?.total_stock || 0) - existingQuantity;
 
-  // Validation
+  // Enhanced validation with detailed stock checking
   useEffect(() => {
     const newErrors = [];
 
@@ -78,23 +79,102 @@ export function QuantitySelectionModal({
       newErrors.push("Quantities cannot be negative");
     }
 
+    // Check individual packaging limits
+    const maxBoxes = Math.floor(
+      availableStock / (product?.total_pieces_per_box || 1)
+    );
+    const maxSheets = Math.floor(
+      availableStock / (product?.pieces_per_sheet || 1)
+    );
+
+    if (quantityMode.boxes > maxBoxes && maxBoxes > 0) {
+      newErrors.push(
+        `Maximum ${maxBoxes} boxes available (${
+          maxBoxes * (product?.total_pieces_per_box || 0)
+        } pieces)`
+      );
+    }
+
+    if (quantityMode.sheets > maxSheets && maxSheets > 0) {
+      newErrors.push(
+        `Maximum ${maxSheets} sheets available (${
+          maxSheets * (product?.pieces_per_sheet || 0)
+        } pieces)`
+      );
+    }
+
+    if (quantityMode.pieces > availableStock) {
+      newErrors.push(`Maximum ${availableStock} individual pieces available`);
+    }
+
     setErrors(newErrors);
-    setIsValid(newErrors.length === 0 && totalPieces > 0);
-  }, [quantityMode, totalPieces, availableStock]);
+    setIsValid(
+      newErrors.length === 0 && totalPieces > 0 && totalPieces <= availableStock
+    );
+  }, [quantityMode, totalPieces, availableStock, product]);
 
   const handleQuantityChange = (type, value) => {
     const numValue = Math.max(0, parseInt(value) || 0);
+
+    // Apply smart limiters based on stock and packaging
+    let limitedValue = numValue;
+
+    if (type === "boxes") {
+      const maxBoxes = Math.floor(
+        availableStock / (product?.total_pieces_per_box || 1)
+      );
+      limitedValue = Math.min(numValue, maxBoxes);
+    } else if (type === "sheets") {
+      const maxSheets = Math.floor(
+        availableStock / (product?.pieces_per_sheet || 1)
+      );
+      limitedValue = Math.min(numValue, maxSheets);
+    } else if (type === "pieces") {
+      limitedValue = Math.min(numValue, availableStock);
+    }
+
     setQuantityMode((prev) => ({
       ...prev,
-      [type]: numValue,
+      [type]: limitedValue,
     }));
   };
 
   const handleIncrement = (type) => {
-    setQuantityMode((prev) => ({
-      ...prev,
-      [type]: prev[type] + 1,
-    }));
+    setQuantityMode((prev) => {
+      let newValue = prev[type] + 1;
+
+      // Apply limiters for increment
+      if (type === "boxes") {
+        const maxBoxes = Math.floor(
+          availableStock / (product?.total_pieces_per_box || 1)
+        );
+        newValue = Math.min(newValue, maxBoxes);
+      } else if (type === "sheets") {
+        const maxSheets = Math.floor(
+          availableStock / (product?.pieces_per_sheet || 1)
+        );
+        newValue = Math.min(newValue, maxSheets);
+      } else if (type === "pieces") {
+        newValue = Math.min(newValue, availableStock);
+      }
+
+      // Check if total would exceed stock
+      const testQuantity = { ...prev, [type]: newValue };
+      const testTotal = calculateTotalPieces(
+        testQuantity.boxes,
+        testQuantity.sheets,
+        testQuantity.pieces
+      );
+
+      if (testTotal > availableStock) {
+        return prev; // Don't increment if it would exceed stock
+      }
+
+      return {
+        ...prev,
+        [type]: newValue,
+      };
+    });
   };
 
   const handleDecrement = (type) => {
@@ -119,15 +199,28 @@ export function QuantitySelectionModal({
   };
 
   const handleQuickAdd = (type) => {
+    const maxBoxes = Math.floor(
+      availableStock / (product?.total_pieces_per_box || 1)
+    );
+    const maxSheets = Math.floor(
+      availableStock / (product?.pieces_per_sheet || 1)
+    );
+
     switch (type) {
       case "box":
-        setQuantityMode({ boxes: 1, sheets: 0, pieces: 0 });
+        if (maxBoxes >= 1) {
+          setQuantityMode({ boxes: 1, sheets: 0, pieces: 0 });
+        }
         break;
       case "sheet":
-        setQuantityMode({ boxes: 0, sheets: 1, pieces: 0 });
+        if (maxSheets >= 1) {
+          setQuantityMode({ boxes: 0, sheets: 1, pieces: 0 });
+        }
         break;
       case "piece":
-        setQuantityMode({ boxes: 0, sheets: 0, pieces: 1 });
+        if (availableStock >= 1) {
+          setQuantityMode({ boxes: 0, sheets: 0, pieces: 1 });
+        }
         break;
       default:
         break;
@@ -137,7 +230,7 @@ export function QuantitySelectionModal({
   if (!isOpen || !product) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -181,37 +274,125 @@ export function QuantitySelectionModal({
                 )}
               </div>
             </div>
-            <div className="text-xs text-gray-500 space-y-1">
-              <p>• {product.pieces_per_sheet} pieces per sheet</p>
-              <p>• {product.sheets_per_box} sheets per box</p>
-              <p>• {product.total_pieces_per_box} pieces per box</p>
-              <p>• ₱{product.selling_price.toFixed(2)} per piece</p>
+            <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+              <div>
+                <p>• {product.pieces_per_sheet} pieces per sheet</p>
+                <p>• {product.sheets_per_box} sheets per box</p>
+              </div>
+              <div>
+                <p>• {product.total_pieces_per_box} pieces per box</p>
+                <p>• ₱{product.selling_price.toFixed(2)} per piece</p>
+              </div>
             </div>
+            {product.brand_name && (
+              <div className="mt-2 text-xs text-blue-600">
+                <p>Brand: {product.brand_name}</p>
+              </div>
+            )}
+            {product.expiry_date && (
+              <div className="mt-1 text-xs text-orange-600">
+                <p>
+                  Expires: {new Date(product.expiry_date).toLocaleDateString()}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Quick Add Buttons */}
           <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => handleQuickAdd("box")}
-              className="p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-center"
-            >
-              <Box size={20} className="text-blue-600 mx-auto mb-1" />
-              <p className="text-xs text-blue-700 font-medium">1 Box</p>
-            </button>
-            <button
-              onClick={() => handleQuickAdd("sheet")}
-              className="p-3 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors text-center"
-            >
-              <Layers size={20} className="text-green-600 mx-auto mb-1" />
-              <p className="text-xs text-green-700 font-medium">1 Sheet</p>
-            </button>
-            <button
-              onClick={() => handleQuickAdd("piece")}
-              className="p-3 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors text-center"
-            >
-              <Hash size={20} className="text-orange-600 mx-auto mb-1" />
-              <p className="text-xs text-orange-700 font-medium">1 Piece</p>
-            </button>
+            {(() => {
+              const maxBoxes = Math.floor(
+                availableStock / (product?.total_pieces_per_box || 1)
+              );
+              const maxSheets = Math.floor(
+                availableStock / (product?.pieces_per_sheet || 1)
+              );
+
+              return (
+                <>
+                  <button
+                    onClick={() => handleQuickAdd("box")}
+                    disabled={maxBoxes < 1}
+                    className={`p-3 border rounded-lg transition-colors text-center ${
+                      maxBoxes >= 1
+                        ? "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        : "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Box
+                      size={20}
+                      className={`mx-auto mb-1 ${
+                        maxBoxes >= 1 ? "text-blue-600" : "text-gray-400"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium ${
+                        maxBoxes >= 1 ? "text-blue-700" : "text-gray-500"
+                      }`}
+                    >
+                      1 Box
+                    </p>
+                    <p className="text-xs text-gray-500">Max: {maxBoxes}</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickAdd("sheet")}
+                    disabled={maxSheets < 1}
+                    className={`p-3 border rounded-lg transition-colors text-center ${
+                      maxSheets >= 1
+                        ? "bg-green-50 border-green-200 hover:bg-green-100"
+                        : "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Layers
+                      size={20}
+                      className={`mx-auto mb-1 ${
+                        maxSheets >= 1 ? "text-green-600" : "text-gray-400"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium ${
+                        maxSheets >= 1 ? "text-green-700" : "text-gray-500"
+                      }`}
+                    >
+                      1 Sheet
+                    </p>
+                    <p className="text-xs text-gray-500">Max: {maxSheets}</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickAdd("piece")}
+                    disabled={availableStock < 1}
+                    className={`p-3 border rounded-lg transition-colors text-center ${
+                      availableStock >= 1
+                        ? "bg-orange-50 border-orange-200 hover:bg-orange-100"
+                        : "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Hash
+                      size={20}
+                      className={`mx-auto mb-1 ${
+                        availableStock >= 1
+                          ? "text-orange-600"
+                          : "text-gray-400"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium ${
+                        availableStock >= 1
+                          ? "text-orange-700"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      1 Piece
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Max: {availableStock}
+                    </p>
+                  </button>
+                </>
+              );
+            })()}
           </div>
 
           {/* Quantity Selectors */}
@@ -344,7 +525,10 @@ export function QuantitySelectionModal({
               </div>
               <ul className="text-sm text-red-700 space-y-1">
                 {errors.map((error, index) => (
-                  <li key={index} className="flex items-center gap-1">
+                  <li
+                    key={`summary-${index}`}
+                    className="flex items-center gap-1"
+                  >
                     <span>•</span>
                     <span>{error}</span>
                   </li>
@@ -430,5 +614,27 @@ export function QuantitySelectionModal({
     </div>
   );
 }
+
+QuantitySelectionModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  product: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    selling_price: PropTypes.number,
+    total_stock: PropTypes.number,
+    pieces_per_sheet: PropTypes.number,
+    sheets_per_box: PropTypes.number,
+    total_pieces_per_box: PropTypes.number,
+    brand_name: PropTypes.string,
+    expiry_date: PropTypes.string,
+  }).isRequired,
+  onAddToCart: PropTypes.func.isRequired,
+  existingQuantity: PropTypes.number,
+};
+
+QuantitySelectionModal.defaultProps = {
+  existingQuantity: 0,
+};
 
 export default QuantitySelectionModal;

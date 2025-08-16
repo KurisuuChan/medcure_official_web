@@ -5,11 +5,20 @@ let SAMPLE_PRODUCTS = [
     id: 1,
     name: "Paracetamol 500mg",
     generic_name: "Acetaminophen",
+    brand_name: "Biogesic",
     category: "Analgesic",
+    description:
+      "Pain reliever and fever reducer. Used for headaches, muscle aches, and general pain relief.",
+    supplier: "PharmaCorp Inc.",
     total_stock: 120,
     critical_level: 20,
     cost_price: 3.5,
     selling_price: 5.25,
+    pieces_per_sheet: 10,
+    sheets_per_box: 10,
+    total_pieces_per_box: 100,
+    expiry_date: "2025-12-31",
+    batch_number: "PAR001-2024",
     is_active: true,
     created_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:30:00Z",
@@ -18,11 +27,20 @@ let SAMPLE_PRODUCTS = [
     id: 2,
     name: "Amoxicillin 250mg",
     generic_name: "Amoxicillin",
+    brand_name: "Amoxil",
     category: "Antibiotic",
+    description:
+      "Broad-spectrum antibiotic for treating bacterial infections including respiratory and urinary tract infections.",
+    supplier: "MediGen Pharmaceuticals",
     total_stock: 85,
     critical_level: 15,
     cost_price: 8.2,
     selling_price: 12.5,
+    pieces_per_sheet: 8,
+    sheets_per_box: 12,
+    total_pieces_per_box: 96,
+    expiry_date: "2025-11-30",
+    batch_number: "AMX002-2024",
     is_active: true,
     created_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:30:00Z",
@@ -31,63 +49,108 @@ let SAMPLE_PRODUCTS = [
     id: 3,
     name: "Vitamin C 1000mg",
     generic_name: "Ascorbic Acid",
+    brand_name: "C-Lemon",
     category: "Supplement",
+    description:
+      "High-potency vitamin C supplement for immune system support and antioxidant protection.",
+    supplier: "HealthPlus Vitamins",
     total_stock: 6,
     critical_level: 10,
     cost_price: 5.0,
     selling_price: 7.5,
-    is_active: true,
-    created_at: "2024-01-15T10:30:00Z",
-    updated_at: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: 3,
-    name: "Amoxicillin 500mg",
-    generic_name: "Amoxicillin",
-    category: "Antibiotic",
-    total_stock: 0,
-    critical_level: 15,
-    cost_price: 7.75,
-    selling_price: 11.25,
+    pieces_per_sheet: 6,
+    sheets_per_box: 5,
+    total_pieces_per_box: 30,
+    expiry_date: "2026-03-15",
+    batch_number: "VTC003-2024",
     is_active: true,
     created_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:30:00Z",
   },
   {
     id: 4,
-    name: "Cetirizine 10mg",
-    generic_name: "Cetirizine HCl",
-    category: "Antihistamine",
-    total_stock: 44,
-    critical_level: 25,
-    cost_price: 2.1,
-    selling_price: 3.15,
+    name: "Amoxicillin 500mg",
+    generic_name: "Amoxicillin",
+    brand_name: "Amoxil Forte",
+    category: "Antibiotic",
+    description:
+      "Higher strength broad-spectrum antibiotic for more severe bacterial infections.",
+    supplier: "MediGen Pharmaceuticals",
+    total_stock: 50,
+    critical_level: 15,
+    cost_price: 7.75,
+    selling_price: 11.25,
+    pieces_per_sheet: 8,
+    sheets_per_box: 12,
+    total_pieces_per_box: 96,
+    expiry_date: "2025-10-31",
+    batch_number: "AMX004-2024",
     is_active: true,
     created_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:30:00Z",
   },
   {
     id: 5,
-    name: "Hydrogen Peroxide",
-    generic_name: "Hydrogen Peroxide 3%",
-    category: "First Aid",
-    total_stock: 9,
-    critical_level: 12,
-    cost_price: 15.25,
-    selling_price: 22.5,
+    name: "Cetirizine 10mg",
+    generic_name: "Cetirizine HCl",
+    brand_name: "Zyrtec",
+    category: "Antihistamine",
+    description:
+      "Non-drowsy antihistamine for allergic rhinitis, urticaria, and other allergic conditions.",
+    supplier: "AllerCare Pharmaceuticals",
+    total_stock: 44,
+    critical_level: 25,
+    cost_price: 2.1,
+    selling_price: 3.15,
+    pieces_per_sheet: 10,
+    sheets_per_box: 10,
+    total_pieces_per_box: 100,
+    expiry_date: "2025-09-30",
+    batch_number: "CET005-2024",
     is_active: true,
     created_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:30:00Z",
   },
   {
     id: 6,
+    name: "Hydrogen Peroxide 3%",
+    generic_name: "Hydrogen Peroxide Solution",
+    brand_name: "H2O2 Clean",
+    category: "First Aid",
+    description:
+      "Antiseptic solution for cleaning wounds and preventing infection. External use only.",
+    supplier: "MedClean Solutions",
+    total_stock: 9,
+    critical_level: 12,
+    cost_price: 15.25,
+    selling_price: 22.5,
+    pieces_per_sheet: 1,
+    sheets_per_box: 12,
+    total_pieces_per_box: 12,
+    expiry_date: "2025-08-31",
+    batch_number: "HYD006-2024",
+    is_active: true,
+    created_at: "2024-01-15T10:30:00Z",
+    updated_at: "2024-01-15T10:30:00Z",
+  },
+  {
+    id: 7,
     name: "Ibuprofen 400mg",
     generic_name: "Ibuprofen",
+    brand_name: "Advil",
     category: "Analgesic",
+    description:
+      "Nonsteroidal anti-inflammatory drug (NSAID) for pain, inflammation, and fever reduction.",
+    supplier: "PharmaCorp Inc.",
     total_stock: 85,
     critical_level: 30,
     cost_price: 4.2,
     selling_price: 6.3,
+    pieces_per_sheet: 10,
+    sheets_per_box: 10,
+    total_pieces_per_box: 100,
+    expiry_date: "2025-07-31",
+    batch_number: "IBU007-2024",
     is_active: true,
     created_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:30:00Z",
@@ -300,15 +363,18 @@ export async function mockCreateSale(saleData) {
       throw new Error("Cart is empty");
     }
 
-    // Calculate totals
-    const subtotal = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+    console.log("🛒 Processing sale with cart:", cart);
+
+    // Calculate totals using the price from cart items
+    const subtotal = cart.reduce((sum, item) => {
+      const price = item.price || item.selling_price || 0;
+      return sum + price * item.quantity;
+    }, 0);
+
     const discountAmount = (subtotal * (discount || 0)) / 100;
     const pwdSeniorDiscount = isPwdSenior ? subtotal * 0.2 : 0;
     const totalDiscountAmount = discountAmount + pwdSeniorDiscount;
-    const totalAmount = subtotal - totalDiscountAmount;
+    const totalAmount = Math.max(0, subtotal - totalDiscountAmount);
 
     // Generate transaction number
     const timestamp = Date.now();
@@ -321,16 +387,16 @@ export async function mockCreateSale(saleData) {
     const transaction = {
       id: Date.now(),
       transaction_number: transactionNumber,
-      subtotal: subtotal,
+      subtotal: Math.round(subtotal * 100) / 100,
       discount_percentage: discount || 0,
-      discount_amount: discountAmount,
-      pwd_senior_discount: pwdSeniorDiscount,
-      total_amount: totalAmount,
+      discount_amount: Math.round(discountAmount * 100) / 100,
+      pwd_senior_discount: Math.round(pwdSeniorDiscount * 100) / 100,
+      total_amount: Math.round(totalAmount * 100) / 100,
       is_pwd_senior: isPwdSenior,
       customer_name: customerInfo.name || null,
       payment_method: customerInfo.paymentMethod || "cash",
       amount_paid: customerInfo.amountPaid || totalAmount,
-      change_amount: customerInfo.changeAmount || 0,
+      change_amount: Math.round((customerInfo.changeAmount || 0) * 100) / 100,
       status: "completed",
       created_at: new Date().toISOString(),
     };
@@ -341,6 +407,14 @@ export async function mockCreateSale(saleData) {
 
     for (let i = 0; i < cart.length; i++) {
       const item = cart[i];
+
+      console.log(`📋 Processing item ${i + 1}:`, {
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        stock: item.stock || item.total_stock,
+        packaging: item.packaging,
+      });
 
       // Check stock availability
       const productIndex = SAMPLE_PRODUCTS.findIndex((p) => p.id === item.id);
@@ -355,35 +429,41 @@ export async function mockCreateSale(saleData) {
         );
       }
 
-      // Create sales item record
+      // Create sales item record with proper price handling
+      const unitPrice = item.price || item.selling_price || 0;
       const saleItem = {
         id: Date.now() + i,
         transaction_id: transaction.id,
         product_id: item.id,
+        name: item.name,
         boxes_sold: item.packaging?.boxes_sold || 0,
         sheets_sold: item.packaging?.sheets_sold || 0,
         pieces_sold: item.packaging?.pieces_sold || 0,
         total_pieces: item.quantity,
-        unit_price: item.price,
-        line_total: item.price * item.quantity,
+        unit_price: unitPrice,
+        line_total: Math.round(unitPrice * item.quantity * 100) / 100,
+        packaging: item.packaging || {},
         created_at: new Date().toISOString(),
       };
 
       saleItems.push(saleItem);
 
       // Update product stock
-      SAMPLE_PRODUCTS[productIndex].total_stock = currentStock - item.quantity;
+      const newStock = currentStock - item.quantity;
+      SAMPLE_PRODUCTS[productIndex].total_stock = newStock;
+      SAMPLE_PRODUCTS[productIndex].updated_at = new Date().toISOString();
+
       stockUpdates.push({
         productId: item.id,
+        productName: item.name,
         previousStock: currentStock,
-        newStock: currentStock - item.quantity,
+        newStock: newStock,
         quantitySold: item.quantity,
+        packaging: item.packaging || {},
       });
 
       console.log(
-        `📦 Stock updated for ${item.name}: ${currentStock} → ${
-          currentStock - item.quantity
-        }`
+        `📦 Stock updated for ${item.name}: ${currentStock} → ${newStock} (sold ${item.quantity})`
       );
     }
 
@@ -392,6 +472,8 @@ export async function mockCreateSale(saleData) {
       ...transaction,
       sales_items: saleItems,
     });
+
+    console.log("✅ Transaction completed:", transactionNumber);
 
     // Generate receipt
     const receipt = generateReceipt(transaction, saleItems, cart);
@@ -404,30 +486,34 @@ export async function mockCreateSale(saleData) {
         receipt,
         summary: {
           transactionNumber,
-          subtotal,
-          discountAmount,
-          pwdSeniorDiscount,
-          totalAmount,
+          subtotal: transaction.subtotal,
+          discountAmount: transaction.discount_amount,
+          pwdSeniorDiscount: transaction.pwd_senior_discount,
+          totalAmount: transaction.total_amount,
           itemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
+          itemTypes: cart.length,
         },
       },
       error: null,
     };
   } catch (error) {
-    console.error("Error creating sale:", error);
+    console.error("❌ Error creating sale:", error);
     return { data: null, error: error.message };
   }
 }
 
 // Generate receipt for a transaction
 function generateReceipt(transaction, items, cart) {
-  const receiptItems = cart.map((cartItem, index) => ({
-    name: cartItem.name,
-    quantity: cartItem.quantity,
-    unitPrice: cartItem.price,
-    lineTotal: cartItem.price * cartItem.quantity,
-    packaging: cartItem.packaging || {},
-  }));
+  const receiptItems = cart.map((cartItem) => {
+    const unitPrice = cartItem.price || cartItem.selling_price || 0;
+    return {
+      name: cartItem.name,
+      quantity: cartItem.quantity,
+      unitPrice: unitPrice,
+      lineTotal: unitPrice * cartItem.quantity,
+      packaging: cartItem.packaging || {},
+    };
+  });
 
   return {
     transaction_number: transaction.transaction_number,

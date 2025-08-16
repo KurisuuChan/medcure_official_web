@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import {
   X,
   Package,
@@ -187,7 +188,7 @@ export function ProductModal({
     parseInt(formData.sheets_per_box || 1);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -508,11 +509,32 @@ export function ProductModal({
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700 space-y-1">
                 <p>
                   📦 Total pieces per box:{" "}
                   <span className="font-semibold">{totalPiecesPerBox}</span>
                 </p>
+                {formData.total_stock && (
+                  <>
+                    <p>
+                      📊 Total boxes available:{" "}
+                      <span className="font-semibold">
+                        {Math.floor(
+                          parseInt(formData.total_stock) / totalPiecesPerBox
+                        )}
+                      </span>
+                    </p>
+                    <p>
+                      📋 Total sheets available:{" "}
+                      <span className="font-semibold">
+                        {Math.floor(
+                          parseInt(formData.total_stock) /
+                            parseInt(formData.pieces_per_sheet || 1)
+                        )}
+                      </span>
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -605,3 +627,31 @@ export function ProductModal({
     </div>
   );
 }
+
+ProductModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  product: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    category: PropTypes.string,
+    buying_price: PropTypes.number,
+    selling_price: PropTypes.number,
+    total_stock: PropTypes.number,
+    pieces_per_sheet: PropTypes.number,
+    sheets_per_box: PropTypes.number,
+    brand_name: PropTypes.string,
+    supplier: PropTypes.string,
+    description: PropTypes.string,
+    expiry_date: PropTypes.string,
+    batch_number: PropTypes.string,
+    restock_level: PropTypes.number,
+  }),
+  categories: PropTypes.arrayOf(PropTypes.string),
+};
+
+ProductModal.defaultProps = {
+  product: null,
+  categories: [],
+};

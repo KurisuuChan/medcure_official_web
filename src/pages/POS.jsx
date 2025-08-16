@@ -39,6 +39,7 @@ export default function POS() {
     setDiscount,
     setIsPwdSenior,
     calculateTotals,
+    getCartItem,
   } = usePOS();
 
   // Get unique categories from products
@@ -188,19 +189,39 @@ export default function POS() {
 
                   {/* Packaging Info */}
                   <div className="text-xs text-gray-400 mb-3 space-y-1">
-                    <p>📦 {product.total_pieces_per_box} pcs/box</p>
-                    <p>📄 {product.pieces_per_sheet} pcs/sheet</p>
+                    <div className="flex justify-between">
+                      <span>📦 Per box:</span>
+                      <span>{product.total_pieces_per_box} pcs</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>📄 Per sheet:</span>
+                      <span>{product.pieces_per_sheet} pcs</span>
+                    </div>
+                    {product.brand_name && (
+                      <div className="flex justify-between">
+                        <span>🏷️ Brand:</span>
+                        <span>{product.brand_name}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-bold text-blue-600">
                       ₱{product.selling_price.toFixed(2)}
                     </span>
-                    {inCart && (
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {inCart.quantity} in cart
-                      </span>
-                    )}
+                    <div className="flex flex-col items-end gap-1">
+                      {inCart && (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {inCart.quantity} in cart
+                        </span>
+                      )}
+                      {product.expiry_date && (
+                        <span className="text-xs text-orange-600">
+                          Exp:{" "}
+                          {new Date(product.expiry_date).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Action Button */}
@@ -403,7 +424,7 @@ export default function POS() {
             }`}
           >
             <CheckCircle size={20} />
-            Complete Sale - ₱{totals.total.toFixed(2)}
+            Place Order - ₱{totals.total.toFixed(2)}
           </button>
 
           {cart.length > 0 && (
@@ -421,6 +442,9 @@ export default function POS() {
         onClose={closeQuantityModal}
         product={selectedProduct}
         onAddToCart={addToCart}
+        existingQuantity={
+          selectedProduct ? getCartItem(selectedProduct.id)?.quantity || 0 : 0
+        }
       />
 
       <TransactionHistoryModal

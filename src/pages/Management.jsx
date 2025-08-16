@@ -23,16 +23,18 @@ import { ImportModal } from "../components/modals/ImportModal.jsx";
 import { ExportModal } from "../components/modals/ExportModal.jsx";
 import { FilterModal } from "../components/modals/FilterModal.jsx";
 import { BulkActionsModal } from "../components/modals/BulkActionsModal.jsx";
+import { CategoryManagementModal } from "../components/modals/CategoryManagementModal.jsx";
 import {
   ConfirmationModal,
   ArchiveProductModal,
 } from "../components/modals/ConfirmationModal.jsx";
-import { exportProductsToCSV } from "../utils/csvUtils.js";
-import {
-  generateProductCatalogPDF,
-  generateLowStockReportPDF,
-  generateInventoryValuationPDF,
-} from "../utils/pdfUtils.js";
+// Future implementation - reports functionality
+// import { exportProductsToCSV } from "../utils/csvUtils.js";
+// import {
+//   generateProductCatalogPDF,
+//   generateLowStockReportPDF,
+//   generateInventoryValuationPDF,
+// } from "../utils/pdfUtils.js";
 import { useNotification } from "../hooks/useNotification.js";
 
 export default function Management() {
@@ -46,6 +48,7 @@ export default function Management() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showBulkActionsModal, setShowBulkActionsModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [productToArchive, setProductToArchive] = useState(null);
@@ -56,15 +59,15 @@ export default function Management() {
   // Use products hook
   const {
     products,
-    loading,
-    error,
+    loading: _loading,
+    error: _error,
     addProduct,
     updateProduct,
     archiveProduct,
     importProductsFromCSV,
     applyFilters,
     getInventoryStats,
-    refresh,
+    refresh: _refresh,
   } = useProducts();
 
   // Load categories
@@ -259,7 +262,7 @@ export default function Management() {
     }
   };
 
-  const inventoryStats = getInventoryStats();
+  const _inventoryStats = getInventoryStats();
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -323,6 +326,13 @@ export default function Management() {
           >
             <Filter size={16} />
             Filters
+          </button>
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <Settings size={16} />
+            Categories
           </button>
         </div>
 
@@ -724,6 +734,32 @@ export default function Management() {
         onBulkUpdate={handleBulkUpdate}
         onBulkArchive={handleBulkArchive}
         categories={categories}
+      />
+
+      <CategoryManagementModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        categories={categories}
+        onAddCategory={async (categoryData) => {
+          setCategories((prev) => [...prev, categoryData]);
+          addNotification("Category added successfully", "success");
+        }}
+        onUpdateCategory={async (categoryId, updateData) => {
+          setCategories((prev) =>
+            prev.map((cat) =>
+              (cat.id || cat.name) === categoryId
+                ? { ...cat, ...updateData }
+                : cat
+            )
+          );
+          addNotification("Category updated successfully", "success");
+        }}
+        onDeleteCategory={async (categoryId) => {
+          setCategories((prev) =>
+            prev.filter((cat) => (cat.id || cat.name) !== categoryId)
+          );
+          addNotification("Category deleted successfully", "success");
+        }}
       />
 
       <ArchiveProductModal
