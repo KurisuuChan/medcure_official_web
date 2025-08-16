@@ -7,6 +7,9 @@ import {
   PackageX,
   Award,
   LineChart,
+  BarChart3,
+  Activity,
+  DollarSign,
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import SalesByHourChart from "@/components/charts/SalesByHourChart";
