@@ -6,6 +6,15 @@ import App from "./App";
 import "./index.css";
 import { NotificationProvider } from "@/context/NotificationProvider";
 
+// Test mock API
+import { isMockMode } from "@/utils/mockApi";
+console.log("🔧 Mock API Status Check:", isMockMode() ? "ENABLED" : "DISABLED");
+console.log(
+  "🔧 Environment VITE_USE_MOCK_API:",
+  import.meta.env.VITE_USE_MOCK_API
+);
+console.log("🔧 All environment variables:", import.meta.env);
+
 // Create a client
 const queryClient = new QueryClient();
 

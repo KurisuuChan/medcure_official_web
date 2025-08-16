@@ -36,39 +36,75 @@ export function ImportModal({ isOpen, onClose, onImport }) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
-      setErrors(["Please select a CSV file"]);
+    // Clear previous errors
+    setErrors([]);
+
+    // Check file type
+    if (
+      !file.name.toLowerCase().endsWith(".csv") &&
+      file.type !== "text/csv" &&
+      file.type !== "application/vnd.ms-excel"
+    ) {
+      setErrors(["Please select a CSV file (.csv)"]);
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors([
+        "File size too large. Please select a file smaller than 5MB.",
+      ]);
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target.result;
-      const { data, error } = parseCSV(text);
+      try {
+        const text = e.target.result;
 
-      if (error) {
-        setErrors([error]);
-        return;
+        // Basic validation
+        if (!text || text.trim().length === 0) {
+          setErrors(["The selected file appears to be empty."]);
+          return;
+        }
+
+        const { data, error } = parseCSV(text);
+
+        if (error) {
+          setErrors([error]);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          setErrors(["No data found in the CSV file."]);
+          return;
+        }
+
+        // Convert to products format
+        const { data: products, error: convertError } =
+          convertCSVToProducts(data);
+
+        if (convertError) {
+          setErrors([convertError]);
+          return;
+        }
+
+        if (!products || products.length === 0) {
+          setErrors(["No valid products found in the CSV file."]);
+          return;
+        }
+
+        setParsedProducts(products);
+        setErrors([]);
+        setStep(2);
+      } catch (error) {
+        console.error("File processing error:", error);
+        setErrors([`Error processing file: ${error.message}`]);
       }
-
-      setCsvData(data);
-
-      // Convert to products format
-      const { data: products, error: convertError } =
-        convertCSVToProducts(data);
-
-      if (convertError) {
-        setErrors([convertError]);
-        return;
-      }
-
-      setParsedProducts(products);
-      setErrors([]);
-      setStep(2);
     };
 
     reader.onerror = () => {
-      setErrors(["Error reading file"]);
+      setErrors(["Error reading the selected file. Please try again."]);
     };
 
     reader.readAsText(file);
@@ -142,8 +178,8 @@ export function ImportModal({ isOpen, onClose, onImport }) {
                     selling_price, total_stock
                   </p>
                   <p>
-                    • Optional columns: generic_name, barcode, supplier,
-                    critical_level, etc.
+                    • Optional columns: generic_name, supplier, critical_level,
+                    etc.
                   </p>
                   <p>• Use comma-separated values format</p>
                   <p>• First row should contain column headers</p>
@@ -263,9 +299,7 @@ export function ImportModal({ isOpen, onClose, onImport }) {
                     <tbody className="divide-y divide-gray-200">
                       {parsedProducts.slice(0, 10).map((product) => (
                         <tr
-                          key={`${product.name}-${
-                            product.barcode || Math.random()
-                          }`}
+                          key={`${product.name}-${Math.random()}`}
                           className="hover:bg-gray-50"
                         >
                           <td className="px-4 py-3 text-sm text-gray-900">
@@ -373,9 +407,7 @@ export function ImportModal({ isOpen, onClose, onImport }) {
                       .slice(0, 5)
                       .map((error, errorIndex) => {
                         const key =
-                          error.product?.barcode ||
-                          error.product?.name ||
-                          `error-${errorIndex}`;
+                          error.product?.name || `error-${errorIndex}`;
                         return (
                           <div key={key} className="text-sm text-red-700 mb-2">
                             <p className="font-medium">

@@ -14,12 +14,27 @@ import {
   List,
   MoreVertical,
   PackageX,
+  Settings,
 } from "lucide-react";
 import { useProducts } from "../hooks/useProducts.js";
 import { getCategories } from "../services/productService.js";
 import { ProductModal } from "../components/modals/ProductModal.jsx";
+import { ProductViewModal } from "../components/modals/ProductViewModal.jsx";
 import { ImportModal } from "../components/modals/ImportModal.jsx";
+import { ExportModal } from "../components/modals/ExportModal.jsx";
+import { FilterModal } from "../components/modals/FilterModal.jsx";
+import { BulkActionsModal } from "../components/modals/BulkActionsModal.jsx";
+import {
+  ConfirmationModal,
+  ArchiveProductModal,
+  DeleteProductModal,
+} from "../components/modals/ConfirmationModal.jsx";
 import { exportProductsToCSV } from "../utils/csvUtils.js";
+import {
+  generateProductCatalogPDF,
+  generateLowStockReportPDF,
+  generateInventoryValuationPDF,
+} from "../utils/pdfUtils.js";
 import { useNotification } from "../hooks/useNotification.js";
 
 export default function Management() {
@@ -27,9 +42,19 @@ export default function Management() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showProductViewModal, setShowProductViewModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showBulkActionsModal, setShowBulkActionsModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [viewingProduct, setViewingProduct] = useState(null);
+  const [productToArchive, setProductToArchive] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [currentFilters, setCurrentFilters] = useState({});
   const { addNotification } = useNotification();
 
   // Use products hook
@@ -81,6 +106,58 @@ export default function Management() {
     setShowProductModal(true);
   };
 
+  const handleViewProduct = (product) => {
+    setViewingProduct(product);
+    setShowProductViewModal(true);
+  };
+
+  const handleArchiveProduct = (product) => {
+    setProductToArchive(product);
+    setShowArchiveModal(true);
+  };
+
+  const handleDeleteProduct = (product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmArchive = async () => {
+    if (productToArchive) {
+      await removeProduct(productToArchive.id);
+      setProductToArchive(null);
+      setShowArchiveModal(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (productToDelete) {
+      await removeProduct(productToDelete.id);
+      setProductToDelete(null);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleBulkActions = () => {
+    setShowBulkActionsModal(true);
+  };
+
+  const handleBulkUpdate = async (selectedProducts, updateData) => {
+    // Update each selected product
+    for (const productId of selectedProducts) {
+      await updateProduct(productId, updateData);
+    }
+    setSelectedItems([]);
+    addNotification(
+      `${selectedProducts.length} products updated successfully`,
+      "success"
+    );
+  };
+
+  const handleApplyFilters = (filters) => {
+    setCurrentFilters(filters);
+    applyFilters(filters);
+  };
+
   const handleProductSubmit = async (productData) => {
     if (editingProduct) {
       await updateProduct(editingProduct.id, productData);
@@ -99,12 +176,7 @@ export default function Management() {
   };
 
   const handleExport = () => {
-    const { success } = exportProductsToCSV(products);
-    if (success) {
-      addNotification("Products exported successfully", "success");
-    } else {
-      addNotification("Failed to export products", "error");
-    }
+    setShowExportModal(true);
   };
 
   const handleImport = async (productsArray) => {
@@ -163,13 +235,16 @@ export default function Management() {
             {selectedItems.length} selected
           </p>
           <button
+            onClick={handleBulkActions}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold hover:bg-blue-200"
+          >
+            <Settings size={16} /> Bulk Actions
+          </button>
+          <button
             onClick={handleBulkArchive}
             className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200"
           >
             <Archive size={16} /> Archive Selected
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200">
-            <Trash2 size={16} /> Delete
           </button>
         </div>
       )}
@@ -190,7 +265,10 @@ export default function Management() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button
+            onClick={() => setShowFilterModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <Filter size={16} />
             Filters
           </button>
@@ -228,7 +306,7 @@ export default function Management() {
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             <Upload size={16} />
-            Export
+            Export PDF
           </button>
           <button
             onClick={handleAddProduct}
@@ -310,7 +388,10 @@ export default function Management() {
                   </div>
 
                   <div className="flex gap-2 pt-4 border-t border-gray-100">
-                    <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                    <button
+                      onClick={() => handleViewProduct(product)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                    >
                       <Eye size={14} />
                       View
                     </button>
@@ -419,7 +500,10 @@ export default function Management() {
                     </td>
                     <td className="py-4 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                        <button
+                          onClick={() => handleViewProduct(product)}
+                          className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                        >
                           <Eye size={16} />
                         </button>
                         <button
@@ -464,10 +548,73 @@ export default function Management() {
         categories={categories}
       />
 
+      <ProductViewModal
+        isOpen={showProductViewModal}
+        onClose={() => {
+          setShowProductViewModal(false);
+          setViewingProduct(null);
+        }}
+        onEdit={handleEditProduct}
+        product={viewingProduct}
+      />
+
       <ImportModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onImport={handleImport}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        products={filteredProducts.length > 0 ? filteredProducts : products}
+      />
+
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApplyFilters={handleApplyFilters}
+        categories={categories}
+        currentFilters={currentFilters}
+      />
+
+      <BulkActionsModal
+        isOpen={showBulkActionsModal}
+        onClose={() => setShowBulkActionsModal(false)}
+        selectedProducts={selectedItems}
+        onBulkUpdate={handleBulkUpdate}
+        onBulkArchive={handleBulkArchive}
+        onBulkDelete={async (selectedProducts) => {
+          for (const productId of selectedProducts) {
+            await removeProduct(productId);
+          }
+          setSelectedItems([]);
+          addNotification(
+            `${selectedProducts.length} products deleted successfully`,
+            "success"
+          );
+        }}
+        categories={categories}
+      />
+
+      <ArchiveProductModal
+        isOpen={showArchiveModal}
+        onClose={() => {
+          setShowArchiveModal(false);
+          setProductToArchive(null);
+        }}
+        onConfirm={handleConfirmArchive}
+        productName={productToArchive?.name || ""}
+      />
+
+      <DeleteProductModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setProductToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        productName={productToDelete?.name || ""}
       />
     </div>
   );

@@ -1,0 +1,6 @@
+name,category,cost_price,selling_price,total_stock,critical_level,supplier,generic_name,description
+"Paracetamol 500mg","Pain Relief",3.50,5.99,100,20,"PharmaCorp","Acetaminophen","Pain and fever relief tablets"
+"Ibuprofen 200mg","Pain Relief",4.75,7.99,75,15,"MediSupply","Ibuprofen","Anti-inflammatory tablets"
+"Vitamin C 1000mg","Vitamins",8.50,12.99,50,10,"HealthPlus","Ascorbic Acid","Immune system support"
+"Bandages (Pack of 10)","First Aid",2.25,3.99,200,50,"MedSupplies","Sterile Bandages","Sterile adhesive bandages"
+"Digital Thermometer","Medical Devices",12.00,19.99,25,5,"TechMed","Digital Thermometer","Digital fever thermometer"

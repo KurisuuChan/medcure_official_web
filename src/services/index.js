@@ -61,7 +61,6 @@ export { default as ReportService } from "./reportService.js";
  * - generateCSVTemplate()
  * - downloadCSVTemplate()
  * - exportProductsToCSV(products, filename)
- * - validateBarcode(barcode)
  * - formatCurrency(amount, currency)
  * - calculatePackagingBreakdown(totalPieces, piecesPerSheet, sheetsPerBox)
  */

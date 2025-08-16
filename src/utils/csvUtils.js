@@ -10,15 +10,49 @@ export function parseCSV(csvText) {
       throw new Error("CSV must have at least a header row and one data row");
     }
 
-    const headers = lines[0]
-      .split(",")
-      .map((header) => header.trim().replace(/"/g, ""));
+    // Better CSV parsing to handle quoted fields
+    const parseCSVLine = (line) => {
+      const result = [];
+      let current = "";
+      let inQuotes = false;
+      let i = 0;
+
+      while (i < line.length) {
+        const char = line[i];
+
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i += 2;
+          } else {
+            // Toggle quote state
+            inQuotes = !inQuotes;
+            i++;
+          }
+        } else if (char === "," && !inQuotes) {
+          // Field separator
+          result.push(current.trim());
+          current = "";
+          i++;
+        } else {
+          current += char;
+          i++;
+        }
+      }
+
+      // Add the last field
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseCSVLine(lines[0]);
     const data = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const row = lines[i]
-        .split(",")
-        .map((cell) => cell.trim().replace(/"/g, ""));
+      if (lines[i].trim() === "") continue; // Skip empty lines
+
+      const row = parseCSVLine(lines[i]);
       const obj = {};
 
       headers.forEach((header, index) => {
@@ -46,7 +80,6 @@ export function convertCSVToProducts(csvData) {
         brand_name: row.brand_name || row.brand || row.Brand || "",
         category: row.category || row.Category || "General",
         description: row.description || row.Description || "",
-        barcode: row.barcode || row.Barcode || row.sku || row.SKU || "",
         supplier: row.supplier || row.Supplier || "",
         cost_price: parseFloat(
           row.cost_price || row.cost || row.Cost || row["Cost Price"] || 0
@@ -162,7 +195,6 @@ export function generateCSVTemplate() {
     "name",
     "generic_name",
     "category",
-    "barcode",
     "supplier",
     "cost_price",
     "selling_price",
@@ -180,7 +212,6 @@ export function generateCSVTemplate() {
       name: "Paracetamol 500mg",
       generic_name: "Paracetamol",
       category: "Pain Relief",
-      barcode: "1234567890123",
       supplier: "PharmaCorp Inc.",
       cost_price: "12.50",
       selling_price: "15.50",
@@ -233,7 +264,6 @@ export function exportProductsToCSV(
       "name",
       "generic_name",
       "category",
-      "barcode",
       "supplier",
       "cost_price",
       "selling_price",
@@ -343,32 +373,4 @@ export function calculatePackagingBreakdown(
   const pieces = remainingAfterBoxes % piecesPerSheet;
 
   return { boxes, sheets, pieces };
-}
-
-// Validate barcode format (basic validation)
-export function validateBarcode(barcode) {
-  if (!barcode) return { valid: true, error: null };
-
-  // Remove any spaces or dashes
-  const cleanBarcode = barcode.replace(/[\s-]/g, "");
-
-  // Check common barcode formats
-  const formats = [
-    { name: "UPC-A", pattern: /^\d{12}$/ },
-    { name: "EAN-13", pattern: /^\d{13}$/ },
-    { name: "EAN-8", pattern: /^\d{8}$/ },
-    { name: "Alphanumeric", pattern: /^[A-Za-z0-9]{1,48}$/ },
-  ];
-
-  for (const format of formats) {
-    if (format.pattern.test(cleanBarcode)) {
-      return { valid: true, error: null, format: format.name };
-    }
-  }
-
-  return {
-    valid: false,
-    error:
-      "Invalid barcode format. Please use UPC-A (12 digits), EAN-13 (13 digits), or EAN-8 (8 digits).",
-  };
 }

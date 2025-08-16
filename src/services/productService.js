@@ -1,4 +1,15 @@
 import { supabase, TABLES } from "../lib/supabase.js";
+import {
+  mockFetchProducts,
+  mockFetchCategories,
+  mockFetchProduct,
+  mockCreateProduct,
+  mockUpdateProduct,
+  mockDeleteProduct,
+  mockImportProducts,
+  mockGetInventorySummary,
+  isMockMode,
+} from "../utils/mockApi.js";
 
 /**
  * Product Management API Service
@@ -7,6 +18,16 @@ import { supabase, TABLES } from "../lib/supabase.js";
 
 // Get all products with optional filtering
 export async function getProducts(filters = {}) {
+  // Force mock API for testing - bypass environment check
+  console.log("🔧 getProducts called - forcing mock mode");
+  return await mockFetchProducts(filters);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockFetchProducts(filters);
+  }
+
   try {
     let query = supabase
       .from(TABLES.PRODUCTS)
@@ -21,7 +42,7 @@ export async function getProducts(filters = {}) {
 
     if (filters.search) {
       query = query.or(
-        `name.ilike.%${filters.search}%, generic_name.ilike.%${filters.search}%, barcode.ilike.%${filters.search}%`
+        `name.ilike.%${filters.search}%, generic_name.ilike.%${filters.search}%`
       );
     }
 
@@ -42,10 +63,16 @@ export async function getProducts(filters = {}) {
     console.error("Error fetching products:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Get single product by ID
 export async function getProduct(id) {
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockFetchProduct(id);
+  }
+
   try {
     const { data, error } = await supabase
       .from(TABLES.PRODUCTS)
@@ -65,6 +92,16 @@ export async function getProduct(id) {
 
 // Create new product
 export async function createProduct(productData) {
+  // Force mock API for testing - bypass environment check
+  console.log("🔧 createProduct called - forcing mock mode");
+  return await mockCreateProduct(productData);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockCreateProduct(productData);
+  }
+
   try {
     const { data, error } = await supabase
       .from(TABLES.PRODUCTS)
@@ -91,10 +128,21 @@ export async function createProduct(productData) {
     console.error("Error creating product:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Update product
 export async function updateProduct(id, updates) {
+  // Force mock API for testing - bypass environment check
+  console.log("🔧 updateProduct called - forcing mock mode");
+  return await mockUpdateProduct(id, updates);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockUpdateProduct(id, updates);
+  }
+
   try {
     const { data, error } = await supabase
       .from(TABLES.PRODUCTS)
@@ -110,6 +158,7 @@ export async function updateProduct(id, updates) {
     console.error("Error updating product:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Update product stock
@@ -159,6 +208,16 @@ export async function updateProductStock(
 
 // Soft delete product
 export async function deleteProduct(id) {
+  // Force mock API for testing - bypass environment check
+  console.log("🔧 deleteProduct called - forcing mock mode");
+  return await mockDeleteProduct(id);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockDeleteProduct(id);
+  }
+
   try {
     const { data, error } = await supabase
       .from(TABLES.PRODUCTS)
@@ -174,10 +233,21 @@ export async function deleteProduct(id) {
     console.error("Error deleting product:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Import products from CSV data
 export async function importProducts(productsArray) {
+  // Force mock API for testing - bypass environment check
+  console.log("🔧 importProducts called - forcing mock mode");
+  return await mockImportProducts(productsArray);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockImportProducts(productsArray);
+  }
+
   try {
     const results = {
       success: [],
@@ -187,23 +257,6 @@ export async function importProducts(productsArray) {
 
     for (const productData of productsArray) {
       try {
-        // Check if product with barcode already exists
-        if (productData.barcode) {
-          const { data: existing } = await supabase
-            .from(TABLES.PRODUCTS)
-            .select("id")
-            .eq("barcode", productData.barcode)
-            .single();
-
-          if (existing) {
-            results.errors.push({
-              product: productData,
-              error: "Product with this barcode already exists",
-            });
-            continue;
-          }
-        }
-
         const { data, error } = await createProduct(productData);
 
         if (error) {
@@ -227,10 +280,21 @@ export async function importProducts(productsArray) {
     console.error("Error importing products:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Get product categories
 export async function getCategories() {
+  // Force mock API for testing
+  console.log("🔧 getCategories called - forcing mock mode");
+  return await mockFetchCategories();
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockFetchCategories();
+  }
+
   try {
     const { data, error } = await supabase
       .from(TABLES.CATEGORIES)
@@ -245,6 +309,7 @@ export async function getCategories() {
     console.error("Error fetching categories:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Create stock movement record
@@ -286,6 +351,16 @@ export async function getStockMovements(productId, limit = 50) {
 
 // Get inventory summary
 export async function getInventorySummary() {
+  // Force mock API for testing
+  console.log("🔧 getInventorySummary called - forcing mock mode");
+  return await mockGetInventorySummary();
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockGetInventorySummary();
+  }
+
   try {
     const { data: products, error } = await supabase
       .from(TABLES.PRODUCTS)
@@ -322,4 +397,5 @@ export async function getInventorySummary() {
     console.error("Error getting inventory summary:", error);
     return { data: null, error: error.message };
   }
+  */
 }

@@ -7,7 +7,7 @@ import {
   Calendar,
   AlertTriangle,
 } from "lucide-react";
-import { validateBarcode, formatCurrency } from "../../utils/csvUtils.js";
+import { formatCurrency } from "../../utils/csvUtils.js";
 
 export function ProductModal({
   isOpen,
@@ -22,7 +22,6 @@ export function ProductModal({
     brand_name: "",
     category: "",
     description: "",
-    barcode: "",
     supplier: "",
     cost_price: "",
     selling_price: "",
@@ -45,7 +44,6 @@ export function ProductModal({
         brand_name: product.brand_name || "",
         category: product.category || "",
         description: product.description || "",
-        barcode: product.barcode || "",
         supplier: product.supplier || "",
         cost_price: product.cost_price?.toString() || "",
         selling_price: product.selling_price?.toString() || "",
@@ -63,7 +61,6 @@ export function ProductModal({
         brand_name: "",
         category: "",
         description: "",
-        barcode: "",
         supplier: "",
         cost_price: "",
         selling_price: "",
@@ -138,14 +135,6 @@ export function ProductModal({
 
     if (isNaN(sheetsPerBox) || sheetsPerBox < 1) {
       newErrors.sheets_per_box = "Must be at least 1";
-    }
-
-    // Barcode validation
-    if (formData.barcode.trim()) {
-      const barcodeValidation = validateBarcode(formData.barcode.trim());
-      if (!barcodeValidation.valid) {
-        newErrors.barcode = barcodeValidation.error;
-      }
     }
 
     // Date validation
@@ -306,25 +295,6 @@ export function ProductModal({
                 </select>
                 {errors.category && (
                   <p className="text-red-500 text-xs mt-1">{errors.category}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Barcode
-                </label>
-                <input
-                  type="text"
-                  name="barcode"
-                  value={formData.barcode}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                    errors.barcode ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="e.g., 1234567890123"
-                />
-                {errors.barcode && (
-                  <p className="text-red-500 text-xs mt-1">{errors.barcode}</p>
                 )}
               </div>
 

@@ -24,6 +24,18 @@ export function useDashboardData() {
   const [hourlySales, setHourlySales] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
 
+  // Helper function to format relative time
+  const formatRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return format(date, "MMM d");
+  };
+
   // Fetch all dashboard data
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -206,18 +218,6 @@ export function useDashboardData() {
     hourlySales,
     bestSellers,
   ]);
-
-  // Helper function to format relative time
-  const formatRelativeTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-
-    if (diffInMinutes < 1) return "Just now";
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return format(date, "MMM d");
-  };
 
   // Initial load
   useEffect(() => {

@@ -1,5 +1,12 @@
 import { supabase, TABLES } from "../lib/supabase.js";
 import { updateProductStock } from "./productService.js";
+import {
+  mockGetSalesTransactions,
+  mockGetSalesSummary,
+  mockGetHourlySales,
+  mockGetTopSellingProducts,
+  isMockMode,
+} from "../utils/mockApi.js";
 
 /**
  * Sales Management API Service
@@ -127,6 +134,16 @@ export async function createSale(saleData) {
 
 // Get sale transactions with optional filtering
 export async function getSalesTransactions(filters = {}) {
+  // Force mock API for testing
+  console.log("🔧 getSalesTransactions called - forcing mock mode");
+  return await mockGetSalesTransactions(filters);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockGetSalesTransactions(filters);
+  }
+
   try {
     let query = supabase
       .from(TABLES.SALES_TRANSACTIONS)
@@ -177,6 +194,7 @@ export async function getSalesTransactions(filters = {}) {
     console.error("Error fetching sales transactions:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Get single sale transaction
@@ -211,6 +229,16 @@ export async function getSaleTransaction(id) {
 
 // Get sales summary/statistics
 export async function getSalesSummary(period = "today") {
+  // Force mock API for testing
+  console.log("🔧 getSalesSummary called - forcing mock mode");
+  return await mockGetSalesSummary(period);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockGetSalesSummary(period);
+  }
+
   try {
     let startDate, endDate;
     const now = new Date();
@@ -284,6 +312,7 @@ export async function getSalesSummary(period = "today") {
     console.error("Error getting sales summary:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Cancel/void a transaction
@@ -337,6 +366,16 @@ export async function cancelTransaction(transactionId, reason = "") {
 
 // Get top selling products
 export async function getTopSellingProducts(limit = 10, period = "month") {
+  // Force mock API for testing
+  console.log("🔧 getTopSellingProducts called - forcing mock mode");
+  return await mockGetTopSellingProducts(limit, period);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockGetTopSellingProducts(limit, period);
+  }
+
   try {
     let startDate;
     const now = new Date();
@@ -402,10 +441,21 @@ export async function getTopSellingProducts(limit = 10, period = "month") {
     console.error("Error getting top selling products:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Get hourly sales data for charts
 export async function getHourlySales(date = new Date()) {
+  // Force mock API for testing
+  console.log("🔧 getHourlySales called - forcing mock mode");
+  return await mockGetHourlySales(date);
+
+  /* Original Supabase code - temporarily disabled
+  // Use mock API if enabled
+  if (isMockMode()) {
+    return await mockGetHourlySales(date);
+  }
+
   try {
     const startDate = new Date(
       date.getFullYear(),
@@ -446,4 +496,5 @@ export async function getHourlySales(date = new Date()) {
     console.error("Error getting hourly sales:", error);
     return { data: null, error: error.message };
   }
+  */
 }

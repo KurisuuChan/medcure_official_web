@@ -14,7 +14,7 @@ import {
   getSalesSummary,
 } from "./services/salesService.js";
 
-import { parseCSV, validateBarcode, formatCurrency } from "./utils/csvUtils.js";
+import { parseCSV, formatCurrency } from "./utils/csvUtils.js";
 
 /**
  * Test Product Service
@@ -97,13 +97,6 @@ export async function testCSVUtils() {
     const { data: parsedData, error: parseError } = parseCSV(testCSV);
     if (parseError) throw new Error(`CSV parsing failed: ${parseError}`);
     console.log("✅ CSV parsing:", parsedData?.length || 0, "rows parsed");
-
-    // Test barcode validation
-    const barcodeResult = validateBarcode("1234567890123");
-    console.log(
-      "✅ Barcode validation:",
-      barcodeResult.valid ? "valid" : "invalid"
-    );
 
     // Test currency formatting
     const formatted = formatCurrency(1234.56);

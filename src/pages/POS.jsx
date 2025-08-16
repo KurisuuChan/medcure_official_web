@@ -172,7 +172,7 @@ export default function POS() {
               />
               <input
                 type="text"
-                placeholder="Search products by name or barcode..."
+                placeholder="Search products by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
