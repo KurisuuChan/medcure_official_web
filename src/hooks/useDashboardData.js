@@ -1,73 +1,175 @@
-import { useMemo } from "react";
-import { subHours, format } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, isAfter, differenceInDays } from "date-fns";
+import {
+  getInventorySummary,
+  getProducts,
+} from "../services/productService.js";
+import {
+  getSalesSummary,
+  getSalesTransactions,
+  getHourlySales,
+  getTopSellingProducts,
+} from "../services/salesService.js";
 
-// Mock dashboard data. Replace with real API or Supabase queries later.
+/**
+ * Hook for fetching and managing dashboard data from the backend
+ */
 export function useDashboardData() {
-  // Compute sales by hour based on current time when hook first runs
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [inventorySummary, setInventorySummary] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [todaySales, setTodaySales] = useState(null);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [hourlySales, setHourlySales] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+
+  // Fetch all dashboard data
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch inventory data
+      const [inventoryResult, productsResult] = await Promise.all([
+        getInventorySummary(),
+        getProducts(),
+      ]);
+
+      if (inventoryResult.error) throw new Error(inventoryResult.error);
+      if (productsResult.error) throw new Error(productsResult.error);
+
+      setInventorySummary(inventoryResult.data);
+      setProducts(productsResult.data || []);
+
+      // Fetch sales data
+      const [salesResult, transactionsResult, hourlyResult, topProductsResult] =
+        await Promise.all([
+          getSalesSummary("today"),
+          getSalesTransactions({ limit: 5 }),
+          getHourlySales(),
+          getTopSellingProducts(5, "week"),
+        ]);
+
+      if (salesResult.error) throw new Error(salesResult.error);
+      if (transactionsResult.error) throw new Error(transactionsResult.error);
+      if (hourlyResult.error) throw new Error(hourlyResult.error);
+      if (topProductsResult.error) throw new Error(topProductsResult.error);
+
+      setTodaySales(salesResult.data);
+      setRecentTransactions(transactionsResult.data || []);
+      setHourlySales(hourlyResult.data || []);
+      setTopProducts(topProductsResult.data || []);
+    } catch (err) {
+      console.error("Dashboard data fetch error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate derived data
+  const lowStockItems = useMemo(() => {
+    return products
+      .filter(
+        (product) =>
+          product.total_stock <= product.critical_level &&
+          product.total_stock > 0
+      )
+      .slice(0, 5)
+      .map((product) => ({
+        name: product.name,
+        quantity: product.total_stock,
+        critical: product.critical_level,
+      }));
+  }, [products]);
+
+  const expiringSoon = useMemo(() => {
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+    return products
+      .filter(
+        (product) =>
+          product.expiry_date &&
+          isAfter(new Date(product.expiry_date), today) &&
+          !isAfter(new Date(product.expiry_date), thirtyDaysFromNow)
+      )
+      .slice(0, 5)
+      .map((product) => ({
+        name: product.name,
+        days: differenceInDays(new Date(product.expiry_date), today),
+        expiryDate: product.expiry_date,
+      }))
+      .sort((a, b) => a.days - b.days);
+  }, [products]);
+
   const salesByHourData = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 12 }).map((_, idx) => {
-      const date = subHours(now, 11 - idx);
-      return {
-        hour: format(date, "HH:00"),
-        sales: Math.round(Math.random() * 1200 + 100),
-      };
+    if (!hourlySales.length) {
+      // Return empty data if no sales data
+      return Array.from({ length: 24 }, (_, hour) => ({
+        hour: `${hour.toString().padStart(2, "0")}:00`,
+        sales: 0,
+      }));
+    }
+    return hourlySales;
+  }, [hourlySales]);
+
+  // Calculate sales by category from products and recent transactions
+  const salesByCategory = useMemo(() => {
+    if (!recentTransactions.length) return [];
+
+    const categoryTotals = {};
+
+    recentTransactions.forEach((transaction) => {
+      transaction.sales_items?.forEach((item) => {
+        const category = item.products?.category || "Other";
+        categoryTotals[category] =
+          (categoryTotals[category] || 0) + item.line_total;
+      });
     });
-  }, []);
 
-  const salesByCategory = useMemo(
-    () => [
-      { category: "Antibiotics", value: 4200 },
-      { category: "Vitamins", value: 3100 },
-      { category: "Pain Relief", value: 2800 },
-      { category: "OTC", value: 1900 },
-    ],
-    []
-  );
+    return Object.entries(categoryTotals)
+      .map(([category, value]) => ({ category, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [recentTransactions]);
 
-  const bestSellers = useMemo(
-    () => [
-      { name: "Amoxicillin 500mg", quantity: 134 },
-      { name: "Vitamin C 1000mg", quantity: 118 },
-      { name: "Paracetamol 500mg", quantity: 102 },
-      { name: "Ibuprofen 200mg", quantity: 87 },
-    ],
-    []
-  );
+  const bestSellers = useMemo(() => {
+    return topProducts.map((item) => ({
+      name: item.product.name,
+      quantity: item.totalQuantity,
+      revenue: item.totalRevenue,
+    }));
+  }, [topProducts]);
 
-  const expiringSoon = useMemo(
-    () => [
-      { name: "Cough Syrup 60ml", days: 18 },
-      { name: "Antacid Tabs", days: 25 },
-      { name: "Vitamin D3", days: 33 },
-    ],
-    []
-  );
+  const recentSales = useMemo(() => {
+    return recentTransactions.slice(0, 4).map((transaction) => ({
+      id: transaction.id,
+      product: transaction.sales_items?.[0]?.products?.name || "Multiple items",
+      qty:
+        transaction.sales_items?.reduce(
+          (sum, item) => sum + item.total_pieces,
+          0
+        ) || 0,
+      price: transaction.total_amount,
+      time: formatRelativeTime(transaction.created_at),
+    }));
+  }, [recentTransactions]);
 
-  const lowStockItems = useMemo(
-    () => [
-      { name: "Bandage Roll", quantity: 6 },
-      { name: "Zinc Supplement", quantity: 4 },
-      { name: "Allergy Relief", quantity: 2 },
-    ],
-    []
-  );
+  const summaryCards = useMemo(() => {
+    const totalSales = todaySales?.totalSales || 0;
+    const avgSales =
+      hourlySales.length > 0
+        ? hourlySales.reduce((sum, item) => sum + item.sales, 0) /
+          hourlySales.filter((item) => item.sales > 0).length
+        : 0;
 
-  const recentSales = useMemo(
-    () => [
-      { id: 1, product: "Vitamin C 1000mg", qty: 3, price: 399, time: "Just now" },
-      { id: 2, product: "Paracetamol 500mg", qty: 2, price: 120, time: "5m ago" },
-      { id: 3, product: "Amoxicillin 500mg", qty: 1, price: 560, time: "12m ago" },
-      { id: 4, product: "Ibuprofen 200mg", qty: 4, price: 320, time: "25m ago" },
-    ],
-    []
-  );
-
-  const summaryCards = useMemo(
-    () => [
+    return [
       {
         title: "Total Products",
-        value: 148,
+        value: inventorySummary?.totalProducts || 0,
         iconBg: "bg-blue-50 text-blue-600",
       },
       {
@@ -82,26 +184,49 @@ export function useDashboardData() {
       },
       {
         title: "Today Sales",
-        value: "₱" + salesByHourData.reduce((a, b) => a + b.sales, 0).toLocaleString(),
+        value: "₱" + totalSales.toLocaleString(),
         iconBg: "bg-emerald-50 text-emerald-600",
       },
       {
         title: "Avg / Hour",
-        value: "₱" + Math.round(salesByHourData.reduce((a, b) => a + b.sales, 0) / salesByHourData.length).toLocaleString(),
+        value: "₱" + Math.round(avgSales || 0).toLocaleString(),
         iconBg: "bg-indigo-50 text-indigo-600",
       },
       {
         title: "Best Seller Qty",
-        value: bestSellers[0].quantity,
+        value: bestSellers[0]?.quantity || 0,
         iconBg: "bg-fuchsia-50 text-fuchsia-600",
       },
-    ],
-    [lowStockItems.length, expiringSoon.length, salesByHourData, bestSellers]
-  );
+    ];
+  }, [
+    inventorySummary,
+    lowStockItems.length,
+    expiringSoon.length,
+    todaySales,
+    hourlySales,
+    bestSellers,
+  ]);
+
+  // Helper function to format relative time
+  const formatRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return format(date, "MMM d");
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   return {
-    loading: false,
-    error: null,
+    loading,
+    error,
     summaryCards,
     salesByHourData,
     salesByCategory,
@@ -109,6 +234,7 @@ export function useDashboardData() {
     expiringSoon,
     lowStockItems,
     recentSales,
+    refresh: fetchDashboardData,
   };
 }
 
