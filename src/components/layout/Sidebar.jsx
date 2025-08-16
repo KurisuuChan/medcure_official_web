@@ -152,19 +152,23 @@ export default function Sidebar({ branding }) {
         >
           {expanded || mobileMenuOpen ? (
             <>
-              <div className={`flex items-center gap-3 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                expanded || mobileMenuOpen 
-                  ? "opacity-100 transform translate-x-0" 
-                  : "opacity-0 transform -translate-x-4"
-              }`}>
+              <div
+                className={`flex items-center gap-3 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                  expanded || mobileMenuOpen
+                    ? "opacity-100 transform translate-x-0"
+                    : "opacity-0 transform -translate-x-4"
+                }`}
+              >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300">
                   <span>M</span>
                 </div>
-                <div className={`space-y-0.5 transition-all duration-500 delay-100 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                  expanded || mobileMenuOpen 
-                    ? "opacity-100 transform translate-x-0" 
-                    : "opacity-0 transform translate-x-4"
-                }`}>
+                <div
+                  className={`space-y-0.5 transition-all duration-500 delay-100 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                    expanded || mobileMenuOpen
+                      ? "opacity-100 transform translate-x-0"
+                      : "opacity-0 transform translate-x-4"
+                  }`}
+                >
                   <div className="font-semibold text-gray-900 text-base">
                     {branding?.name || "MedCure"}
                   </div>
@@ -269,15 +273,20 @@ export default function Sidebar({ branding }) {
                             isActive ? "scale-105" : "group-hover:scale-105"
                           } ${expanded || mobileMenuOpen ? "" : "w-5 h-5"}`}
                         >
-                          <IconComponent size={18} className="flex-shrink-0 transition-all duration-300" />
+                          <IconComponent
+                            size={18}
+                            className="flex-shrink-0 transition-all duration-300"
+                          />
                         </div>
 
                         {(expanded || mobileMenuOpen) && (
-                          <div className={`flex-1 flex items-center justify-between transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-                            expanded || mobileMenuOpen 
-                              ? "opacity-100 transform translate-x-0" 
-                              : "opacity-0 transform translate-x-4"
-                          }`}>
+                          <div
+                            className={`flex-1 flex items-center justify-between transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                              expanded || mobileMenuOpen
+                                ? "opacity-100 transform translate-x-0"
+                                : "opacity-0 transform translate-x-4"
+                            }`}
+                          >
                             <div className="flex flex-col">
                               <span className="truncate font-medium leading-tight transition-all duration-300">
                                 {item.label}
@@ -318,11 +327,13 @@ export default function Sidebar({ branding }) {
 
           {/* Quick Access Section - Only when expanded */}
           {(expanded || mobileMenuOpen) && (
-            <div className={`mt-8 px-3 transition-all duration-600 delay-200 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-              expanded || mobileMenuOpen 
-                ? "opacity-100 transform translate-y-0" 
-                : "opacity-0 transform translate-y-4"
-            }`}>
+            <div
+              className={`mt-8 px-3 transition-all duration-600 delay-200 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                expanded || mobileMenuOpen
+                  ? "opacity-100 transform translate-y-0"
+                  : "opacity-0 transform translate-y-4"
+              }`}
+            >
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-1 transition-all duration-300">
                 Quick Access
               </div>
@@ -339,7 +350,9 @@ export default function Sidebar({ branding }) {
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-[1.02] hover:shadow-sm"
                 >
                   <div className="w-2 h-2 bg-red-500 rounded-full transition-all duration-300 animate-pulse"></div>
-                  <span className="font-medium transition-all duration-300">Notifications</span>
+                  <span className="font-medium transition-all duration-300">
+                    Notifications
+                  </span>
                   <span className="ml-auto px-1.5 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded-full transition-all duration-300 animate-pulse">
                     3
                   </span>
@@ -357,7 +370,9 @@ export default function Sidebar({ branding }) {
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-[1.02] hover:shadow-sm"
                 >
                   <div className="w-2 h-2 bg-green-500 rounded-full transition-all duration-300"></div>
-                  <span className="font-medium transition-all duration-300">Financials</span>
+                  <span className="font-medium transition-all duration-300">
+                    Financials
+                  </span>
                 </button>
 
                 <button
@@ -372,7 +387,9 @@ export default function Sidebar({ branding }) {
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50/50 rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-[1.02] hover:shadow-sm"
                 >
                   <div className="w-2 h-2 bg-gray-500 rounded-full transition-all duration-300"></div>
-                  <span className="font-medium transition-all duration-300">Archived Items</span>
+                  <span className="font-medium transition-all duration-300">
+                    Archived Items
+                  </span>
                 </button>
               </div>
             </div>
@@ -386,11 +403,13 @@ export default function Sidebar({ branding }) {
           }`}
         >
           {expanded || mobileMenuOpen ? (
-            <div className={`text-center space-y-2 transition-all duration-500 delay-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-              expanded || mobileMenuOpen 
-                ? "opacity-100 transform translate-y-0" 
-                : "opacity-0 transform translate-y-4"
-            }`}>
+            <div
+              className={`text-center space-y-2 transition-all duration-500 delay-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                expanded || mobileMenuOpen
+                  ? "opacity-100 transform translate-y-0"
+                  : "opacity-0 transform translate-y-4"
+              }`}
+            >
               <div className="flex items-center justify-center gap-2 mb-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-xs text-gray-600 font-medium transition-all duration-300">
@@ -401,13 +420,17 @@ export default function Sidebar({ branding }) {
                 <div className="text-xs text-gray-500 transition-all duration-300">
                   © {new Date().getFullYear()} MedCure
                 </div>
-                <div className="text-xs text-gray-400 transition-all duration-300">Version 2.1.0</div>
+                <div className="text-xs text-gray-400 transition-all duration-300">
+                  Version 2.1.0
+                </div>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 transition-all duration-300">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <div className="text-xs text-gray-400 font-medium transition-all duration-300">v2.1</div>
+              <div className="text-xs text-gray-400 font-medium transition-all duration-300">
+                v2.1
+              </div>
             </div>
           )}
         </div>
