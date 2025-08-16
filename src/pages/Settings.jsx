@@ -22,6 +22,11 @@ import {
   Users,
   Building,
   Calendar,
+  Image,
+  Camera,
+  Zap,
+  Brush,
+  UserCheck,
 } from "lucide-react";
 import BackendStatus from "../components/BackendStatus";
 import {
@@ -30,15 +35,27 @@ import {
   resetSettings,
   exportSettings,
   importSettings,
+  validateSettings,
+  testSettingsOperations,
+  uploadLogo,
+  updateBranding,
+  updateProfile,
+  uploadAvatar,
+  getBrandingSettings,
+  getProfileSettings,
 } from "../services/settingsService";
 import { useNotification } from "../hooks/useNotification";
+import { useBranding } from "../hooks/useBranding";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
   const { showNotification } = useNotification();
+  const { refreshSettings } = useBranding();
 
   const [settings, setSettings] = useState({
     // General Settings
@@ -50,6 +67,24 @@ export default function Settings() {
     timezone: "Asia/Manila",
     currency: "PHP",
     language: "en",
+
+    // Branding Settings
+    brandingName: "MedCure",
+    companyLogo: "",
+    logoUrl: "",
+    brandColor: "#2563eb",
+    accentColor: "#3b82f6",
+    headerStyle: "modern",
+    sidebarStyle: "minimal",
+
+    // Profile Settings
+    profileName: "Admin User",
+    profileEmail: "admin@medcure.com",
+    profileRole: "Administrator",
+    profileAvatar: "",
+    profilePhone: "+63 912 345 6789",
+    displayName: "Admin",
+    userInitials: "AU",
 
     // Notification Settings
     lowStockThreshold: 10,
@@ -77,7 +112,20 @@ export default function Settings() {
   });
 
   const handleSettingChange = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSettings((prev) => {
+      const newSettings = { ...prev, [key]: value };
+      
+      // Clear any existing validation error for this field
+      if (validationErrors[key]) {
+        setValidationErrors((prevErrors) => {
+          const newErrors = { ...prevErrors };
+          delete newErrors[key];
+          return newErrors;
+        });
+      }
+      
+      return newSettings;
+    });
   };
 
   const loadSettings = useCallback(async () => {
@@ -85,7 +133,42 @@ export default function Settings() {
     try {
       const result = await getSettings();
       if (result.success && result.data) {
-        setSettings(result.data);
+        // Use default settings as base, then merge with loaded data
+        const defaultSettings = {
+          // General Settings
+          businessName: "MedCure Pharmacy",
+          businessAddress: "123 Health Street, Medical District, City",
+          businessPhone: "+63 912 345 6789",
+          businessEmail: "contact@medcure.com",
+          primaryColor: "#2563eb",
+          timezone: "Asia/Manila",
+          currency: "PHP",
+          language: "en",
+          // Notification Settings
+          lowStockThreshold: 10,
+          criticalStockThreshold: 5,
+          expiryAlertDays: 30,
+          emailNotifications: true,
+          smsNotifications: false,
+          pushNotifications: true,
+          dailyReports: true,
+          weeklyReports: true,
+          // Security Settings
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+          twoFactorAuth: false,
+          sessionTimeout: 30,
+          passwordExpiry: 90,
+          // Backup Settings
+          autoBackup: true,
+          backupFrequency: "daily",
+          backupRetention: 30,
+          cloudBackup: false,
+        };
+        
+        const loadedSettings = { ...defaultSettings, ...result.data };
+        setSettings(loadedSettings);
       } else {
         showNotification("Failed to load settings", "error");
       }
@@ -105,6 +188,32 @@ export default function Settings() {
   const handleSave = async (section) => {
     setIsSaving(true);
     try {
+      // Validate settings before saving
+      const validation = validateSettings(settings);
+      if (!validation.isValid) {
+        const errorMap = {};
+        validation.errors.forEach(error => {
+          // Extract field name from error message (simple approach)
+          const field = error.toLowerCase().includes('business name') ? 'businessName' :
+                       error.toLowerCase().includes('business email') ? 'businessEmail' :
+                       error.toLowerCase().includes('business phone') ? 'businessPhone' :
+                       error.toLowerCase().includes('low stock') ? 'lowStockThreshold' :
+                       error.toLowerCase().includes('critical stock') ? 'criticalStockThreshold' :
+                       error.toLowerCase().includes('expiry alert') ? 'expiryAlertDays' :
+                       error.toLowerCase().includes('session timeout') ? 'sessionTimeout' :
+                       error.toLowerCase().includes('password expiry') ? 'passwordExpiry' :
+                       error.toLowerCase().includes('backup retention') ? 'backupRetention' : 'general';
+          errorMap[field] = error;
+        });
+        
+        setValidationErrors(errorMap);
+        showNotification(`Validation failed: ${validation.errors[0]}`, "error");
+        return;
+      }
+
+      // Clear validation errors on successful validation
+      setValidationErrors({});
+
       const result = await updateSettings(settings, section);
       if (result.success) {
         showNotification(`${section} settings saved successfully`, "success");
@@ -192,8 +301,159 @@ export default function Settings() {
     event.target.value = "";
   };
 
+  const handleTestConnection = async () => {
+    console.log("🔧 Starting settings test connection...");
+    setIsTesting(true);
+    try {
+      showNotification("Testing backend connection...", "info");
+      
+      console.log("🔧 Calling testSettingsOperations...");
+      const result = await testSettingsOperations();
+      console.log("🔧 Test result:", result);
+      
+      if (result.success) {
+        showNotification("Backend connection successful!", "success");
+      } else {
+        showNotification(`Connection test failed: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Error testing connection:", error);
+      showNotification("Connection test failed", "error");
+    } finally {
+      console.log("🔧 Test connection completed, setting loading to false");
+      setIsTesting(false);
+    }
+  };
+
+  // Handle logo upload
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      showNotification("Uploading logo...", "info");
+
+      const result = await uploadLogo(file);
+      if (result.success) {
+        handleSettingChange("logoUrl", result.data.url);
+        handleSettingChange("companyLogo", result.data.filename);
+        showNotification("Logo uploaded successfully!", "success");
+        // Refresh the branding context to show changes immediately
+        await refreshSettings();
+      } else {
+        showNotification(`Failed to upload logo: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      showNotification("Error uploading logo", "error");
+    } finally {
+      setIsLoading(false);
+      event.target.value = "";
+    }
+  };
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      showNotification("Uploading avatar...", "info");
+
+      const result = await uploadAvatar(file);
+      if (result.success) {
+        handleSettingChange("profileAvatar", result.data.url);
+        showNotification("Avatar uploaded successfully!", "success");
+        // Refresh the branding context to show changes immediately
+        await refreshSettings();
+      } else {
+        showNotification(`Failed to upload avatar: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      showNotification("Error uploading avatar", "error");
+    } finally {
+      setIsLoading(false);
+      event.target.value = "";
+    }
+  };
+
+  // Handle branding save
+  const handleBrandingSave = async () => {
+    try {
+      setIsSaving(true);
+      
+      const brandingData = {
+        brandingName: settings.brandingName,
+        companyLogo: settings.companyLogo,
+        logoUrl: settings.logoUrl,
+        brandColor: settings.brandColor,
+        accentColor: settings.accentColor,
+        headerStyle: settings.headerStyle,
+        sidebarStyle: settings.sidebarStyle,
+      };
+
+      const result = await updateBranding(brandingData);
+      if (result.success) {
+        showNotification("Branding settings saved successfully!", "success");
+        // Refresh the branding context to show changes immediately
+        await refreshSettings();
+      } else {
+        showNotification(`Failed to save branding settings: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Error saving branding:", error);
+      showNotification("Error saving branding settings", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle profile save
+  const handleProfileSave = async () => {
+    try {
+      setIsSaving(true);
+      
+      const profileData = {
+        profileName: settings.profileName,
+        profileEmail: settings.profileEmail,
+        profileRole: settings.profileRole,
+        profileAvatar: settings.profileAvatar,
+        profilePhone: settings.profilePhone,
+        displayName: settings.displayName,
+        userInitials: settings.userInitials,
+      };
+
+      const result = await updateProfile(profileData);
+      if (result.success) {
+        showNotification("Profile settings saved successfully!", "success");
+        // Refresh the branding context to show changes immediately
+        await refreshSettings();
+      } else {
+        showNotification(`Failed to save profile settings: ${result.error}`, "error");
+      }
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      showNotification("Error saving profile settings", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Helper function to get input class names with validation styling
+  const getInputClassName = (fieldName, baseClassName = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500") => {
+    if (validationErrors[fieldName]) {
+      return `${baseClassName} border-red-300 focus:border-red-500`;
+    }
+    return `${baseClassName} border-gray-300 focus:border-blue-500`;
+  };
+
   const tabs = [
     { id: "general", label: "General", icon: SettingsIcon },
+    { id: "branding", label: "Branding", icon: Brush },
+    { id: "profile", label: "Profile", icon: UserCheck },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
     { id: "backup", label: "Backup & Data", icon: Database },
@@ -268,12 +528,17 @@ export default function Settings() {
                     </label>
                     <input
                       type="text"
-                      value={settings.businessName}
+                      value={settings.businessName || ""}
                       onChange={(e) =>
                         handleSettingChange("businessName", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={getInputClassName("businessName")}
                     />
+                    {validationErrors.businessName && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {validationErrors.businessName}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -307,12 +572,17 @@ export default function Settings() {
                     </label>
                     <input
                       type="email"
-                      value={settings.businessEmail}
+                      value={settings.businessEmail || ""}
                       onChange={(e) =>
                         handleSettingChange("businessEmail", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={getInputClassName("businessEmail")}
                     />
+                    {validationErrors.businessEmail && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {validationErrors.businessEmail}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -393,6 +663,388 @@ export default function Settings() {
               >
                 <Save size={18} />
                 {isSaving ? "Saving..." : "Save General Settings"}
+              </button>
+            </div>
+          )}
+
+          {/* Branding Settings */}
+          {activeTab === "branding" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                  Branding Settings
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Customize your application branding, logo, and visual identity
+                </p>
+              </div>
+
+              {/* Logo Upload */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Image size={20} />
+                  Company Logo
+                </h3>
+                <div className="flex items-start gap-6">
+                  <div className="flex-shrink-0">
+                    <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                      {settings.logoUrl ? (
+                        <img
+                          src={settings.logoUrl}
+                          alt="Company Logo"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      ) : (
+                        <div className="text-center">
+                          <Image size={32} className="mx-auto text-gray-400 mb-2" />
+                          <p className="text-xs text-gray-500">No logo</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Upload Logo
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          disabled={isLoading}
+                        />
+                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                          <Upload size={16} />
+                          Choose Logo
+                        </button>
+                      </div>
+                      {settings.logoUrl && (
+                        <button
+                          onClick={() => {
+                            handleSettingChange("logoUrl", "");
+                            handleSettingChange("companyLogo", "");
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        >
+                          <Trash2 size={16} />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Recommended size: 200x200px. Supports JPEG, PNG, GIF, WebP. Max size: 5MB.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Branding Identity */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Brush size={20} />
+                  Brand Identity
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Branding Name
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.brandingName || ""}
+                      onChange={(e) =>
+                        handleSettingChange("brandingName", e.target.value)
+                      }
+                      placeholder="e.g., MedCure"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This name appears in the header and sidebar
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Brand Color
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settings.brandColor || "#2563eb"}
+                        onChange={(e) =>
+                          handleSettingChange("brandColor", e.target.value)
+                        }
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={settings.brandColor || "#2563eb"}
+                        onChange={(e) =>
+                          handleSettingChange("brandColor", e.target.value)
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Accent Color
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settings.accentColor || "#3b82f6"}
+                        onChange={(e) =>
+                          handleSettingChange("accentColor", e.target.value)
+                        }
+                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={settings.accentColor || "#3b82f6"}
+                        onChange={(e) =>
+                          handleSettingChange("accentColor", e.target.value)
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Header Style
+                    </label>
+                    <select
+                      value={settings.headerStyle || "modern"}
+                      onChange={(e) =>
+                        handleSettingChange("headerStyle", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="modern">Modern</option>
+                      <option value="classic">Classic</option>
+                      <option value="minimal">Minimal</option>
+                      <option value="compact">Compact</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layout Preferences */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Zap size={20} />
+                  Layout Preferences
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sidebar Style
+                    </label>
+                    <select
+                      value={settings.sidebarStyle || "minimal"}
+                      onChange={(e) =>
+                        handleSettingChange("sidebarStyle", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="minimal">Minimal</option>
+                      <option value="expanded">Expanded</option>
+                      <option value="compact">Compact</option>
+                      <option value="icons-only">Icons Only</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleBrandingSave}
+                disabled={isSaving || isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                  isSaving || isLoading
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                <Save size={18} />
+                {isSaving ? "Saving..." : "Save Branding Settings"}
+              </button>
+            </div>
+          )}
+
+          {/* Profile Settings */}
+          {activeTab === "profile" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                  Profile Settings
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Manage your personal profile information and avatar
+                </p>
+              </div>
+
+              {/* Profile Avatar */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Camera size={20} />
+                  Profile Avatar
+                </h3>
+                <div className="flex items-start gap-6">
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-white overflow-hidden">
+                      {settings.profileAvatar ? (
+                        <img
+                          src={settings.profileAvatar}
+                          alt="Profile Avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center">
+                          <User size={24} className="mx-auto text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-500">Avatar</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Upload Avatar
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          disabled={isLoading}
+                        />
+                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                          <Upload size={16} />
+                          Choose Avatar
+                        </button>
+                      </div>
+                      {settings.profileAvatar && (
+                        <button
+                          onClick={() => handleSettingChange("profileAvatar", "")}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        >
+                          <Trash2 size={16} />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Recommended size: 150x150px. Supports JPEG, PNG, GIF, WebP. Max size: 2MB.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <UserCheck size={20} />
+                  Personal Information
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.profileName || ""}
+                      onChange={(e) =>
+                        handleSettingChange("profileName", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.displayName || ""}
+                      onChange={(e) =>
+                        handleSettingChange("displayName", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={settings.profileEmail || ""}
+                      onChange={(e) =>
+                        handleSettingChange("profileEmail", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={settings.profilePhone || ""}
+                      onChange={(e) =>
+                        handleSettingChange("profilePhone", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.profileRole || ""}
+                      onChange={(e) =>
+                        handleSettingChange("profileRole", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      User Initials
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.userInitials || ""}
+                      onChange={(e) =>
+                        handleSettingChange("userInitials", e.target.value.substring(0, 3).toUpperCase())
+                      }
+                      maxLength="3"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Maximum 3 characters for avatar display
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleProfileSave}
+                disabled={isSaving || isLoading}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                  isSaving || isLoading
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                <Save size={18} />
+                {isSaving ? "Saving..." : "Save Profile Settings"}
               </button>
             </div>
           )}
@@ -914,6 +1566,67 @@ export default function Settings() {
           {/* Backend Status Tab */}
           {activeTab === "backend" && (
             <div className="space-y-6">
+              <div className="bg-white p-6 rounded-lg border-l-4 border-blue-500">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <Database size={20} />
+                    Settings Backend Test
+                  </h3>
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={isTesting}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
+                      isTesting
+                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    <CheckCircle size={16} />
+                    {isTesting ? "Testing..." : "Test Connection"}
+                  </button>
+                </div>
+                <p className="text-gray-600 text-sm">
+                  Test the settings backend connection to ensure your settings can be saved and retrieved properly.
+                </p>
+              </div>
+
+              {/* Settings Analytics */}
+              <div className="bg-white p-6 rounded-lg">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Settings size={20} />
+                  Settings Configuration Summary
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="font-medium text-blue-800">Business Info</div>
+                    <div className="text-blue-600 mt-1">
+                      {(settings.businessName || "").length > 0 ? '✓' : '✗'} Name: {settings.businessName || 'Not set'}
+                    </div>
+                    <div className="text-blue-600">
+                      {(settings.businessEmail || "").length > 0 ? '✓' : '✗'} Email: {settings.businessEmail || 'Not set'}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <div className="font-medium text-green-800">Stock Alerts</div>
+                    <div className="text-green-600 mt-1">
+                      Low Stock: {settings.lowStockThreshold || 0} items
+                    </div>
+                    <div className="text-green-600">
+                      Critical: {settings.criticalStockThreshold || 0} items
+                    </div>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <div className="font-medium text-purple-800">Security</div>
+                    <div className="text-purple-600 mt-1">
+                      2FA: {settings.twoFactorAuth ? 'Enabled' : 'Disabled'}
+                    </div>
+                    <div className="text-purple-600">
+                      Session: {settings.sessionTimeout || 30} minutes
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <BackendStatus />
             </div>
           )}

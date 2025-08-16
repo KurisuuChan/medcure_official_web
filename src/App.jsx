@@ -1,19 +1,18 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import FullLayout from "@/layouts/FullLayout";
-import Dashboard from "@/pages/Dashboard";
-import Analytics from "@/pages/Analytics";
-import Management from "@/pages/Management";
-import Archived from "@/pages/Archived";
-import Pos from "@/pages/POS";
-import Contacts from "@/pages/Contacts";
-import NotificationHistory from "@/pages/NotificationHistory";
-import Financials from "@/pages/Financials";
-import Reports from "@/pages/Reports";
-import Settings from "@/pages/Settings";
-import { MockApiStatus } from "@/components/MockApiStatus";
+import FullLayout from "./layouts/FullLayout";
+import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
+import Management from "./pages/Management";
+import Archived from "./pages/Archived";
+import Pos from "./pages/POS";
+import Contacts from "./pages/Contacts";
+import NotificationHistory from "./pages/NotificationHistory";
+import Financials from "./pages/Financials";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import { MockApiStatus } from "./components/MockApiStatus";
 
-const branding = { name: "MedCure" };
 const user = { name: "Admin User", role: "Administrator", initials: "AU" };
 
 export default function App() {
@@ -21,7 +20,7 @@ export default function App() {
     <>
       <MockApiStatus />
       <Routes>
-        <Route element={<FullLayout branding={branding} user={user} />}>
+        <Route element={<FullLayout user={user} />}>
           <Route index element={<Dashboard />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="management" element={<Management />} />

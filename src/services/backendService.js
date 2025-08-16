@@ -25,6 +25,24 @@ export async function checkBackendHealth() {
   try {
     console.log("🔄 Checking backend health...");
 
+    // Check if explicitly using mock API
+    if (import.meta.env.VITE_USE_MOCK_API === "true") {
+      console.log("🔧 Mock API mode enabled - skipping backend health check");
+      return {
+        status: "unavailable",
+        message: "Running in mock mode (VITE_USE_MOCK_API=true)",
+        services: {
+          database: false,
+          products: false,
+          sales: false,
+          archived: false,
+          settings: false,
+        },
+        error: null,
+        mode: "mock",
+      };
+    }
+
     if (!isBackendAvailable()) {
       return {
         status: "unavailable",
@@ -34,6 +52,7 @@ export async function checkBackendHealth() {
           products: false,
           sales: false,
           archived: false,
+          settings: false,
         },
         error: "Missing Supabase environment variables",
       };
@@ -59,8 +78,10 @@ export async function checkBackendHealth() {
         products: true,
         sales: true,
         archived: true,
+        settings: true,
       },
       error: null,
+      mode: "backend",
     };
   } catch (error) {
     console.error("❌ Backend health check failed:", error);
@@ -73,8 +94,10 @@ export async function checkBackendHealth() {
         products: false,
         sales: false,
         archived: false,
+        settings: false,
       },
       error: error.message,
+      mode: "error",
     };
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Database,
   Server,
@@ -23,13 +23,11 @@ export default function BackendStatus() {
   const [refreshing, setRefreshing] = useState(false);
   const { showNotification } = useNotification();
 
-  useEffect(() => {
-    checkSystemHealth();
-  }, [checkSystemHealth]);
-
-  const checkSystemHealth = useCallback(async () => {
+  const checkSystemHealth = async (showNotifications = false) => {
     try {
-      setLoading(true);
+      if (showNotifications) {
+        setLoading(true);
+      }
 
       const [healthResult, statsResult] = await Promise.all([
         backendService.checkBackendHealth(),
@@ -39,27 +37,65 @@ export default function BackendStatus() {
       setHealthStatus(healthResult);
       setSystemStats(statsResult.data);
 
-      if (healthResult.status === "healthy") {
-        showNotification("Backend services are operational", "success");
-      } else if (healthResult.status === "unavailable") {
-        showNotification(
-          "Running in mock mode - backend not configured",
-          "info"
-        );
-      } else {
-        showNotification("Backend services have issues", "warning");
+      // Only show notifications when explicitly requested (manual refresh)
+      if (showNotifications) {
+        if (healthResult.status === "healthy") {
+          showNotification("Backend services are operational", "success");
+        } else if (healthResult.status === "unavailable") {
+          if (healthResult.mode === "mock") {
+            showNotification("Running in mock mode - all services simulated", "info");
+          } else {
+            showNotification("Backend not configured - using mock mode", "info");
+          }
+        } else {
+          showNotification("Backend services have issues", "warning");
+        }
       }
     } catch (error) {
       console.error("Error checking system health:", error);
-      showNotification("Failed to check system health", "error");
+      if (showNotifications) {
+        showNotification("Failed to check system health", "error");
+      }
     } finally {
-      setLoading(false);
+      if (showNotifications) {
+        setLoading(false);
+      }
     }
-  }, [showNotification]);
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const initializeData = async () => {
+      try {
+        const [healthResult, statsResult] = await Promise.all([
+          backendService.checkBackendHealth(),
+          backendService.getSystemStats(),
+        ]);
+
+        if (isMounted) {
+          setHealthStatus(healthResult);
+          setSystemStats(statsResult.data);
+        }
+      } catch (error) {
+        console.error("Error initializing backend status:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await checkSystemHealth();
+    await checkSystemHealth(true); // Manual refresh with notifications
     setRefreshing(false);
   };
 
@@ -72,7 +108,7 @@ export default function BackendStatus() {
 
       if (result.success) {
         showNotification("Successfully migrated to backend!", "success");
-        await checkSystemHealth();
+        await checkSystemHealth(true);
       } else {
         showNotification(result.message, "warning");
       }
@@ -89,7 +125,7 @@ export default function BackendStatus() {
       case "healthy":
         return <CheckCircle className="text-green-500" size={24} />;
       case "unavailable":
-        return <AlertTriangle className="text-yellow-500" size={24} />;
+        return <Monitor className="text-blue-500" size={24} />; // Changed to blue Monitor icon for mock mode
       case "error":
         return <XCircle className="text-red-500" size={24} />;
       default:
@@ -102,7 +138,7 @@ export default function BackendStatus() {
       case "healthy":
         return "text-green-600 bg-green-50 border-green-200";
       case "unavailable":
-        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+        return "text-blue-600 bg-blue-50 border-blue-200"; // Changed from yellow to blue for mock mode
       case "error":
         return "text-red-600 bg-red-50 border-red-200";
       default:
@@ -223,6 +259,12 @@ export default function BackendStatus() {
                       className={status ? "text-green-600" : "text-red-600"}
                     />
                   )}
+                  {service === "settings" && (
+                    <Settings
+                      size={20}
+                      className={status ? "text-green-600" : "text-red-600"}
+                    />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800 capitalize">
@@ -309,7 +351,7 @@ export default function BackendStatus() {
       )}
 
       {/* Migration Actions */}
-      {healthStatus?.status === "unavailable" && (
+      {healthStatus?.status === "unavailable" && healthStatus?.mode !== "mock" && (
         <div className="bg-white p-8 rounded-2xl shadow-lg">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             Backend Configuration
@@ -318,7 +360,7 @@ export default function BackendStatus() {
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <h3 className="font-semibold text-yellow-800 mb-2">
-                Mock Mode Active
+                Backend Not Configured
               </h3>
               <p className="text-yellow-700 text-sm mb-4">
                 The system is currently running in mock mode. To enable backend
@@ -332,7 +374,46 @@ export default function BackendStatus() {
                 <div className="mt-2 space-y-1">
                   <div>VITE_SUPABASE_URL=your_supabase_project_url</div>
                   <div>VITE_SUPABASE_ANON_KEY=your_supabase_anon_key</div>
+                  <div>VITE_USE_MOCK_API=false</div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mock Mode Information */}
+      {healthStatus?.mode === "mock" && (
+        <div className="bg-white p-8 rounded-2xl shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Mock Mode Active
+          </h2>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-semibold text-blue-800 mb-2">
+                Simulated Environment
+              </h3>
+              <p className="text-blue-700 text-sm mb-4">
+                The system is running in mock mode with simulated data. All operations are working with local mock data instead of a real database.
+              </p>
+
+              <div className="bg-white p-4 rounded border text-sm">
+                <div className="text-gray-600 mb-2">
+                  Mock mode features:
+                </div>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• Simulated product management</li>
+                  <li>• Mock sales transactions</li>
+                  <li>• Local settings storage</li>
+                  <li>• Test data for all features</li>
+                </ul>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-blue-700 text-sm">
+                  To switch to backend mode, set <code className="bg-blue-100 px-1 rounded">VITE_USE_MOCK_API=false</code> in your environment variables.
+                </p>
               </div>
             </div>
           </div>

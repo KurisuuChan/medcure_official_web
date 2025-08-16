@@ -1361,7 +1361,29 @@ export async function mockArchiveEmployee(employeeId, reason) {
 }
 
 // Settings Mock API
-let MOCK_SETTINGS = {
+// Load settings from localStorage or use defaults
+const loadPersistedSettings = () => {
+  try {
+    const saved = localStorage.getItem('medcure-mock-settings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.warn('Failed to load persisted settings:', error);
+  }
+  return null;
+};
+
+// Save settings to localStorage
+const savePersistedSettings = (settings) => {
+  try {
+    localStorage.setItem('medcure-mock-settings', JSON.stringify(settings));
+  } catch (error) {
+    console.warn('Failed to save settings to localStorage:', error);
+  }
+};
+
+let MOCK_SETTINGS = loadPersistedSettings() || {
   // General Settings
   businessName: "MedCure Pharmacy",
   businessAddress: "123 Health Street, Medical District, City",
@@ -1371,6 +1393,25 @@ let MOCK_SETTINGS = {
   timezone: "Asia/Manila",
   currency: "PHP",
   language: "en",
+
+  // Branding Settings
+  brandingName: "MedCure",
+  companyLogo: "",
+  logoUrl: "",
+  brandColor: "#2563eb",
+  accentColor: "#3b82f6",
+  headerStyle: "modern",
+  sidebarStyle: "minimal",
+  systemDescription: "Pharmacy Management System",
+
+  // Profile Settings
+  profileName: "Admin User",
+  profileEmail: "admin@medcure.com",
+  profileRole: "Administrator",
+  profileAvatar: "",
+  profilePhone: "+63 912 345 6789",
+  displayName: "Admin",
+  userInitials: "AU",
 
   // Notification Settings
   lowStockThreshold: 10,
@@ -1400,6 +1441,12 @@ export async function mockGetSettings() {
   try {
     console.log("📋 Mock: Getting settings");
 
+    // Always load the latest settings from localStorage
+    const persistedSettings = loadPersistedSettings();
+    if (persistedSettings) {
+      MOCK_SETTINGS = persistedSettings;
+    }
+
     return {
       data: MOCK_SETTINGS,
       error: null,
@@ -1422,6 +1469,9 @@ export async function mockUpdateSettings(settingsData, section = "all") {
 
     // Merge with existing settings
     MOCK_SETTINGS = { ...MOCK_SETTINGS, ...settingsData };
+    
+    // Persist to localStorage
+    savePersistedSettings(MOCK_SETTINGS);
 
     return {
       data: MOCK_SETTINGS,
@@ -1469,6 +1519,9 @@ export async function mockResetSettings() {
       backupRetention: 30,
       cloudBackup: false,
     };
+
+    // Clear localStorage
+    localStorage.removeItem('medcure-mock-settings');
 
     return {
       data: MOCK_SETTINGS,

@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import PropTypes from "prop-types";
+import { useBranding } from "../../hooks/useBranding";
+import { handleImageSrc } from "../../utils/imageUtils";
 
 // Streamlined menu with primary functions only
 const menu = [
@@ -66,8 +68,9 @@ const menu = [
   },
 ];
 
-export default function Sidebar({ branding }) {
+export default function Sidebar() {
   const navigate = useNavigate();
+  const { branding } = useBranding();
   const [expanded, setExpanded] = useState(() => {
     const stored = localStorage.getItem("mc-sidebar-expanded");
     return stored ? JSON.parse(stored) : true;
@@ -159,8 +162,21 @@ export default function Sidebar({ branding }) {
                     : "opacity-0 transform -translate-x-4"
                 }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300">
-                  <span>M</span>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300 overflow-hidden">
+                  {branding?.logoUrl ? (
+                    <img 
+                      src={handleImageSrc(branding.logoUrl, 'logo')} 
+                      alt={`${branding?.brandingName || 'MedCure'} Logo`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <span className={`${branding?.logoUrl ? 'hidden' : ''}`}>
+                    {branding?.brandingName ? branding.brandingName.charAt(0).toUpperCase() : 'M'}
+                  </span>
                 </div>
                 <div
                   className={`space-y-0.5 transition-all duration-500 delay-100 ease-[cubic-bezier(0.4,0,0.2,1)] ${
@@ -170,10 +186,10 @@ export default function Sidebar({ branding }) {
                   }`}
                 >
                   <div className="font-semibold text-gray-900 text-base">
-                    {branding?.name || "MedCure"}
+                    {branding?.brandingName || "MedCure"}
                   </div>
                   <div className="text-xs text-gray-500 hidden sm:block">
-                    Pharmacy System
+                    {branding?.systemDescription || "Pharmacy System"}
                   </div>
                 </div>
               </div>
@@ -418,7 +434,7 @@ export default function Sidebar({ branding }) {
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 transition-all duration-300">
-                  © {new Date().getFullYear()} MedCure
+                  © {new Date().getFullYear()} {branding?.brandingName || "MedCure"}
                 </div>
                 <div className="text-xs text-gray-400 transition-all duration-300">
                   Version 2.1.0
@@ -439,6 +455,4 @@ export default function Sidebar({ branding }) {
   );
 }
 
-Sidebar.propTypes = {
-  branding: PropTypes.shape({ name: PropTypes.string }),
-};
+Sidebar.propTypes = {};

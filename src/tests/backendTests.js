@@ -16,6 +16,8 @@ import {
 
 import { parseCSV, formatCurrency } from "./utils/csvUtils.js";
 
+import { testSettingsOperations } from "./services/settingsService.js";
+
 /**
  * Test Product Service
  */
@@ -110,6 +112,27 @@ export async function testCSVUtils() {
 }
 
 /**
+ * Test Settings Service
+ */
+export async function testSettingsService() {
+  console.log("🧪 Testing Settings Service...");
+
+  try {
+    // Test settings operations
+    const settingsTest = await testSettingsOperations();
+    if (!settingsTest.success) {
+      throw new Error(`Settings test failed: ${settingsTest.error}`);
+    }
+    console.log("✅ Settings operations:", settingsTest.message);
+
+    return true;
+  } catch (error) {
+    console.error("❌ Settings Service test failed:", error.message);
+    return false;
+  }
+}
+
+/**
  * Test Database Connection
  */
 export async function testDatabaseConnection() {
@@ -137,6 +160,7 @@ export async function runAllTests() {
     { name: "Database Connection", test: testDatabaseConnection },
     { name: "Product Service", test: testProductService },
     { name: "Sales Service", test: testSalesService },
+    { name: "Settings Service", test: testSettingsService },
     { name: "CSV Utilities", test: testCSVUtils },
   ];
 

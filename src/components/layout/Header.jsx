@@ -19,11 +19,14 @@ import {
   Plus,
 } from "lucide-react";
 import PropTypes from "prop-types";
-import { useNotification } from "@/hooks/useNotification";
+import { useNotification } from "../../hooks/useNotification";
+import { useBranding } from "../../hooks/useBranding";
+import { handleImageSrc } from "../../utils/imageUtils";
 
 export default function Header({ onLogout, user }) {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { profile } = useBranding();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -129,7 +132,7 @@ export default function Header({ onLogout, user }) {
 
   return (
     <header className="h-14 sm:h-16 bg-white/95 backdrop-blur-sm border-b border-gray-200/80 flex items-center justify-between px-3 sm:px-4 md:px-6 sticky top-0 z-50 shadow-sm">
-      {/* Left Section */}
+      {/* Left Section - Search */}
       <div className="flex items-center gap-3 sm:gap-4 md:gap-6 flex-1">
         {/* Search Bar */}
         <div className="relative max-w-sm sm:max-w-md lg:max-w-lg w-full">
@@ -465,15 +468,30 @@ export default function Header({ onLogout, user }) {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-semibold shadow-sm group-hover:shadow-md transition-shadow">
-              {user?.initials || "A"}
+            <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-semibold shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+              {profile?.profileAvatar ? (
+                <img 
+                  src={handleImageSrc(profile.profileAvatar, 'avatar')} 
+                  alt={`${profile?.firstName || user?.name || 'User'} Avatar`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center ${profile?.profileAvatar ? 'hidden' : ''}`}>
+                {profile?.firstName ? profile.firstName.charAt(0).toUpperCase() : user?.initials || "A"}
+              </div>
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-sm font-semibold text-gray-900">
-                {user?.name || "Admin User"}
+                {profile?.firstName && profile?.lastName 
+                  ? `${profile.firstName} ${profile.lastName}` 
+                  : user?.name || "Admin User"}
               </div>
               <div className="text-xs text-gray-500 font-medium">
-                {user?.role || "Administrator"}
+                {profile?.jobTitle || user?.role || "Administrator"}
               </div>
             </div>
             <ChevronDown
@@ -489,10 +507,12 @@ export default function Header({ onLogout, user }) {
               {/* User Info Header */}
               <div className="px-3 sm:px-4 py-3 border-b border-gray-100">
                 <div className="font-semibold text-gray-900">
-                  {user?.name || "Admin User"}
+                  {profile?.firstName && profile?.lastName 
+                    ? `${profile.firstName} ${profile.lastName}` 
+                    : user?.name || "Admin User"}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {user?.email || "admin@medcure.com"}
+                  {profile?.email || user?.email || "admin@medcure.com"}
                 </div>
               </div>
 
@@ -546,5 +566,6 @@ Header.propTypes = {
     name: PropTypes.string,
     role: PropTypes.string,
     initials: PropTypes.string,
+    email: PropTypes.string,
   }),
 };

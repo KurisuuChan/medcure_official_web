@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useMemo } from "react";
 import PropTypes from "prop-types";
-import Toast from "@/components/Toast";
+import Toast from "../components/Toast";
 import { NotificationContext } from "./NotificationContext";
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
 
-  const addNotification = useCallback((message, type = "success") => {
+  const showNotification = useCallback((message, type = "success") => {
     const newItem = { message, type, id: Date.now() };
     setNotifications((prev) => [...prev, newItem]);
   }, []);
@@ -15,7 +15,7 @@ export const NotificationProvider = ({ children }) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const contextValue = useMemo(() => ({ addNotification }), [addNotification]);
+  const contextValue = useMemo(() => ({ showNotification }), [showNotification]);
 
   return (
     <NotificationContext.Provider value={contextValue}>
