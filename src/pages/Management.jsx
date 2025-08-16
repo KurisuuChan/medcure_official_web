@@ -109,6 +109,10 @@ export default function Management() {
       if (searchTerm || Object.keys(currentFilters).length > 0) {
         applyFilters(allFilters);
       }
+      // Only clear selection if we actually have a search term or filters applied
+      if (searchTerm || Object.keys(currentFilters).length > 0) {
+        setSelectedItems([]);
+      }
     }, 300); // Debounce search
 
     return () => clearTimeout(debounceTimer);
@@ -119,6 +123,43 @@ export default function Management() {
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
+
+  const handleSelectAll = () => {
+    console.log("🔧 handleSelectAll called");
+    console.log("🔧 Current selectedItems:", selectedItems);
+    console.log("🔧 Current filteredProducts:", filteredProducts.length);
+    console.log(
+      "🔧 filteredProducts IDs:",
+      filteredProducts.map((p) => p.id)
+    );
+
+    if (selectedItems.length === filteredProducts.length) {
+      // If all are selected, deselect all
+      console.log("🔧 Deselecting all items");
+      setSelectedItems([]);
+    } else {
+      // If not all are selected, select all visible products
+      const allIds = filteredProducts.map((product) => product.id);
+      console.log("🔧 Selecting all items:", allIds);
+      setSelectedItems(allIds);
+    }
+  };
+
+  const isAllSelected =
+    filteredProducts.length > 0 &&
+    selectedItems.length === filteredProducts.length;
+  const isIndeterminate =
+    selectedItems.length > 0 && selectedItems.length < filteredProducts.length;
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log("Selection debug:", {
+      selectedItems: selectedItems.length,
+      filteredProducts: filteredProducts.length,
+      isAllSelected,
+      isIndeterminate,
+    });
+  }, [selectedItems, filteredProducts, isAllSelected, isIndeterminate]);
 
   const handleAddProduct = () => {
     setEditingProduct(null);
@@ -332,217 +373,291 @@ export default function Management() {
       {/* Content */}
       {filteredProducts.length > 0 ? (
         viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.includes(product.id)}
-                      onChange={() => handleSelectItem(product.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-                      {product.name.charAt(0)}
-                    </div>
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <MoreVertical size={20} />
+          <>
+            {/* Grid view header with select all */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  ref={(input) => {
+                    if (input) input.indeterminate = isIndeterminate;
+                  }}
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">
+                  {selectedItems.length > 0
+                    ? `${selectedItems.length} of ${filteredProducts.length} selected`
+                    : `Select all ${filteredProducts.length} products`}
+                </span>
+                {selectedItems.length > 0 && (
+                  <button
+                    onClick={() => setSelectedItems([])}
+                    className="text-sm text-red-600 hover:text-red-800 underline"
+                  >
+                    Clear selection
                   </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 text-lg">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">{product.category}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-500">Stock</p>
-                      <p className="font-semibold">
-                        {product.total_stock} units
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Cost Price</p>
-                      <p className="font-semibold">
-                        ₱{product.cost_price.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Selling Price</p>
-                      <p className="font-semibold">
-                        ₱{product.selling_price.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Expiry</p>
-                      <p className="font-semibold">
-                        {product.expiry_date || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    {getStatusBadge(
-                      product.status,
-                      product.total_stock,
-                      product.critical_level
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={() => handleViewProduct(product)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-                    >
-                      <Eye size={14} />
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleEditProduct(product)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-                    >
-                      <Edit size={14} />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleArchiveProduct(product)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
-                    >
-                      <Archive size={14} />
-                      Archive
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-3 px-4 text-left">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
-                    Product
-                  </th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
-                    Category
-                  </th>
-                  <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
-                    Stock
-                  </th>
-                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
-                    Cost
-                  </th>
-                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
-                    Price
-                  </th>
-                  <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
-                    Status
-                  </th>
-                  <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="py-4 px-4">
+              {selectedItems.length > 0 && (
+                <button
+                  onClick={handleBulkActions}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  <Settings size={14} />
+                  Bulk Actions ({selectedItems.length})
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={selectedItems.includes(product.id)}
                         onChange={() => handleSelectItem(product.id)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                          {product.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800">
-                            {product.name}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {product.supplier}
-                          </p>
-                        </div>
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                        {product.name.charAt(0)}
                       </div>
-                    </td>
-                    <td className="py-4 px-4 text-sm text-gray-600">
-                      {product.category}
-                    </td>
-                    <td className="py-4 px-4 text-center text-sm font-semibold">
-                      <span
-                        className={(() => {
-                          if (product.total_stock === 0) return "text-red-600";
-                          if (
-                            product.total_stock <=
-                            (product.critical_level || 10)
-                          )
-                            return "text-orange-600";
-                          return "text-gray-800";
-                        })()}
-                      >
-                        {product.total_stock}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-right text-sm font-medium">
-                      ₱{product.cost_price.toFixed(2)}
-                    </td>
-                    <td className="py-4 px-4 text-right text-sm font-medium">
-                      ₱{product.selling_price.toFixed(2)}
-                    </td>
-                    <td className="py-4 px-4 text-center">
+                    </div>
+                    <button className="text-gray-400 hover:text-gray-600">
+                      <MoreVertical size={20} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-800 text-lg">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {product.category}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500">Stock</p>
+                        <p className="font-semibold">
+                          {product.total_stock} units
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Cost Price</p>
+                        <p className="font-semibold">
+                          ₱{product.cost_price.toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Selling Price</p>
+                        <p className="font-semibold">
+                          ₱{product.selling_price.toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Expiry</p>
+                        <p className="font-semibold">
+                          {product.expiry_date || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
                       {getStatusBadge(
                         product.status,
                         product.total_stock,
                         product.critical_level
                       )}
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleViewProduct(product)}
-                          className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleEditProduct(product)}
-                          className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleArchiveProduct(product)}
-                          className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                        >
-                          <Archive size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    </div>
+
+                    <div className="flex gap-2 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => handleViewProduct(product)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleEditProduct(product)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                      >
+                        <Edit size={14} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleArchiveProduct(product)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                      >
+                        <Archive size={14} />
+                        Archive
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Table view header with selection info */}
+            {selectedItems.length > 0 && (
+              <div className="flex items-center justify-between mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-blue-700">
+                    {selectedItems.length} of {filteredProducts.length} products
+                    selected
+                  </span>
+                  <button
+                    onClick={() => setSelectedItems([])}
+                    className="text-sm text-red-600 hover:text-red-800 underline"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+                <button
+                  onClick={handleBulkActions}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  <Settings size={14} />
+                  Bulk Actions ({selectedItems.length})
+                </button>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="py-3 px-4 text-left">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = isIndeterminate;
+                        }}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </th>
+                    <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
+                      Product
+                    </th>
+                    <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
+                      Category
+                    </th>
+                    <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
+                      Stock
+                    </th>
+                    <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
+                      Cost
+                    </th>
+                    <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
+                      Price
+                    </th>
+                    <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
+                      Status
+                    </th>
+                    <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(product.id)}
+                          onChange={() => handleSelectItem(product.id)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                            {product.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">
+                              {product.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {product.supplier}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600">
+                        {product.category}
+                      </td>
+                      <td className="py-4 px-4 text-center text-sm font-semibold">
+                        <span
+                          className={(() => {
+                            if (product.total_stock === 0)
+                              return "text-red-600";
+                            if (
+                              product.total_stock <=
+                              (product.critical_level || 10)
+                            )
+                              return "text-orange-600";
+                            return "text-gray-800";
+                          })()}
+                        >
+                          {product.total_stock}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right text-sm font-medium">
+                        ₱{product.cost_price.toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 text-right text-sm font-medium">
+                        ₱{product.selling_price.toFixed(2)}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        {getStatusBadge(
+                          product.status,
+                          product.total_stock,
+                          product.critical_level
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleViewProduct(product)}
+                            className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleEditProduct(product)}
+                            className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleArchiveProduct(product)}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                          >
+                            <Archive size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )
       ) : (
         <div className="text-center py-12">

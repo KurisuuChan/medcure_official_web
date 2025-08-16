@@ -1,5 +1,10 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
+
+// Ensure autoTable is attached to jsPDF
+if (typeof jsPDF.API.autoTable === 'undefined') {
+  jsPDF.API.autoTable = autoTable;
+}
 
 /**
  * Utility functions for PDF generation and export
@@ -23,6 +28,8 @@ export const formatDate = (date) => {
 // Generate comprehensive product catalog PDF
 export function generateProductCatalogPDF(products, options = {}) {
   try {
+    console.log("🔧 Starting PDF generation with products:", products.length);
+
     const {
       title = "Product Catalog",
       includeImages = false,
@@ -31,17 +38,24 @@ export function generateProductCatalogPDF(products, options = {}) {
       filename = "product-catalog.pdf",
     } = options;
 
+    console.log("🔧 Creating jsPDF instance...");
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4",
     });
 
+    console.log("🔧 jsPDF instance created, checking autoTable plugin...");
+    if (typeof doc.autoTable !== "function") {
+      throw new Error("autoTable plugin not loaded");
+    }
+
     // Set up the document
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
 
+    console.log("🔧 Adding header...");
     // Header
     doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
@@ -53,6 +67,8 @@ export function generateProductCatalogPDF(products, options = {}) {
     doc.text(`Generated on ${formatDate(new Date())}`, pageWidth / 2, 32, {
       align: "center",
     });
+
+    console.log("🔧 Adding summary statistics...");
 
     // Summary statistics
     const totalProducts = products.length;
@@ -315,7 +331,9 @@ export function generateProductCatalogPDF(products, options = {}) {
     }
 
     // Save the PDF
+    console.log("🔧 Saving PDF with filename:", filename);
     doc.save(filename);
+    console.log("🔧 PDF save command executed successfully");
 
     return { success: true, error: null };
   } catch (error) {

@@ -24,6 +24,7 @@ export function ExportModal({ isOpen, onClose, products }) {
   });
 
   const handleExport = async (reportType) => {
+    console.log("🔧 Export started:", reportType, "Products:", products.length);
     setIsExporting(true);
 
     try {
@@ -32,6 +33,7 @@ export function ExportModal({ isOpen, onClose, products }) {
 
       switch (reportType) {
         case "catalog":
+          console.log("🔧 Generating catalog PDF...");
           result = generateProductCatalogPDF(products, {
             title: "Product Catalog",
             filename: `product-catalog-${timestamp}.pdf`,
@@ -40,12 +42,14 @@ export function ExportModal({ isOpen, onClose, products }) {
           });
           break;
         case "lowStock":
+          console.log("🔧 Generating low stock PDF...");
           result = generateLowStockReportPDF(
             products,
             `low-stock-report-${timestamp}.pdf`
           );
           break;
         case "valuation":
+          console.log("🔧 Generating valuation PDF...");
           result = generateInventoryValuationPDF(
             products,
             `inventory-valuation-${timestamp}.pdf`
@@ -61,13 +65,16 @@ export function ExportModal({ isOpen, onClose, products }) {
           throw new Error("Unknown report type");
       }
 
-      if (result.success) {
+      console.log("🔧 Export result:", result);
+
+      if (result && result.success) {
+        console.log("🔧 Export successful, closing modal");
         onClose();
       } else {
-        throw new Error(result.error);
+        throw new Error(result?.error || "Export failed");
       }
     } catch (error) {
-      console.error("Export failed:", error);
+      console.error("🔧 Export failed:", error);
       alert(`Export failed: ${error.message}`);
     } finally {
       setIsExporting(false);
