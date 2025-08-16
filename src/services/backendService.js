@@ -104,6 +104,7 @@ export async function initializeBackend() {
       testProductOperations(),
       testSalesOperations(),
       testArchivedOperations(),
+      testSettingsOperations(),
     ]);
 
     const allTestsPassed = tests.every((test) => test.success);
@@ -234,6 +235,40 @@ async function testArchivedOperations() {
     console.error("❌ Archived operations test failed:", error);
     return {
       service: "archived",
+      success: false,
+      operations: [],
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Test settings operations
+ * @returns {Promise<Object>} Test result
+ */
+async function testSettingsOperations() {
+  try {
+    console.log("🧪 Testing settings operations...");
+
+    // Test read operation
+    const { data: _data, error } = await supabase
+      .from(TABLES.SETTINGS)
+      .select("id, data")
+      .limit(1);
+
+    if (error) throw error;
+
+    console.log("✅ Settings operations test passed");
+    return {
+      service: "settings",
+      success: true,
+      operations: ["read"],
+      error: null,
+    };
+  } catch (error) {
+    console.error("❌ Settings operations test failed:", error);
+    return {
+      service: "settings",
       success: false,
       operations: [],
       error: error.message,
