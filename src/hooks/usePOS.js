@@ -1,5 +1,9 @@
 import { useState, useCallback } from "react";
-import { createSale } from "../services/salesService.js";
+import {
+  processPOSSale,
+  validatePOSCart,
+  calculatePOSTotals,
+} from "../services/posService.js";
 import { useNotification } from "./useNotification.js";
 
 /**
@@ -119,24 +123,7 @@ export function usePOS() {
 
   // Calculate totals
   const calculateTotals = useCallback(() => {
-    const subtotal = cart.reduce(
-      (sum, item) => sum + item.selling_price * item.quantity,
-      0
-    );
-    const regularDiscountAmount = (subtotal * discount) / 100;
-    const pwdSeniorDiscount = isPwdSenior ? subtotal * 0.2 : 0;
-    const totalDiscount = regularDiscountAmount + pwdSeniorDiscount;
-    const total = subtotal - totalDiscount;
-    const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-    return {
-      subtotal,
-      regularDiscountAmount,
-      pwdSeniorDiscount,
-      totalDiscount,
-      total,
-      itemCount,
-    };
+    return calculatePOSTotals(cart, discount, isPwdSenior);
   }, [cart, discount, isPwdSenior]);
 
   // Process sale
@@ -147,8 +134,15 @@ export function usePOS() {
         return { success: false, error: "Cart is empty" };
       }
 
-      const totals = calculateTotals();
+      // Validate cart
+      const validation = validatePOSCart(cart);
+      if (!validation.isValid) {
+        const errorMsg = validation.errors.join(", ");
+        addNotification(errorMsg, "error");
+        return { success: false, error: errorMsg };
+      }
 
+      const totals = calculateTotals();
       setIsProcessing(true);
 
       try {
@@ -174,23 +168,25 @@ export function usePOS() {
           },
         };
 
-        const { data, error } = await createSale(saleData);
+        console.log("🛒 Processing POS sale with data:", saleData);
 
-        if (error) {
-          throw new Error(error);
+        const result = await processPOSSale(saleData);
+
+        if (!result.success) {
+          throw new Error(result.error);
         }
 
         // Clear cart on successful sale
         clearCart();
 
         addNotification(
-          `Sale completed! Transaction #${data.summary.transactionNumber}`,
+          `Sale completed! Transaction #${result.data.summary.transactionNumber}`,
           "success"
         );
 
         return {
           success: true,
-          data: data,
+          data: result.data,
           error: null,
         };
       } catch (err) {
@@ -244,22 +240,7 @@ export function usePOS() {
 
   // Validate cart before checkout
   const validateCart = useCallback(() => {
-    const errors = [];
-
-    if (cart.length === 0) {
-      errors.push("Cart is empty");
-    }
-
-    cart.forEach((item) => {
-      if (item.quantity > item.total_stock) {
-        errors.push(`Insufficient stock for ${item.name}`);
-      }
-    });
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
+    return validatePOSCart(cart);
   }, [cart]);
 
   return {

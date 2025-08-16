@@ -5,6 +5,10 @@ import {
   mockGetSalesSummary,
   mockGetHourlySales,
   mockGetTopSellingProducts,
+  mockCreateSale,
+  mockGetTransactionHistory,
+  mockPrintReceipt,
+  mockCancelTransaction,
   isMockMode,
 } from "../utils/mockApi.js";
 
@@ -24,6 +28,11 @@ function generateTransactionNumber() {
 
 // Create a new sale transaction
 export async function createSale(saleData) {
+  // Force mock mode for POS functionality
+  console.log("🔧 createSale called - using mock POS backend");
+  return await mockCreateSale(saleData);
+
+  /* Original Supabase code - temporarily disabled for mock mode
   try {
     const { cart, discount, isPwdSenior, customerInfo = {} } = saleData;
 
@@ -130,6 +139,7 @@ export async function createSale(saleData) {
     console.error("Error creating sale:", error);
     return { data: null, error: error.message };
   }
+  */
 }
 
 // Get sale transactions with optional filtering
@@ -313,6 +323,24 @@ export async function getSalesSummary(period = "today") {
     return { data: null, error: error.message };
   }
   */
+}
+
+// Get transaction history for POS
+export async function getTransactionHistory(filters = {}) {
+  console.log("🔧 getTransactionHistory called - using mock POS backend");
+  return await mockGetTransactionHistory(filters);
+}
+
+// Print receipt for a transaction
+export async function printReceipt(transactionId) {
+  console.log("🔧 printReceipt called - using mock POS backend");
+  return await mockPrintReceipt(transactionId);
+}
+
+// Enhanced cancel transaction for POS
+export async function cancelPOSTransaction(transactionId, reason = "") {
+  console.log("🔧 cancelPOSTransaction called - using mock POS backend");
+  return await mockCancelTransaction(transactionId, reason);
 }
 
 // Cancel/void a transaction

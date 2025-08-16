@@ -13,6 +13,8 @@ import {
   generateLowStockReportPDF,
   generateInventoryValuationPDF,
   generateProductListPDF,
+  generateSimplePDF,
+  testPDFGeneration,
 } from "../../utils/pdfUtils.js";
 
 export function ExportModal({ isOpen, onClose, products }) {
@@ -31,6 +33,13 @@ export function ExportModal({ isOpen, onClose, products }) {
       let result;
       const timestamp = new Date().toISOString().split("T")[0];
 
+      // First, test basic PDF generation
+      console.log("🔧 Testing basic PDF functionality...");
+      const testResult = testPDFGeneration();
+      if (!testResult.success) {
+        throw new Error(`PDF library test failed: ${testResult.error}`);
+      }
+
       switch (reportType) {
         case "catalog":
           console.log("🔧 Generating catalog PDF...");
@@ -40,6 +49,14 @@ export function ExportModal({ isOpen, onClose, products }) {
             groupByCategory: exportOptions.groupByCategory,
             includeFinancials: exportOptions.includeFinancials,
           });
+          // Fallback to simple PDF if autoTable fails
+          if (!result.success && result.error.includes("autoTable")) {
+            console.log("🔧 autoTable failed, falling back to simple PDF...");
+            result = generateSimplePDF(
+              products,
+              `simple-catalog-${timestamp}.pdf`
+            );
+          }
           break;
         case "lowStock":
           console.log("🔧 Generating low stock PDF...");
@@ -47,6 +64,15 @@ export function ExportModal({ isOpen, onClose, products }) {
             products,
             `low-stock-report-${timestamp}.pdf`
           );
+          if (!result.success && result.error.includes("autoTable")) {
+            const lowStockProducts = products.filter(
+              (p) => (p.total_stock || 0) <= (p.critical_level || 10)
+            );
+            result = generateSimplePDF(
+              lowStockProducts,
+              `simple-low-stock-${timestamp}.pdf`
+            );
+          }
           break;
         case "valuation":
           console.log("🔧 Generating valuation PDF...");
@@ -54,12 +80,16 @@ export function ExportModal({ isOpen, onClose, products }) {
             products,
             `inventory-valuation-${timestamp}.pdf`
           );
+          if (!result.success && result.error.includes("autoTable")) {
+            result = generateSimplePDF(
+              products,
+              `simple-valuation-${timestamp}.pdf`
+            );
+          }
           break;
         case "simple":
-          result = generateProductListPDF(
-            products,
-            `product-list-${timestamp}.pdf`
-          );
+          console.log("🔧 Generating simple product list...");
+          result = generateSimplePDF(products, `product-list-${timestamp}.pdf`);
           break;
         default:
           throw new Error("Unknown report type");

@@ -1,14 +1,39 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-// Ensure autoTable is attached to jsPDF
-if (typeof jsPDF.API.autoTable === 'undefined') {
-  jsPDF.API.autoTable = autoTable;
-}
+import "jspdf-autotable";
 
 /**
  * Utility functions for PDF generation and export
  */
+
+// Test function to verify PDF generation works
+export function testPDFGeneration() {
+  try {
+    console.log("🔧 Testing basic PDF generation...");
+    const doc = new jsPDF();
+
+    // Test basic text
+    doc.text("Test PDF Generation", 20, 20);
+
+    // Test basic autoTable functionality
+    if (typeof doc.autoTable === "function") {
+      doc.autoTable({
+        head: [["Test Column 1", "Test Column 2"]],
+        body: [["Test Data 1", "Test Data 2"]],
+        startY: 30,
+      });
+      console.log("🔧 autoTable test successful");
+    } else {
+      console.log("🔧 autoTable not available, but basic PDF works");
+    }
+
+    doc.save("test.pdf");
+    console.log("🔧 Basic PDF test successful");
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("🔧 Basic PDF test failed:", error);
+    return { success: false, error: error.message };
+  }
+}
 
 // Format currency for display
 export const formatCurrency = (amount, currency = "₱") => {
@@ -46,8 +71,14 @@ export function generateProductCatalogPDF(products, options = {}) {
     });
 
     console.log("🔧 jsPDF instance created, checking autoTable plugin...");
+    console.log("🔧 autoTable available:", typeof doc.autoTable === "function");
+
+    // Check if autoTable is available
     if (typeof doc.autoTable !== "function") {
-      throw new Error("autoTable plugin not loaded");
+      console.error("🔧 autoTable plugin not available");
+      throw new Error(
+        "autoTable plugin not loaded - PDF table generation not available"
+      );
     }
 
     // Set up the document
@@ -338,6 +369,48 @@ export function generateProductCatalogPDF(products, options = {}) {
     return { success: true, error: null };
   } catch (error) {
     console.error("PDF generation error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Simple PDF generation without autoTable for testing
+export function generateSimplePDF(
+  products,
+  filename = "simple-product-list.pdf"
+) {
+  try {
+    console.log("🔧 Creating simple PDF without autoTable...");
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.text("Product List", 20, 20);
+
+    // Add some product data as text
+    let yPosition = 40;
+    doc.setFontSize(12);
+
+    products.slice(0, 10).forEach((product, index) => {
+      if (yPosition > 280) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.text(
+        `${index + 1}. ${product.name || "Unknown"} - Stock: ${
+          product.total_stock || 0
+        }`,
+        20,
+        yPosition
+      );
+      yPosition += 10;
+    });
+
+    console.log("🔧 Saving simple PDF...");
+    doc.save(filename);
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("🔧 Simple PDF generation failed:", error);
     return { success: false, error: error.message };
   }
 }

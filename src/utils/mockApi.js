@@ -287,6 +287,279 @@ export async function mockGetSalesSummary(period = "today") {
   return { data: summary, error: null };
 }
 
+// POS-specific functions
+
+// Create a sale transaction (POS backend)
+export async function mockCreateSale(saleData) {
+  await delay();
+
+  try {
+    const { cart, discount, isPwdSenior, customerInfo = {} } = saleData;
+
+    if (!cart || cart.length === 0) {
+      throw new Error("Cart is empty");
+    }
+
+    // Calculate totals
+    const subtotal = cart.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    const discountAmount = (subtotal * (discount || 0)) / 100;
+    const pwdSeniorDiscount = isPwdSenior ? subtotal * 0.2 : 0;
+    const totalDiscountAmount = discountAmount + pwdSeniorDiscount;
+    const totalAmount = subtotal - totalDiscountAmount;
+
+    // Generate transaction number
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    const transactionNumber = `TXN${timestamp}${random}`;
+
+    // Create transaction record
+    const transaction = {
+      id: Date.now(),
+      transaction_number: transactionNumber,
+      subtotal: subtotal,
+      discount_percentage: discount || 0,
+      discount_amount: discountAmount,
+      pwd_senior_discount: pwdSeniorDiscount,
+      total_amount: totalAmount,
+      is_pwd_senior: isPwdSenior,
+      customer_name: customerInfo.name || null,
+      payment_method: customerInfo.paymentMethod || "cash",
+      amount_paid: customerInfo.amountPaid || totalAmount,
+      change_amount: customerInfo.changeAmount || 0,
+      status: "completed",
+      created_at: new Date().toISOString(),
+    };
+
+    // Create sales items and update stock
+    const saleItems = [];
+    const stockUpdates = [];
+
+    for (let i = 0; i < cart.length; i++) {
+      const item = cart[i];
+
+      // Check stock availability
+      const productIndex = SAMPLE_PRODUCTS.findIndex((p) => p.id === item.id);
+      if (productIndex === -1) {
+        throw new Error(`Product ${item.name} not found`);
+      }
+
+      const currentStock = SAMPLE_PRODUCTS[productIndex].total_stock;
+      if (currentStock < item.quantity) {
+        throw new Error(
+          `Insufficient stock for ${item.name}. Available: ${currentStock}, Requested: ${item.quantity}`
+        );
+      }
+
+      // Create sales item record
+      const saleItem = {
+        id: Date.now() + i,
+        transaction_id: transaction.id,
+        product_id: item.id,
+        boxes_sold: item.packaging?.boxes_sold || 0,
+        sheets_sold: item.packaging?.sheets_sold || 0,
+        pieces_sold: item.packaging?.pieces_sold || 0,
+        total_pieces: item.quantity,
+        unit_price: item.price,
+        line_total: item.price * item.quantity,
+        created_at: new Date().toISOString(),
+      };
+
+      saleItems.push(saleItem);
+
+      // Update product stock
+      SAMPLE_PRODUCTS[productIndex].total_stock = currentStock - item.quantity;
+      stockUpdates.push({
+        productId: item.id,
+        previousStock: currentStock,
+        newStock: currentStock - item.quantity,
+        quantitySold: item.quantity,
+      });
+
+      console.log(
+        `📦 Stock updated for ${item.name}: ${currentStock} → ${
+          currentStock - item.quantity
+        }`
+      );
+    }
+
+    // Add transaction to sample data for future queries
+    SAMPLE_SALES_TRANSACTIONS.unshift({
+      ...transaction,
+      sales_items: saleItems,
+    });
+
+    // Generate receipt
+    const receipt = generateReceipt(transaction, saleItems, cart);
+
+    return {
+      data: {
+        transaction,
+        items: saleItems,
+        stockUpdates,
+        receipt,
+        summary: {
+          transactionNumber,
+          subtotal,
+          discountAmount,
+          pwdSeniorDiscount,
+          totalAmount,
+          itemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
+        },
+      },
+      error: null,
+    };
+  } catch (error) {
+    console.error("Error creating sale:", error);
+    return { data: null, error: error.message };
+  }
+}
+
+// Generate receipt for a transaction
+function generateReceipt(transaction, items, cart) {
+  const receiptItems = cart.map((cartItem, index) => ({
+    name: cartItem.name,
+    quantity: cartItem.quantity,
+    unitPrice: cartItem.price,
+    lineTotal: cartItem.price * cartItem.quantity,
+    packaging: cartItem.packaging || {},
+  }));
+
+  return {
+    transaction_number: transaction.transaction_number,
+    timestamp: transaction.created_at,
+    customer_name: transaction.customer_name,
+    items: receiptItems,
+    subtotal: transaction.subtotal,
+    discount_percentage: transaction.discount_percentage,
+    discount_amount: transaction.discount_amount,
+    pwd_senior_discount: transaction.pwd_senior_discount,
+    total_amount: transaction.total_amount,
+    amount_paid: transaction.amount_paid,
+    change_amount: transaction.change_amount,
+    payment_method: transaction.payment_method,
+    cashier: "System User", // Could be dynamic based on user context
+  };
+}
+
+// Get transaction history for POS
+export async function mockGetTransactionHistory(filters = {}) {
+  await delay();
+
+  let transactions = [...SAMPLE_SALES_TRANSACTIONS];
+
+  // Apply filters
+  if (filters.startDate) {
+    transactions = transactions.filter(
+      (t) => new Date(t.created_at) >= new Date(filters.startDate)
+    );
+  }
+
+  if (filters.endDate) {
+    transactions = transactions.filter(
+      (t) => new Date(t.created_at) <= new Date(filters.endDate)
+    );
+  }
+
+  if (filters.transactionNumber) {
+    transactions = transactions.filter((t) =>
+      t.transaction_number
+        .toLowerCase()
+        .includes(filters.transactionNumber.toLowerCase())
+    );
+  }
+
+  if (filters.status) {
+    transactions = transactions.filter((t) => t.status === filters.status);
+  }
+
+  if (filters.limit) {
+    transactions = transactions.slice(0, filters.limit);
+  }
+
+  return { data: transactions, error: null };
+}
+
+// Print receipt (mock implementation)
+export async function mockPrintReceipt(transactionId) {
+  await delay();
+
+  const transaction = SAMPLE_SALES_TRANSACTIONS.find(
+    (t) => t.id === transactionId
+  );
+  if (!transaction) {
+    return { data: null, error: "Transaction not found" };
+  }
+
+  // In a real implementation, this would interface with a printer
+  console.log(
+    "🖨️ Receipt printed for transaction:",
+    transaction.transaction_number
+  );
+
+  return {
+    data: {
+      success: true,
+      message: "Receipt printed successfully",
+      transaction_number: transaction.transaction_number,
+    },
+    error: null,
+  };
+}
+
+// Cancel/void a transaction
+export async function mockCancelTransaction(transactionId, reason = "") {
+  await delay();
+
+  try {
+    const transactionIndex = SAMPLE_SALES_TRANSACTIONS.findIndex(
+      (t) => t.id === transactionId
+    );
+    if (transactionIndex === -1) {
+      throw new Error("Transaction not found");
+    }
+
+    const transaction = SAMPLE_SALES_TRANSACTIONS[transactionIndex];
+
+    if (transaction.status !== "completed") {
+      throw new Error("Only completed transactions can be cancelled");
+    }
+
+    // Restore stock for each item
+    transaction.sales_items.forEach((item) => {
+      const productIndex = SAMPLE_PRODUCTS.findIndex(
+        (p) => p.id === item.product_id
+      );
+      if (productIndex !== -1) {
+        SAMPLE_PRODUCTS[productIndex].total_stock += item.total_pieces;
+        console.log(
+          `📦 Stock restored for product ID ${item.product_id}: +${item.total_pieces}`
+        );
+      }
+    });
+
+    // Update transaction status
+    SAMPLE_SALES_TRANSACTIONS[transactionIndex] = {
+      ...transaction,
+      status: "cancelled",
+      notes: reason,
+      cancelled_at: new Date().toISOString(),
+    };
+
+    return {
+      data: SAMPLE_SALES_TRANSACTIONS[transactionIndex],
+      error: null,
+    };
+  } catch (error) {
+    console.error("Error cancelling transaction:", error);
+    return { data: null, error: error.message };
+  }
+}
+
 export async function mockGetHourlySales(date) {
   await delay();
 

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNotification } from "@/hooks/useNotification";
 import { usePOS } from "../hooks/usePOS.js";
 import { useProducts } from "../hooks/useProducts.js";
+import { QuantitySelectionModal } from "../components/modals/QuantitySelectionModal.jsx";
+import { TransactionHistoryModal } from "../components/modals/TransactionHistoryModal.jsx";
 import {
   ShoppingCart,
   Search,
@@ -13,9 +15,6 @@ import {
   User,
   Clock,
   CheckCircle,
-  Box,
-  Layers,
-  Hash,
   Settings,
 } from "lucide-react";
 
@@ -24,12 +23,8 @@ export default function POS() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [quantityMode, setQuantityMode] = useState({
-    boxes: 0,
-    sheets: 0,
-    pieces: 0,
-  });
 
   // Use hooks for data management
   const { products } = useProducts();
@@ -60,66 +55,31 @@ export default function POS() {
 
   const openQuantityModal = (product) => {
     setSelectedProduct(product);
-    setQuantityMode({
-      boxes: 0,
-      sheets: 0,
-      pieces: 0,
-    });
     setShowQuantityModal(true);
   };
 
   const closeQuantityModal = () => {
     setShowQuantityModal(false);
     setSelectedProduct(null);
-    setQuantityMode({
-      boxes: 0,
-      sheets: 0,
-      pieces: 0,
-    });
-  };
-
-  const calculateTotalPieces = (boxes, sheets, pieces, packaging) => {
-    const piecesFromBoxes = boxes * packaging.total_pieces_per_box;
-    const piecesFromSheets = sheets * packaging.pieces_per_sheet;
-    return piecesFromBoxes + piecesFromSheets + pieces;
-  };
-
-  const addToCartWithQuantity = () => {
-    if (!selectedProduct) return;
-
-    const totalPieces = calculateTotalPieces(
-      quantityMode.boxes,
-      quantityMode.sheets,
-      quantityMode.pieces,
-      selectedProduct
-    );
-
-    if (totalPieces === 0) {
-      addNotification("Please specify quantity", "warning");
-      return;
-    }
-
-    if (totalPieces > selectedProduct.total_stock) {
-      addNotification("Insufficient stock", "error");
-      return;
-    }
-
-    const success = addToCart(selectedProduct, {
-      boxes: quantityMode.boxes,
-      sheets: quantityMode.sheets,
-      pieces: quantityMode.pieces,
-    });
-
-    if (success) {
-      closeQuantityModal();
-    }
   };
 
   const handleCheckout = async () => {
-    const result = await processSale();
-    if (result.success) {
-      // Optional: Print receipt or show success modal
-      console.log("Sale completed:", result.data);
+    if (cart.length === 0) {
+      addNotification("Cart is empty", "warning");
+      return;
+    }
+
+    try {
+      const result = await processSale();
+      if (result.success) {
+        addNotification("Sale completed successfully!", "success");
+        console.log("Sale completed:", result.data);
+      } else {
+        addNotification(result.error || "Failed to process sale", "error");
+      }
+    } catch (error) {
+      addNotification("Error processing sale: " + error.message, "error");
+      console.error("Sale processing error:", error);
     }
   };
 
@@ -153,7 +113,10 @@ export default function POS() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={() => setShowTransactionHistory(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Clock size={16} />
             Transaction History
           </button>
@@ -369,8 +332,13 @@ export default function POS() {
                     </p>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label
+                  htmlFor="pwd-senior-toggle"
+                  className="relative inline-flex items-center cursor-pointer"
+                  aria-label="Toggle PWD/Senior Citizen discount"
+                >
                   <input
+                    id="pwd-senior-toggle"
                     type="checkbox"
                     checked={isPwdSenior}
                     onChange={(e) => setIsPwdSenior(e.target.checked)}
@@ -447,295 +415,18 @@ export default function POS() {
         </div>
       </div>
 
-      {/* Quantity Selection Modal */}
-      {showQuantityModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Package size={24} className="text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800">
-                    Select Quantity
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {selectedProduct?.name}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={closeQuantityModal}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {/* Modals */}
+      <QuantitySelectionModal
+        isOpen={showQuantityModal}
+        onClose={closeQuantityModal}
+        product={selectedProduct}
+        onAddToCart={addToCart}
+      />
 
-            {/* Modal Content */}
-            <div className="p-6 space-y-6">
-              {/* Product Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-700">
-                    Available Stock:
-                  </span>
-                  <span className="text-lg font-bold text-green-600">
-                    {selectedProduct?.total_stock} pieces
-                  </span>
-                </div>
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>• {selectedProduct?.pieces_per_sheet} pieces per sheet</p>
-                  <p>• {selectedProduct?.sheets_per_box} sheets per box</p>
-                  <p>
-                    • {selectedProduct?.total_pieces_per_box} pieces per box
-                  </p>
-                </div>
-              </div>{" "}
-              {/* Quantity Selectors */}
-              <div className="space-y-4">
-                {/* Boxes */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Box size={20} className="text-blue-600" />
-                      <span className="font-semibold text-blue-800">Boxes</span>
-                      <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                        {selectedProduct?.total_pieces_per_box} pcs/box
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-blue-700">
-                      {quantityMode.boxes *
-                        (selectedProduct?.total_pieces_per_box || 0)}{" "}
-                      pieces
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          boxes: Math.max(0, prev.boxes - 1),
-                        }))
-                      }
-                      className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={quantityMode.boxes}
-                      onChange={(e) =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          boxes: Math.max(0, parseInt(e.target.value) || 0),
-                        }))
-                      }
-                      className="w-20 text-center border border-blue-300 rounded-lg py-2 focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={() =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          boxes: prev.boxes + 1,
-                        }))
-                      }
-                      className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sheets */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Layers size={20} className="text-green-600" />
-                      <span className="font-semibold text-green-800">
-                        Sheets
-                      </span>
-                      <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                        {selectedProduct?.pieces_per_sheet} pcs/sheet
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-green-700">
-                      {quantityMode.sheets *
-                        (selectedProduct?.pieces_per_sheet || 0)}{" "}
-                      pieces
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          sheets: Math.max(0, prev.sheets - 1),
-                        }))
-                      }
-                      className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={quantityMode.sheets}
-                      onChange={(e) =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          sheets: Math.max(0, parseInt(e.target.value) || 0),
-                        }))
-                      }
-                      className="w-20 text-center border border-green-300 rounded-lg py-2 focus:ring-2 focus:ring-green-500"
-                    />
-                    <button
-                      onClick={() =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          sheets: prev.sheets + 1,
-                        }))
-                      }
-                      className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Pieces */}
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Hash size={20} className="text-orange-600" />
-                      <span className="font-semibold text-orange-800">
-                        Individual Pieces
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-orange-700">
-                      {quantityMode.pieces} pieces
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          pieces: Math.max(0, prev.pieces - 1),
-                        }))
-                      }
-                      className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={quantityMode.pieces}
-                      onChange={(e) =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          pieces: Math.max(0, parseInt(e.target.value) || 0),
-                        }))
-                      }
-                      className="w-20 text-center border border-orange-300 rounded-lg py-2 focus:ring-2 focus:ring-orange-500"
-                    />
-                    <button
-                      onClick={() =>
-                        setQuantityMode((prev) => ({
-                          ...prev,
-                          pieces: prev.pieces + 1,
-                        }))
-                      }
-                      className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              {/* Total Summary */}
-              <div className="bg-gray-100 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-gray-700">
-                    Total Quantity:
-                  </span>
-                  <span className="text-xl font-bold text-blue-600">
-                    {calculateTotalPieces(
-                      quantityMode.boxes,
-                      quantityMode.sheets,
-                      quantityMode.pieces,
-                      selectedProduct || {
-                        pieces_per_sheet: 0,
-                        total_pieces_per_box: 0,
-                      }
-                    )}{" "}
-                    pieces
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>Total Amount:</span>
-                  <span className="font-semibold">
-                    ₱
-                    {(
-                      calculateTotalPieces(
-                        quantityMode.boxes,
-                        quantityMode.sheets,
-                        quantityMode.pieces,
-                        selectedProduct || {
-                          pieces_per_sheet: 0,
-                          total_pieces_per_box: 0,
-                        }
-                      ) * (selectedProduct?.selling_price || 0)
-                    ).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={closeQuantityModal}
-                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addToCartWithQuantity}
-                  disabled={
-                    calculateTotalPieces(
-                      quantityMode.boxes,
-                      quantityMode.sheets,
-                      quantityMode.pieces,
-                      selectedProduct || {
-                        pieces_per_sheet: 0,
-                        total_pieces_per_box: 0,
-                      }
-                    ) === 0
-                  }
-                  className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors ${
-                    calculateTotalPieces(
-                      quantityMode.boxes,
-                      quantityMode.sheets,
-                      quantityMode.pieces,
-                      selectedProduct || {
-                        pieces_per_sheet: 0,
-                        total_pieces_per_box: 0,
-                      }
-                    ) > 0
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  Add to Cart
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TransactionHistoryModal
+        isOpen={showTransactionHistory}
+        onClose={() => setShowTransactionHistory(false)}
+      />
     </div>
   );
 }
