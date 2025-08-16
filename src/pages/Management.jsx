@@ -15,75 +15,54 @@ import {
   MoreVertical,
   PackageX,
 } from "lucide-react";
+import { useProducts } from "../hooks/useProducts.js";
+import { getCategories } from "../services/productService.js";
+import { ProductModal } from "../components/modals/ProductModal.jsx";
+import { ImportModal } from "../components/modals/ImportModal.jsx";
+import { exportProductsToCSV } from "../utils/csvUtils.js";
+import { useNotification } from "../hooks/useNotification.js";
 
 export default function Management() {
   const [viewMode, setViewMode] = useState("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const { addNotification } = useNotification();
 
-  // Mock data - replace with real data from API
-  const products = [
-    {
-      id: 1,
-      name: "Amoxicillin 500mg",
-      category: "Antibiotics",
-      stock: 150,
-      cost: 45.5,
-      price: 85.0,
-      expiry: "2025-08-15",
-      status: "Available",
-      supplier: "PharmaCorp Inc.",
-    },
-    {
-      id: 2,
-      name: "Paracetamol 500mg",
-      category: "Pain Relief",
-      stock: 8,
-      cost: 12.25,
-      price: 25.0,
-      expiry: "2025-12-01",
-      status: "Low Stock",
-      supplier: "MediSupply Co.",
-    },
-    {
-      id: 3,
-      name: "Vitamin C 1000mg",
-      category: "Vitamins",
-      stock: 0,
-      cost: 28.75,
-      price: 55.0,
-      expiry: "2026-03-20",
-      status: "Out of Stock",
-      supplier: "HealthMax Ltd.",
-    },
-    {
-      id: 4,
-      name: "Ibuprofen 200mg",
-      category: "Pain Relief",
-      stock: 75,
-      cost: 18.5,
-      price: 42.0,
-      expiry: "2025-10-10",
-      status: "Available",
-      supplier: "PharmaCorp Inc.",
-    },
-    {
-      id: 5,
-      name: "Aspirin 81mg",
-      category: "Cardiovascular",
-      stock: 120,
-      cost: 8.25,
-      price: 18.0,
-      expiry: "2025-11-30",
-      status: "Available",
-      supplier: "CardioMed Supply",
-    },
-  ];
+  // Use products hook
+  const {
+    products,
+    loading,
+    error,
+    addProduct,
+    updateProduct,
+    removeProduct,
+    importProductsFromCSV,
+    applyFilters,
+    getInventoryStats,
+  } = useProducts();
 
+  // Load categories
+  React.useEffect(() => {
+    const loadCategories = async () => {
+      const { data } = await getCategories();
+      if (data) {
+        setCategories(data);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Filter products based on search term
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.generic_name &&
+        product.generic_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleSelectItem = (id) => {
@@ -92,14 +71,56 @@ export default function Management() {
     );
   };
 
-  const getStatusBadge = (status, stock) => {
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setShowProductModal(true);
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowProductModal(true);
+  };
+
+  const handleProductSubmit = async (productData) => {
+    if (editingProduct) {
+      await updateProduct(editingProduct.id, productData);
+    } else {
+      await addProduct(productData);
+    }
+    setShowProductModal(false);
+    setEditingProduct(null);
+  };
+
+  const handleBulkArchive = async () => {
+    for (const id of selectedItems) {
+      await removeProduct(id);
+    }
+    setSelectedItems([]);
+  };
+
+  const handleExport = () => {
+    const { success } = exportProductsToCSV(products);
+    if (success) {
+      addNotification("Products exported successfully", "success");
+    } else {
+      addNotification("Failed to export products", "error");
+    }
+  };
+
+  const handleImport = async (productsArray) => {
+    const result = await importProductsFromCSV(productsArray);
+    setShowImportModal(false);
+    return result;
+  };
+
+  const getStatusBadge = (status, stock, criticalLevel = 10) => {
     if (stock === 0) {
       return (
         <span className="px-2 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full">
           Out of Stock
         </span>
       );
-    } else if (stock < 10) {
+    } else if (stock <= criticalLevel) {
       return (
         <span className="px-2 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded-full">
           Low Stock
@@ -113,6 +134,8 @@ export default function Management() {
       );
     }
   };
+
+  const inventoryStats = getInventoryStats();
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -139,7 +162,10 @@ export default function Management() {
           <p className="font-semibold text-blue-800 flex-grow">
             {selectedItems.length} selected
           </p>
-          <button className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200">
+          <button
+            onClick={handleBulkArchive}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200"
+          >
             <Archive size={16} /> Archive Selected
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200">
@@ -190,15 +216,24 @@ export default function Management() {
             </button>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <Download size={16} />
             Import
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
             <Upload size={16} />
             Export
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={handleAddProduct}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Plus size={16} />
             Add Product
           </button>
@@ -242,28 +277,36 @@ export default function Management() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">Stock</p>
-                      <p className="font-semibold">{product.stock} units</p>
+                      <p className="font-semibold">
+                        {product.total_stock} units
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Cost Price</p>
                       <p className="font-semibold">
-                        ₱{product.cost.toFixed(2)}
+                        ₱{product.cost_price.toFixed(2)}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Selling Price</p>
                       <p className="font-semibold">
-                        ₱{product.price.toFixed(2)}
+                        ₱{product.selling_price.toFixed(2)}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Expiry</p>
-                      <p className="font-semibold">{product.expiry}</p>
+                      <p className="font-semibold">
+                        {product.expiry_date || "N/A"}
+                      </p>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    {getStatusBadge(product.status, product.stock)}
+                    {getStatusBadge(
+                      product.status,
+                      product.total_stock,
+                      product.critical_level
+                    )}
                   </div>
 
                   <div className="flex gap-2 pt-4 border-t border-gray-100">
@@ -271,7 +314,10 @@ export default function Management() {
                       <Eye size={14} />
                       View
                     </button>
-                    <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                    <button
+                      onClick={() => handleEditProduct(product)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                    >
                       <Edit size={14} />
                       Edit
                     </button>
@@ -345,32 +391,41 @@ export default function Management() {
                     </td>
                     <td className="py-4 px-4 text-center text-sm font-semibold">
                       <span
-                        className={
-                          product.stock === 0
-                            ? "text-red-600"
-                            : product.stock < 10
-                            ? "text-orange-600"
-                            : "text-gray-800"
-                        }
+                        className={(() => {
+                          if (product.total_stock === 0) return "text-red-600";
+                          if (
+                            product.total_stock <=
+                            (product.critical_level || 10)
+                          )
+                            return "text-orange-600";
+                          return "text-gray-800";
+                        })()}
                       >
-                        {product.stock}
+                        {product.total_stock}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-right text-sm font-medium">
-                      ₱{product.cost.toFixed(2)}
+                      ₱{product.cost_price.toFixed(2)}
                     </td>
                     <td className="py-4 px-4 text-right text-sm font-medium">
-                      ₱{product.price.toFixed(2)}
+                      ₱{product.selling_price.toFixed(2)}
                     </td>
                     <td className="py-4 px-4 text-center">
-                      {getStatusBadge(product.status, product.stock)}
+                      {getStatusBadge(
+                        product.status,
+                        product.total_stock,
+                        product.critical_level
+                      )}
                     </td>
                     <td className="py-4 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
                           <Eye size={16} />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
+                        <button
+                          onClick={() => handleEditProduct(product)}
+                          className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                        >
                           <Edit size={16} />
                         </button>
                       </div>
@@ -396,6 +451,24 @@ export default function Management() {
           </button>
         </div>
       )}
+
+      {/* Modals */}
+      <ProductModal
+        isOpen={showProductModal}
+        onClose={() => {
+          setShowProductModal(false);
+          setEditingProduct(null);
+        }}
+        onSubmit={handleProductSubmit}
+        product={editingProduct}
+        categories={categories}
+      />
+
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
+      />
     </div>
   );
 }

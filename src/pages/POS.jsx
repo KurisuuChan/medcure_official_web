@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNotification } from "@/hooks/useNotification";
+import { usePOS } from "../hooks/usePOS.js";
+import { useProducts } from "../hooks/useProducts.js";
 import {
   ShoppingCart,
   Search,
@@ -19,11 +21,8 @@ import {
 
 export default function POS() {
   const { addNotification } = useNotification();
-  const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [discount, setDiscount] = useState(0);
-  const [isPwdSenior, setIsPwdSenior] = useState(false);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantityMode, setQuantityMode] = useState({
@@ -32,131 +31,23 @@ export default function POS() {
     pieces: 0,
   });
 
-  // Mock product data
-  const products = [
-    {
-      id: 1,
-      name: "Paracetamol 500mg",
-      price: 15.5,
-      stock: 150,
-      category: "Pain Relief",
-      barcode: "8901030825556",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 10,
-        sheetsPerBox: 10,
-        totalPieces: 100,
-      },
-    },
-    {
-      id: 2,
-      name: "Amoxicillin 500mg",
-      price: 25.0,
-      stock: 80,
-      category: "Antibiotics",
-      barcode: "8901030825557",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 8,
-        sheetsPerBox: 5,
-        totalPieces: 40,
-      },
-    },
-    {
-      id: 3,
-      name: "Vitamin C 1000mg",
-      price: 180.0,
-      stock: 45,
-      category: "Supplements",
-      barcode: "8901030825558",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 12,
-        sheetsPerBox: 6,
-        totalPieces: 72,
-      },
-    },
-    {
-      id: 4,
-      name: "Cough Syrup 100ml",
-      price: 120.0,
-      stock: 25,
-      category: "Cough & Cold",
-      barcode: "8901030825559",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 1,
-        sheetsPerBox: 12,
-        totalPieces: 12,
-      },
-    },
-    {
-      id: 5,
-      name: "Aspirin 81mg",
-      price: 8.75,
-      stock: 200,
-      category: "Pain Relief",
-      barcode: "8901030825560",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 20,
-        sheetsPerBox: 5,
-        totalPieces: 100,
-      },
-    },
-    {
-      id: 6,
-      name: "Multivitamins",
-      price: 350.0,
-      stock: 60,
-      category: "Supplements",
-      barcode: "8901030825561",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 15,
-        sheetsPerBox: 4,
-        totalPieces: 60,
-      },
-    },
-    {
-      id: 7,
-      name: "Bandages (Pack of 10)",
-      price: 45.0,
-      stock: 100,
-      category: "First Aid",
-      barcode: "8901030825562",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 10,
-        sheetsPerBox: 1,
-        totalPieces: 10,
-      },
-    },
-    {
-      id: 8,
-      name: "Thermometer Digital",
-      price: 250.0,
-      stock: 15,
-      category: "Medical Devices",
-      barcode: "8901030825563",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 1,
-        sheetsPerBox: 1,
-        totalPieces: 1,
-      },
-    },
-  ];
+  // Use hooks for data management
+  const { products } = useProducts();
+  const {
+    cart,
+    discount,
+    isPwdSenior,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    processSale,
+    setDiscount,
+    setIsPwdSenior,
+    calculateTotals,
+  } = usePOS();
 
-  const categories = [
-    "all",
-    "Pain Relief",
-    "Antibiotics",
-    "Supplements",
-    "Cough & Cold",
-    "First Aid",
-    "Medical Devices",
-  ];
+  // Get unique categories from products
+  const categories = ["all", ...new Set(products.map((p) => p.category))];
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
@@ -164,7 +55,7 @@ export default function POS() {
       .includes(searchTerm.toLowerCase());
     const matchesCategory =
       selectedCategory === "all" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && product.total_stock > 0;
   });
 
   const openQuantityModal = (product) => {
@@ -188,8 +79,8 @@ export default function POS() {
   };
 
   const calculateTotalPieces = (boxes, sheets, pieces, packaging) => {
-    const piecesFromBoxes = boxes * packaging.totalPieces;
-    const piecesFromSheets = sheets * packaging.piecesPerSheet;
+    const piecesFromBoxes = boxes * packaging.total_pieces_per_box;
+    const piecesFromSheets = sheets * packaging.pieces_per_sheet;
     return piecesFromBoxes + piecesFromSheets + pieces;
   };
 
@@ -200,7 +91,7 @@ export default function POS() {
       quantityMode.boxes,
       quantityMode.sheets,
       quantityMode.pieces,
-      selectedProduct.packaging
+      selectedProduct
     );
 
     if (totalPieces === 0) {
@@ -208,85 +99,42 @@ export default function POS() {
       return;
     }
 
-    if (totalPieces > selectedProduct.stock) {
+    if (totalPieces > selectedProduct.total_stock) {
       addNotification("Insufficient stock", "error");
       return;
     }
 
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === selectedProduct.id);
-      if (existing) {
-        const newQuantity = Math.min(
-          existing.quantity + totalPieces,
-          selectedProduct.stock
-        );
-        return prev.map((item) =>
-          item.id === selectedProduct.id
-            ? { ...item, quantity: newQuantity }
-            : item
-        );
-      }
-      return [...prev, { ...selectedProduct, quantity: totalPieces }];
+    const success = addToCart(selectedProduct, {
+      boxes: quantityMode.boxes,
+      sheets: quantityMode.sheets,
+      pieces: quantityMode.pieces,
     });
 
-    addNotification(`Added ${totalPieces} pieces to cart`, "success");
-    closeQuantityModal();
-  };
-
-  const addToCart = (product) => {
-    openQuantityModal(product);
-  };
-
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(id);
-      return;
+    if (success) {
+      closeQuantityModal();
     }
-    setCart((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.min(newQuantity, item.stock) }
-          : item
-      )
-    );
   };
 
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const pwdSeniorDiscount = isPwdSenior ? subtotal * 0.2 : 0;
-  const regularDiscountAmount = (subtotal * discount) / 100;
-  const totalDiscount = pwdSeniorDiscount + regularDiscountAmount;
-  const total = subtotal - totalDiscount;
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  const handleCheckout = () => {
-    if (cart.length === 0) {
-      addNotification("Cart is empty", "error");
-      return;
+  const handleCheckout = async () => {
+    const result = await processSale();
+    if (result.success) {
+      // Optional: Print receipt or show success modal
+      console.log("Sale completed:", result.data);
     }
-
-    // Simulate sale completion
-    const transactionId = Math.floor(Math.random() * 10000);
-    addNotification(`Sale completed! Transaction #${transactionId}`, "success");
-
-    // Clear cart and reset form
-    setCart([]);
-    setDiscount(0);
-    setIsPwdSenior(false);
   };
 
-  const getStockStatus = (stock) => {
+  const getStockStatus = (stock, criticalLevel = 10) => {
     if (stock <= 5)
       return { color: "text-red-600", bg: "bg-red-50", text: "Critical" };
-    if (stock <= 20)
+    if (stock <= criticalLevel)
       return { color: "text-orange-600", bg: "bg-orange-50", text: "Low" };
     return { color: "text-green-600", bg: "bg-green-50", text: "Good" };
+  };
+
+  const totals = calculateTotals();
+
+  const addToCartHandler = (product) => {
+    openQuantityModal(product);
   };
 
   return (
@@ -346,7 +194,10 @@ export default function POS() {
           {/* Product Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
             {filteredProducts.map((product) => {
-              const stockStatus = getStockStatus(product.stock);
+              const stockStatus = getStockStatus(
+                product.total_stock,
+                product.critical_level
+              );
               const inCart = cart.find((item) => item.id === product.id);
 
               return (
@@ -369,18 +220,18 @@ export default function POS() {
                     {product.name}
                   </h3>
                   <p className="text-sm text-gray-500 mb-2">
-                    Stock: {product.stock} pieces
+                    Stock: {product.total_stock} pieces
                   </p>
 
                   {/* Packaging Info */}
                   <div className="text-xs text-gray-400 mb-3 space-y-1">
-                    <p>📦 {product.packaging.totalPieces} pcs/box</p>
-                    <p>📄 {product.packaging.piecesPerSheet} pcs/sheet</p>
+                    <p>📦 {product.total_pieces_per_box} pcs/box</p>
+                    <p>📄 {product.pieces_per_sheet} pcs/sheet</p>
                   </div>
 
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-bold text-blue-600">
-                      ₱{product.price.toFixed(2)}
+                      ₱{product.selling_price.toFixed(2)}
                     </span>
                     {inCart && (
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
@@ -391,7 +242,7 @@ export default function POS() {
 
                   {/* Action Button */}
                   <button
-                    onClick={() => addToCart(product)}
+                    onClick={() => addToCartHandler(product)}
                     className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
                   >
                     <Settings size={16} />
@@ -424,7 +275,7 @@ export default function POS() {
                 Cart Summary
               </h3>
               <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                {itemCount} items
+                {totals.itemCount} items
               </span>
             </div>
 
@@ -440,7 +291,7 @@ export default function POS() {
                         {item.name}
                       </h4>
                       <p className="text-sm text-gray-500">
-                        ₱{item.price.toFixed(2)} each
+                        ₱{item.selling_price.toFixed(2)} each
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -534,7 +385,7 @@ export default function POS() {
             <div className="border-t border-gray-200 pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal:</span>
-                <span>₱{subtotal.toFixed(2)}</span>
+                <span>₱{totals.subtotal.toFixed(2)}</span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-sm">
@@ -542,7 +393,7 @@ export default function POS() {
                     Regular Discount ({discount}%):
                   </span>
                   <span className="text-red-600">
-                    -₱{regularDiscountAmount.toFixed(2)}
+                    -₱{totals.regularDiscountAmount.toFixed(2)}
                   </span>
                 </div>
               )}
@@ -552,21 +403,23 @@ export default function POS() {
                     PWD/Senior Discount (20%):
                   </span>
                   <span className="text-purple-600">
-                    -₱{pwdSeniorDiscount.toFixed(2)}
+                    -₱{totals.pwdSeniorDiscount.toFixed(2)}
                   </span>
                 </div>
               )}
-              {totalDiscount > 0 && (
+              {totals.totalDiscount > 0 && (
                 <div className="flex justify-between text-sm font-medium border-t border-gray-100 pt-2">
                   <span className="text-gray-700">Total Savings:</span>
                   <span className="text-green-600">
-                    -₱{totalDiscount.toFixed(2)}
+                    -₱{totals.totalDiscount.toFixed(2)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
                 <span>Total:</span>
-                <span className="text-blue-600">₱{total.toFixed(2)}</span>
+                <span className="text-blue-600">
+                  ₱{totals.total.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
@@ -582,7 +435,7 @@ export default function POS() {
             }`}
           >
             <CheckCircle size={20} />
-            Complete Sale - ₱{total.toFixed(2)}
+            Complete Sale - ₱{totals.total.toFixed(2)}
           </button>
 
           {cart.length > 0 && (
@@ -630,23 +483,17 @@ export default function POS() {
                     Available Stock:
                   </span>
                   <span className="text-lg font-bold text-green-600">
-                    {selectedProduct?.stock} pieces
+                    {selectedProduct?.total_stock} pieces
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 space-y-1">
+                  <p>• {selectedProduct?.pieces_per_sheet} pieces per sheet</p>
+                  <p>• {selectedProduct?.sheets_per_box} sheets per box</p>
                   <p>
-                    • {selectedProduct?.packaging?.piecesPerSheet} pieces per
-                    sheet
-                  </p>
-                  <p>
-                    • {selectedProduct?.packaging?.sheetsPerBox} sheets per box
-                  </p>
-                  <p>
-                    • {selectedProduct?.packaging?.totalPieces} pieces per box
+                    • {selectedProduct?.total_pieces_per_box} pieces per box
                   </p>
                 </div>
-              </div>
-
+              </div>{" "}
               {/* Quantity Selectors */}
               <div className="space-y-4">
                 {/* Boxes */}
@@ -656,12 +503,12 @@ export default function POS() {
                       <Box size={20} className="text-blue-600" />
                       <span className="font-semibold text-blue-800">Boxes</span>
                       <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                        {selectedProduct?.packaging?.totalPieces} pcs/box
+                        {selectedProduct?.total_pieces_per_box} pcs/box
                       </span>
                     </div>
                     <span className="text-sm font-medium text-blue-700">
                       {quantityMode.boxes *
-                        (selectedProduct?.packaging?.totalPieces || 0)}{" "}
+                        (selectedProduct?.total_pieces_per_box || 0)}{" "}
                       pieces
                     </span>
                   </div>
@@ -712,12 +559,12 @@ export default function POS() {
                         Sheets
                       </span>
                       <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                        {selectedProduct?.packaging?.piecesPerSheet} pcs/sheet
+                        {selectedProduct?.pieces_per_sheet} pcs/sheet
                       </span>
                     </div>
                     <span className="text-sm font-medium text-green-700">
                       {quantityMode.sheets *
-                        (selectedProduct?.packaging?.piecesPerSheet || 0)}{" "}
+                        (selectedProduct?.pieces_per_sheet || 0)}{" "}
                       pieces
                     </span>
                   </div>
@@ -810,7 +657,6 @@ export default function POS() {
                   </div>
                 </div>
               </div>
-
               {/* Total Summary */}
               <div className="bg-gray-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -822,9 +668,9 @@ export default function POS() {
                       quantityMode.boxes,
                       quantityMode.sheets,
                       quantityMode.pieces,
-                      selectedProduct?.packaging || {
-                        piecesPerSheet: 0,
-                        totalPieces: 0,
+                      selectedProduct || {
+                        pieces_per_sheet: 0,
+                        total_pieces_per_box: 0,
                       }
                     )}{" "}
                     pieces
@@ -839,16 +685,15 @@ export default function POS() {
                         quantityMode.boxes,
                         quantityMode.sheets,
                         quantityMode.pieces,
-                        selectedProduct?.packaging || {
-                          piecesPerSheet: 0,
-                          totalPieces: 0,
+                        selectedProduct || {
+                          pieces_per_sheet: 0,
+                          total_pieces_per_box: 0,
                         }
-                      ) * (selectedProduct?.price || 0)
+                      ) * (selectedProduct?.selling_price || 0)
                     ).toFixed(2)}
                   </span>
                 </div>
               </div>
-
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button
@@ -864,9 +709,9 @@ export default function POS() {
                       quantityMode.boxes,
                       quantityMode.sheets,
                       quantityMode.pieces,
-                      selectedProduct?.packaging || {
-                        piecesPerSheet: 0,
-                        totalPieces: 0,
+                      selectedProduct || {
+                        pieces_per_sheet: 0,
+                        total_pieces_per_box: 0,
                       }
                     ) === 0
                   }
@@ -875,9 +720,9 @@ export default function POS() {
                       quantityMode.boxes,
                       quantityMode.sheets,
                       quantityMode.pieces,
-                      selectedProduct?.packaging || {
-                        piecesPerSheet: 0,
-                        totalPieces: 0,
+                      selectedProduct || {
+                        pieces_per_sheet: 0,
+                        total_pieces_per_box: 0,
                       }
                     ) > 0
                       ? "bg-blue-600 text-white hover:bg-blue-700"
