@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Search,
@@ -12,7 +13,10 @@ import {
   X,
   Settings,
   UserCircle,
-  Activity,
+  DollarSign,
+  PackageX,
+  BarChart3,
+  Plus,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNotification } from "@/hooks/useNotification";
@@ -124,14 +128,17 @@ export default function Header({ onLogout, user }) {
       <div className="flex items-center gap-6 flex-1">
         {/* Search Bar */}
         <div className="relative max-w-lg w-full">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+          />
           <input
             type="text"
             placeholder="Search medicines, patients, prescriptions..."
             className="w-full pl-11 pr-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all duration-200 placeholder:text-gray-500"
           />
         </div>
-        
+
         {/* Quick Stats */}
         <div className="hidden lg:flex items-center gap-5 text-sm">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-100">
@@ -152,7 +159,9 @@ export default function Header({ onLogout, user }) {
         {/* System Status */}
         <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-200">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-xs text-gray-600 font-medium">System Online</span>
+          <span className="text-xs text-gray-600 font-medium">
+            System Online
+          </span>
         </div>
         {/* Notifications */}
         <div ref={notifRef} className="relative">
@@ -161,7 +170,10 @@ export default function Header({ onLogout, user }) {
             className="relative p-2.5 rounded-xl hover:bg-gray-50 text-gray-600 hover:text-gray-800 transition-all duration-200 group"
             aria-label="Notifications"
           >
-            <Bell size={20} className="group-hover:scale-105 transition-transform" />
+            <Bell
+              size={20}
+              className="group-hover:scale-105 transition-transform"
+            />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-sm">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -173,7 +185,9 @@ export default function Header({ onLogout, user }) {
               {/* Header */}
               <div className="p-5 bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-200/80">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 text-lg">Notifications</h3>
+                  <h3 className="font-semibold text-gray-900 text-lg">
+                    Notifications
+                  </h3>
                   <button
                     onClick={() => setNotifOpen(false)}
                     className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-all"
@@ -184,11 +198,15 @@ export default function Header({ onLogout, user }) {
                 <div className="flex items-center gap-5 mt-3 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600">{stats.critical} Critical</span>
+                    <span className="text-gray-600">
+                      {stats.critical} Critical
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <span className="text-gray-600">{stats.warnings} Warnings</span>
+                    <span className="text-gray-600">
+                      {stats.warnings} Warnings
+                    </span>
                   </div>
                   <button
                     onClick={markAllAsRead}
@@ -209,7 +227,9 @@ export default function Header({ onLogout, user }) {
                         <div
                           key={notification.id}
                           className={`p-4 hover:bg-gray-50/80 transition-all duration-200 cursor-pointer ${
-                            notification.unread ? "bg-blue-50/30 border-l-2 border-l-blue-500" : ""
+                            notification.unread
+                              ? "bg-blue-50/30 border-l-2 border-l-blue-500"
+                              : ""
                           }`}
                           onClick={() => markAsRead()}
                         >
@@ -246,8 +266,12 @@ export default function Header({ onLogout, user }) {
                 ) : (
                   <div className="p-10 text-center">
                     <Bell size={36} className="mx-auto mb-4 text-gray-300" />
-                    <p className="text-sm text-gray-500 font-medium">No new notifications</p>
-                    <p className="text-xs text-gray-400 mt-1">You're all caught up!</p>
+                    <p className="text-sm text-gray-500 font-medium">
+                      No new notifications
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      You're all caught up!
+                    </p>
                   </div>
                 )}
               </div>
@@ -286,7 +310,10 @@ export default function Header({ onLogout, user }) {
                 {user?.role || "Administrator"}
               </div>
             </div>
-            <ChevronDown size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
+            <ChevronDown
+              size={16}
+              className="text-gray-400 group-hover:text-gray-600 transition-colors"
+            />
           </button>
           {menuOpen && (
             <div
@@ -295,10 +322,14 @@ export default function Header({ onLogout, user }) {
             >
               {/* User Info Header */}
               <div className="px-4 py-3 border-b border-gray-100">
-                <div className="font-semibold text-gray-900">{user?.name || "Admin User"}</div>
-                <div className="text-xs text-gray-500 mt-1">{user?.email || "admin@medcure.com"}</div>
+                <div className="font-semibold text-gray-900">
+                  {user?.name || "Admin User"}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {user?.email || "admin@medcure.com"}
+                </div>
               </div>
-              
+
               <div className="py-1">
                 <button
                   onClick={() => {
@@ -321,7 +352,7 @@ export default function Header({ onLogout, user }) {
                   <span className="font-medium">System Settings</span>
                 </button>
               </div>
-              
+
               <div className="border-t border-gray-100 py-1">
                 <button
                   onClick={() => {

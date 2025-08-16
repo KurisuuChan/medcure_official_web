@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import FullLayout from "@/layouts/FullLayout";
 import Dashboard from "@/pages/Dashboard";
+import Analytics from "@/pages/Analytics";
 import Management from "@/pages/Management";
 import Archived from "@/pages/Archived";
 import Pos from "@/pages/POS";
@@ -22,6 +23,7 @@ export default function App() {
       <Routes>
         <Route element={<FullLayout branding={branding} user={user} />}>
           <Route index element={<Dashboard />} />
+          <Route path="analytics" element={<Analytics />} />
           <Route path="management" element={<Management />} />
           <Route path="archived" element={<Archived />} />
           <Route path="point-of-sales" element={<Pos />} />
