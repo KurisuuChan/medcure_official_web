@@ -195,7 +195,7 @@ export async function getSalesTransactions(filters = {}) {
 
 // Get sales summary for a period
 export async function getSalesSummary(period = "today") {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getSalesSummary called - using mock mode");
     return await mockGetSalesSummary(period);
   }

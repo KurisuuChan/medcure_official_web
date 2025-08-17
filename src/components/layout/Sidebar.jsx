@@ -12,7 +12,6 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import PropTypes from "prop-types";
 import { useBranding } from "../../hooks/useBranding";
 import { handleImageSrc } from "../../utils/imageUtils";
 
@@ -164,18 +163,20 @@ export default function Sidebar() {
               >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300 overflow-hidden">
                   {branding?.logoUrl ? (
-                    <img 
-                      src={handleImageSrc(branding.logoUrl, 'logo')} 
-                      alt={`${branding?.brandingName || 'MedCure'} Logo`}
+                    <img
+                      src={handleImageSrc(branding.logoUrl, "logo")}
+                      alt={`${branding?.brandingName || "MedCure"} Logo`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
+                        e.target.style.display = "none";
+                        e.target.nextSibling.style.display = "flex";
                       }}
                     />
                   ) : null}
-                  <span className={`${branding?.logoUrl ? 'hidden' : ''}`}>
-                    {branding?.brandingName ? branding.brandingName.charAt(0).toUpperCase() : 'M'}
+                  <span className={`${branding?.logoUrl ? "hidden" : ""}`}>
+                    {branding?.brandingName
+                      ? branding.brandingName.charAt(0).toUpperCase()
+                      : "M"}
                   </span>
                 </div>
                 <div
@@ -434,7 +435,8 @@ export default function Sidebar() {
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 transition-all duration-300">
-                  © {new Date().getFullYear()} {branding?.brandingName || "MedCure"}
+                  © {new Date().getFullYear()}{" "}
+                  {branding?.brandingName || "MedCure"}
                 </div>
                 <div className="text-xs text-gray-400 transition-all duration-300">
                   Version 2.1.0
@@ -454,5 +456,3 @@ export default function Sidebar() {
     </>
   );
 }
-
-Sidebar.propTypes = {};

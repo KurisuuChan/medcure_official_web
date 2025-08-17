@@ -69,7 +69,7 @@ const DEFAULT_SETTINGS = {
 
 // Get all settings
 export async function getSettings() {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getSettings called - using mock mode");
     return await mockGetSettings();
   }
@@ -154,7 +154,7 @@ async function createDefaultSettings() {
 
 // Update settings
 export async function updateSettings(settingsData, section = "all") {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 updateSettings called - using mock mode");
     return await mockUpdateSettings(settingsData, section);
   }
@@ -236,7 +236,7 @@ export async function updateSetting(key, value) {
 
 // Reset settings to defaults
 export async function resetSettings() {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 resetSettings called - using mock mode");
     return await mockResetSettings();
   }
@@ -277,7 +277,7 @@ export async function resetSettings() {
 
 // Export settings
 export async function exportSettings() {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 exportSettings called - using mock mode");
     return await mockExportSettings();
   }
@@ -449,7 +449,11 @@ export async function testSettingsOperations() {
     }
 
     // Test invalid settings validation
-    const invalidSettings = { ...testSettings, businessName: "", lowStockThreshold: -1 };
+    const invalidSettings = {
+      ...testSettings,
+      businessName: "",
+      lowStockThreshold: -1,
+    };
     const invalidValidation = validateSettings(invalidSettings);
     if (invalidValidation.isValid) {
       throw new Error("Invalid settings validation should have failed");
@@ -513,8 +517,13 @@ export function validateSettings(settings) {
     errors.push("Low stock threshold must be between 1 and 1000");
   }
 
-  if (settings.criticalStockThreshold < 0 || settings.criticalStockThreshold >= settings.lowStockThreshold) {
-    errors.push("Critical stock threshold must be less than low stock threshold");
+  if (
+    settings.criticalStockThreshold < 0 ||
+    settings.criticalStockThreshold >= settings.lowStockThreshold
+  ) {
+    errors.push(
+      "Critical stock threshold must be less than low stock threshold"
+    );
   }
 
   if (settings.expiryAlertDays < 1 || settings.expiryAlertDays > 365) {
@@ -553,7 +562,7 @@ export async function getSettingsHistory() {
           created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           version: "1.0",
-        }
+        },
       ],
       error: null,
       success: true,
@@ -613,7 +622,7 @@ export async function bulkUpdateSettings(sections) {
 
     // Merge all sections
     const updatedSettings = { ...currentResult.data };
-    Object.keys(sections).forEach(section => {
+    Object.keys(sections).forEach((section) => {
       Object.assign(updatedSettings, sections[section]);
     });
 
@@ -658,7 +667,8 @@ export async function createSettingsSnapshot(description = "") {
 
     const snapshot = {
       id: `snapshot_${Date.now()}`,
-      description: description || `Snapshot created on ${new Date().toISOString()}`,
+      description:
+        description || `Snapshot created on ${new Date().toISOString()}`,
       settings: settingsResult.data,
       created_at: new Date().toISOString(),
       version: "1.0",
@@ -684,9 +694,12 @@ export async function createSettingsSnapshot(description = "") {
 // Compare settings versions
 export function compareSettings(settings1, settings2) {
   const differences = {};
-  const allKeys = new Set([...Object.keys(settings1), ...Object.keys(settings2)]);
+  const allKeys = new Set([
+    ...Object.keys(settings1),
+    ...Object.keys(settings2),
+  ]);
 
-  allKeys.forEach(key => {
+  allKeys.forEach((key) => {
     if (settings1[key] !== settings2[key]) {
       differences[key] = {
         old: settings1[key],
@@ -712,55 +725,69 @@ export async function uploadLogo(file) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!allowedTypes.includes(file.type)) {
-      throw new Error("Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP)");
+      throw new Error(
+        "Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP)"
+      );
     }
 
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
-      throw new Error("File size too large. Please upload an image smaller than 5MB");
+      throw new Error(
+        "File size too large. Please upload an image smaller than 5MB"
+      );
     }
 
     if (isMockMode()) {
       console.log("🔧 Mock mode: Simulating logo upload...");
-      
-      // Create a simulated URL that's much smaller than base64
-      const simulatedUrl = `mock://logos/${file.name}?t=${Date.now()}`;
-      
-      return {
-        success: true,
-        data: {
-          url: simulatedUrl,
-          filename: file.name,
-          size: file.size,
-          type: file.type,
-        },
-        error: null,
-      };
+
+      // Create a real data URL for preview in mock mode
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve({
+            success: true,
+            data: {
+              url: reader.result, // This will be a data: URL that can be displayed
+              filename: file.name,
+              size: file.size,
+              type: file.type,
+            },
+            error: null,
+          });
+        };
+        reader.readAsDataURL(file);
+      });
     }
 
     // Backend implementation for real file upload
     console.log("🔄 Uploading to backend storage...");
-    
-    const fileExt = file.name.split('.').pop();
+
+    const fileExt = file.name.split(".").pop();
     const fileName = `logo_${Date.now()}.${fileExt}`;
-    
-    const { data, error } = await supabase.storage
-      .from('logos')
+
+    const { error } = await supabase.storage
+      .from("logos")
       .upload(fileName, file);
 
     if (error) {
       throw error;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('logos')
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("logos").getPublicUrl(fileName);
 
     console.log("✅ Logo uploaded successfully");
-    
+
     return {
       success: true,
       data: {
@@ -794,15 +821,16 @@ export async function updateBranding(brandingData) {
       accentColor: brandingData.accentColor || "#3b82f6",
       headerStyle: brandingData.headerStyle || "modern",
       sidebarStyle: brandingData.sidebarStyle || "minimal",
-      systemDescription: brandingData.systemDescription || "Pharmacy Management System",
+      systemDescription:
+        brandingData.systemDescription || "Pharmacy Management System",
     };
 
     const result = await updateSettings(brandingSettings, "branding");
-    
+
     if (result.success) {
       console.log("✅ Branding settings updated successfully");
     }
-    
+
     return result;
   } catch (error) {
     console.error("❌ Error updating branding:", error);
@@ -830,11 +858,11 @@ export async function updateProfile(profileData) {
     };
 
     const result = await updateSettings(profileSettings, "profile");
-    
+
     if (result.success) {
       console.log("✅ Profile settings updated successfully");
     }
-    
+
     return result;
   } catch (error) {
     console.error("❌ Error updating profile:", error);
@@ -856,55 +884,69 @@ export async function uploadAvatar(file) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!allowedTypes.includes(file.type)) {
-      throw new Error("Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP)");
+      throw new Error(
+        "Invalid file type. Please upload a valid image file (JPEG, PNG, GIF, WebP)"
+      );
     }
 
     // Validate file size (max 2MB for avatars)
     const maxSize = 2 * 1024 * 1024; // 2MB
     if (file.size > maxSize) {
-      throw new Error("File size too large. Please upload an image smaller than 2MB");
+      throw new Error(
+        "File size too large. Please upload an image smaller than 2MB"
+      );
     }
 
     if (isMockMode()) {
       console.log("🔧 Mock mode: Simulating avatar upload...");
-      
-      // Create a simulated URL that's much smaller than base64
-      const simulatedUrl = `mock://avatars/${file.name}?t=${Date.now()}`;
-      
-      return {
-        success: true,
-        data: {
-          url: simulatedUrl,
-          filename: file.name,
-          size: file.size,
-          type: file.type,
-        },
-        error: null,
-      };
+
+      // Create a real data URL for preview in mock mode
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve({
+            success: true,
+            data: {
+              url: reader.result, // This will be a data: URL that can be displayed
+              filename: file.name,
+              size: file.size,
+              type: file.type,
+            },
+            error: null,
+          });
+        };
+        reader.readAsDataURL(file);
+      });
     }
 
     // Backend implementation for real file upload
     console.log("🔄 Uploading to backend storage...");
-    
-    const fileExt = file.name.split('.').pop();
+
+    const fileExt = file.name.split(".").pop();
     const fileName = `avatar_${Date.now()}.${fileExt}`;
-    
-    const { data, error } = await supabase.storage
-      .from('avatars')
+
+    const { error } = await supabase.storage
+      .from("avatars")
       .upload(fileName, file);
 
     if (error) {
       throw error;
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
     console.log("✅ Avatar uploaded successfully");
-    
+
     return {
       success: true,
       data: {
@@ -929,7 +971,7 @@ export async function uploadAvatar(file) {
 export async function getBrandingSettings() {
   try {
     console.log("🎨 Getting branding settings...");
-    
+
     const result = await getSettings();
     if (!result.success) {
       throw new Error("Failed to get settings");
@@ -943,7 +985,8 @@ export async function getBrandingSettings() {
       accentColor: result.data.accentColor || "#3b82f6",
       headerStyle: result.data.headerStyle || "modern",
       sidebarStyle: result.data.sidebarStyle || "minimal",
-      systemDescription: result.data.systemDescription || "Pharmacy Management System",
+      systemDescription:
+        result.data.systemDescription || "Pharmacy Management System",
     };
 
     return {
@@ -965,7 +1008,7 @@ export async function getBrandingSettings() {
 export async function getProfileSettings() {
   try {
     console.log("👤 Getting profile settings...");
-    
+
     const result = await getSettings();
     if (!result.success) {
       throw new Error("Failed to get settings");
@@ -980,10 +1023,14 @@ export async function getProfileSettings() {
       profilePhone: result.data.profilePhone || "+63 912 345 6789",
       displayName: result.data.displayName || "Admin",
       userInitials: result.data.userInitials || "AU",
-      
+
       // Additional formats for components
-      firstName: result.data.profileName ? result.data.profileName.split(' ')[0] : "Admin",
-      lastName: result.data.profileName ? result.data.profileName.split(' ').slice(1).join(' ') : "User",
+      firstName: result.data.profileName
+        ? result.data.profileName.split(" ")[0]
+        : "Admin",
+      lastName: result.data.profileName
+        ? result.data.profileName.split(" ").slice(1).join(" ")
+        : "User",
       email: result.data.profileEmail || "admin@medcure.com",
       jobTitle: result.data.profileRole || "Administrator",
     };

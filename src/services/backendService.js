@@ -5,6 +5,9 @@
 
 import { supabase, TABLES } from "../lib/supabase.js";
 
+// Global flag to track if backend is reachable
+let backendReachable = null;
+
 // Environment check for backend availability
 export function isBackendAvailable() {
   return !!(
@@ -12,9 +15,51 @@ export function isBackendAvailable() {
   );
 }
 
-// Check if we should use mock API
-export function shouldUseMockAPI() {
-  return import.meta.env.VITE_USE_MOCK_API === "true" || !isBackendAvailable();
+// Test if backend is actually reachable
+export async function testBackendConnectivity() {
+  if (!isBackendAvailable()) {
+    backendReachable = false;
+    return false;
+  }
+
+  try {
+    // Quick DNS resolution test with reduced logging
+    const testUrl = new URL(import.meta.env.VITE_SUPABASE_URL);
+    const response = await fetch(`${testUrl.origin}/rest/v1/`, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(3000), // 3 second timeout
+    });
+    backendReachable = response.ok;
+    return backendReachable;
+  } catch {
+    // Only log once to reduce console noise
+    if (backendReachable !== false) {
+      console.log(`🚫 Backend unreachable, using mock mode`);
+    }
+    backendReachable = false;
+    return false;
+  }
+}
+
+// Check if we should use mock API (with connectivity fallback)
+export async function shouldUseMockAPI() {
+  // Always use mock if explicitly requested
+  if (import.meta.env.VITE_USE_MOCK_API === "true") {
+    return true;
+  }
+
+  // If backend not configured, use mock
+  if (!isBackendAvailable()) {
+    return true;
+  }
+
+  // Test connectivity if not yet tested
+  if (backendReachable === null) {
+    await testBackendConnectivity();
+  }
+
+  // Fall back to mock if backend is unreachable
+  return !backendReachable;
 }
 
 /**
@@ -59,7 +104,7 @@ export async function checkBackendHealth() {
     }
 
     // Test database connection with a simple query
-    const { data: _data, error } = await supabase
+    const { error } = await supabase
       .from(TABLES.PRODUCTS)
       .select("id")
       .limit(1);
@@ -171,7 +216,7 @@ async function testProductOperations() {
     console.log("🧪 Testing product operations...");
 
     // Test read operation
-    const { data: _data, error } = await supabase
+    const { error } = await supabase
       .from(TABLES.PRODUCTS)
       .select("id, name, is_active")
       .limit(1);
@@ -205,7 +250,7 @@ async function testSalesOperations() {
     console.log("🧪 Testing sales operations...");
 
     // Test read operation
-    const { data: _data, error } = await supabase
+    const { error } = await supabase
       .from(TABLES.SALES_TRANSACTIONS)
       .select("id, transaction_number, status")
       .limit(1);
@@ -239,7 +284,7 @@ async function testArchivedOperations() {
     console.log("🧪 Testing archived operations...");
 
     // Test archived products query
-    const { data: _data, error } = await supabase
+    const { error } = await supabase
       .from(TABLES.PRODUCTS)
       .select("id, name, is_active")
       .eq("is_active", false)
@@ -274,7 +319,7 @@ async function testSettingsOperations() {
     console.log("🧪 Testing settings operations...");
 
     // Test read operation
-    const { data: _data, error } = await supabase
+    const { error } = await supabase
       .from(TABLES.SETTINGS)
       .select("id, data")
       .limit(1);

@@ -19,7 +19,7 @@ import {
 
 // Get all products with optional filtering
 export async function getProducts(filters = {}) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getProducts called - using mock mode");
     return await mockFetchProducts(filters);
   }
@@ -78,7 +78,7 @@ export async function getProducts(filters = {}) {
 
 // Get single product by ID
 export async function getProduct(id) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getProduct called - using mock mode");
     return await mockFetchProduct(id);
   }
@@ -341,7 +341,7 @@ export async function importProducts(products) {
 
 // Get inventory summary
 export async function getInventorySummary() {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getInventorySummary called - using mock mode");
     return await mockGetInventorySummary();
   }

@@ -6,16 +6,29 @@ import { NotificationContext } from "./NotificationContext";
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
 
-  const showNotification = useCallback((message, type = "success") => {
+  const addNotification = useCallback((message, type = "success") => {
     const newItem = { message, type, id: Date.now() };
     setNotifications((prev) => [...prev, newItem]);
   }, []);
+
+  const showNotification = useCallback(
+    (message, type = "success") => {
+      addNotification(message, type);
+    },
+    [addNotification]
+  );
 
   const removeNotification = useCallback((id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const contextValue = useMemo(() => ({ showNotification }), [showNotification]);
+  const contextValue = useMemo(
+    () => ({
+      showNotification,
+      addNotification,
+    }),
+    [showNotification, addNotification]
+  );
 
   return (
     <NotificationContext.Provider value={contextValue}>

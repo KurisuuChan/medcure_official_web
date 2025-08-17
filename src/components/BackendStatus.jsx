@@ -43,9 +43,15 @@ export default function BackendStatus() {
           showNotification("Backend services are operational", "success");
         } else if (healthResult.status === "unavailable") {
           if (healthResult.mode === "mock") {
-            showNotification("Running in mock mode - all services simulated", "info");
+            showNotification(
+              "Running in mock mode - all services simulated",
+              "info"
+            );
           } else {
-            showNotification("Backend not configured - using mock mode", "info");
+            showNotification(
+              "Backend not configured - using mock mode",
+              "info"
+            );
           }
         } else {
           showNotification("Backend services have issues", "warning");
@@ -65,7 +71,7 @@ export default function BackendStatus() {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const initializeData = async () => {
       try {
         const [healthResult, statsResult] = await Promise.all([
@@ -351,36 +357,38 @@ export default function BackendStatus() {
       )}
 
       {/* Migration Actions */}
-      {healthStatus?.status === "unavailable" && healthStatus?.mode !== "mock" && (
-        <div className="bg-white p-8 rounded-2xl shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            Backend Configuration
-          </h2>
+      {healthStatus?.status === "unavailable" &&
+        healthStatus?.mode !== "mock" && (
+          <div className="bg-white p-8 rounded-2xl shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              Backend Configuration
+            </h2>
 
-          <div className="space-y-4">
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h3 className="font-semibold text-yellow-800 mb-2">
-                Backend Not Configured
-              </h3>
-              <p className="text-yellow-700 text-sm mb-4">
-                The system is currently running in mock mode. To enable backend
-                functionality, configure your Supabase environment variables.
-              </p>
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h3 className="font-semibold text-yellow-800 mb-2">
+                  Backend Not Configured
+                </h3>
+                <p className="text-yellow-700 text-sm mb-4">
+                  The system is currently running in mock mode. To enable
+                  backend functionality, configure your Supabase environment
+                  variables.
+                </p>
 
-              <div className="bg-white p-4 rounded border text-sm font-mono">
-                <div className="text-gray-600">
-                  Required environment variables:
-                </div>
-                <div className="mt-2 space-y-1">
-                  <div>VITE_SUPABASE_URL=your_supabase_project_url</div>
-                  <div>VITE_SUPABASE_ANON_KEY=your_supabase_anon_key</div>
-                  <div>VITE_USE_MOCK_API=false</div>
+                <div className="bg-white p-4 rounded border text-sm font-mono">
+                  <div className="text-gray-600">
+                    Required environment variables:
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <div>VITE_SUPABASE_URL=your_supabase_project_url</div>
+                    <div>VITE_SUPABASE_ANON_KEY=your_supabase_anon_key</div>
+                    <div>VITE_USE_MOCK_API=false</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Mock Mode Information */}
       {healthStatus?.mode === "mock" && (
@@ -395,13 +403,13 @@ export default function BackendStatus() {
                 Simulated Environment
               </h3>
               <p className="text-blue-700 text-sm mb-4">
-                The system is running in mock mode with simulated data. All operations are working with local mock data instead of a real database.
+                The system is running in mock mode with simulated data. All
+                operations are working with local mock data instead of a real
+                database.
               </p>
 
               <div className="bg-white p-4 rounded border text-sm">
-                <div className="text-gray-600 mb-2">
-                  Mock mode features:
-                </div>
+                <div className="text-gray-600 mb-2">Mock mode features:</div>
                 <ul className="space-y-1 text-gray-700">
                   <li>• Simulated product management</li>
                   <li>• Mock sales transactions</li>
@@ -412,7 +420,11 @@ export default function BackendStatus() {
 
               <div className="mt-4">
                 <p className="text-blue-700 text-sm">
-                  To switch to backend mode, set <code className="bg-blue-100 px-1 rounded">VITE_USE_MOCK_API=false</code> in your environment variables.
+                  To switch to backend mode, set{" "}
+                  <code className="bg-blue-100 px-1 rounded">
+                    VITE_USE_MOCK_API=false
+                  </code>{" "}
+                  in your environment variables.
                 </p>
               </div>
             </div>

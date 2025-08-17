@@ -7,7 +7,7 @@ import { testSettingsOperations } from "../services/settingsService.js";
 
 async function runSettingsTest() {
   console.log("🧪 Running Settings Test...");
-  console.log("=" .repeat(50));
+  console.log("=".repeat(50));
 
   try {
     const startTime = Date.now();

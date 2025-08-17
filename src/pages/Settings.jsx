@@ -41,11 +41,10 @@ import {
   updateBranding,
   updateProfile,
   uploadAvatar,
-  getBrandingSettings,
-  getProfileSettings,
 } from "../services/settingsService";
 import { useNotification } from "../hooks/useNotification";
 import { useBranding } from "../hooks/useBranding";
+import { handleImageSrc } from "../utils/imageUtils";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("general");
@@ -114,7 +113,7 @@ export default function Settings() {
   const handleSettingChange = (key, value) => {
     setSettings((prev) => {
       const newSettings = { ...prev, [key]: value };
-      
+
       // Clear any existing validation error for this field
       if (validationErrors[key]) {
         setValidationErrors((prevErrors) => {
@@ -123,7 +122,7 @@ export default function Settings() {
           return newErrors;
         });
       }
-      
+
       return newSettings;
     });
   };
@@ -166,7 +165,7 @@ export default function Settings() {
           backupRetention: 30,
           cloudBackup: false,
         };
-        
+
         const loadedSettings = { ...defaultSettings, ...result.data };
         setSettings(loadedSettings);
       } else {
@@ -192,20 +191,30 @@ export default function Settings() {
       const validation = validateSettings(settings);
       if (!validation.isValid) {
         const errorMap = {};
-        validation.errors.forEach(error => {
+        validation.errors.forEach((error) => {
           // Extract field name from error message (simple approach)
-          const field = error.toLowerCase().includes('business name') ? 'businessName' :
-                       error.toLowerCase().includes('business email') ? 'businessEmail' :
-                       error.toLowerCase().includes('business phone') ? 'businessPhone' :
-                       error.toLowerCase().includes('low stock') ? 'lowStockThreshold' :
-                       error.toLowerCase().includes('critical stock') ? 'criticalStockThreshold' :
-                       error.toLowerCase().includes('expiry alert') ? 'expiryAlertDays' :
-                       error.toLowerCase().includes('session timeout') ? 'sessionTimeout' :
-                       error.toLowerCase().includes('password expiry') ? 'passwordExpiry' :
-                       error.toLowerCase().includes('backup retention') ? 'backupRetention' : 'general';
+          const field = error.toLowerCase().includes("business name")
+            ? "businessName"
+            : error.toLowerCase().includes("business email")
+            ? "businessEmail"
+            : error.toLowerCase().includes("business phone")
+            ? "businessPhone"
+            : error.toLowerCase().includes("low stock")
+            ? "lowStockThreshold"
+            : error.toLowerCase().includes("critical stock")
+            ? "criticalStockThreshold"
+            : error.toLowerCase().includes("expiry alert")
+            ? "expiryAlertDays"
+            : error.toLowerCase().includes("session timeout")
+            ? "sessionTimeout"
+            : error.toLowerCase().includes("password expiry")
+            ? "passwordExpiry"
+            : error.toLowerCase().includes("backup retention")
+            ? "backupRetention"
+            : "general";
           errorMap[field] = error;
         });
-        
+
         setValidationErrors(errorMap);
         showNotification(`Validation failed: ${validation.errors[0]}`, "error");
         return;
@@ -306,11 +315,11 @@ export default function Settings() {
     setIsTesting(true);
     try {
       showNotification("Testing backend connection...", "info");
-      
+
       console.log("🔧 Calling testSettingsOperations...");
       const result = await testSettingsOperations();
       console.log("🔧 Test result:", result);
-      
+
       if (result.success) {
         showNotification("Backend connection successful!", "success");
       } else {
@@ -384,7 +393,7 @@ export default function Settings() {
   const handleBrandingSave = async () => {
     try {
       setIsSaving(true);
-      
+
       const brandingData = {
         brandingName: settings.brandingName,
         companyLogo: settings.companyLogo,
@@ -401,7 +410,10 @@ export default function Settings() {
         // Refresh the branding context to show changes immediately
         await refreshSettings();
       } else {
-        showNotification(`Failed to save branding settings: ${result.error}`, "error");
+        showNotification(
+          `Failed to save branding settings: ${result.error}`,
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error saving branding:", error);
@@ -415,7 +427,7 @@ export default function Settings() {
   const handleProfileSave = async () => {
     try {
       setIsSaving(true);
-      
+
       const profileData = {
         profileName: settings.profileName,
         profileEmail: settings.profileEmail,
@@ -432,7 +444,10 @@ export default function Settings() {
         // Refresh the branding context to show changes immediately
         await refreshSettings();
       } else {
-        showNotification(`Failed to save profile settings: ${result.error}`, "error");
+        showNotification(
+          `Failed to save profile settings: ${result.error}`,
+          "error"
+        );
       }
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -443,7 +458,10 @@ export default function Settings() {
   };
 
   // Helper function to get input class names with validation styling
-  const getInputClassName = (fieldName, baseClassName = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500") => {
+  const getInputClassName = (
+    fieldName,
+    baseClassName = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+  ) => {
     if (validationErrors[fieldName]) {
       return `${baseClassName} border-red-300 focus:border-red-500`;
     }
@@ -690,13 +708,16 @@ export default function Settings() {
                     <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-white">
                       {settings.logoUrl ? (
                         <img
-                          src={settings.logoUrl}
+                          src={handleImageSrc(settings.logoUrl, "logo")}
                           alt="Company Logo"
                           className="w-full h-full object-contain rounded-lg"
                         />
                       ) : (
                         <div className="text-center">
-                          <Image size={32} className="mx-auto text-gray-400 mb-2" />
+                          <Image
+                            size={32}
+                            className="mx-auto text-gray-400 mb-2"
+                          />
                           <p className="text-xs text-gray-500">No logo</p>
                         </div>
                       )}
@@ -734,7 +755,8 @@ export default function Settings() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      Recommended size: 200x200px. Supports JPEG, PNG, GIF, WebP. Max size: 5MB.
+                      Recommended size: 200x200px. Supports JPEG, PNG, GIF,
+                      WebP. Max size: 5MB.
                     </p>
                   </div>
                 </div>
@@ -895,13 +917,16 @@ export default function Settings() {
                     <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-white overflow-hidden">
                       {settings.profileAvatar ? (
                         <img
-                          src={settings.profileAvatar}
+                          src={handleImageSrc(settings.profileAvatar, "avatar")}
                           alt="Profile Avatar"
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="text-center">
-                          <User size={24} className="mx-auto text-gray-400 mb-1" />
+                          <User
+                            size={24}
+                            className="mx-auto text-gray-400 mb-1"
+                          />
                           <p className="text-xs text-gray-500">Avatar</p>
                         </div>
                       )}
@@ -927,7 +952,9 @@ export default function Settings() {
                       </div>
                       {settings.profileAvatar && (
                         <button
-                          onClick={() => handleSettingChange("profileAvatar", "")}
+                          onClick={() =>
+                            handleSettingChange("profileAvatar", "")
+                          }
                           className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                         >
                           <Trash2 size={16} />
@@ -936,7 +963,8 @@ export default function Settings() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      Recommended size: 150x150px. Supports JPEG, PNG, GIF, WebP. Max size: 2MB.
+                      Recommended size: 150x150px. Supports JPEG, PNG, GIF,
+                      WebP. Max size: 2MB.
                     </p>
                   </div>
                 </div>
@@ -1022,7 +1050,10 @@ export default function Settings() {
                       type="text"
                       value={settings.userInitials || ""}
                       onChange={(e) =>
-                        handleSettingChange("userInitials", e.target.value.substring(0, 3).toUpperCase())
+                        handleSettingChange(
+                          "userInitials",
+                          e.target.value.substring(0, 3).toUpperCase()
+                        )
                       }
                       maxLength="3"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1586,7 +1617,8 @@ export default function Settings() {
                   </button>
                 </div>
                 <p className="text-gray-600 text-sm">
-                  Test the settings backend connection to ensure your settings can be saved and retrieved properly.
+                  Test the settings backend connection to ensure your settings
+                  can be saved and retrieved properly.
                 </p>
               </div>
 
@@ -1598,16 +1630,22 @@ export default function Settings() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="font-medium text-blue-800">Business Info</div>
+                    <div className="font-medium text-blue-800">
+                      Business Info
+                    </div>
                     <div className="text-blue-600 mt-1">
-                      {(settings.businessName || "").length > 0 ? '✓' : '✗'} Name: {settings.businessName || 'Not set'}
+                      {(settings.businessName || "").length > 0 ? "✓" : "✗"}{" "}
+                      Name: {settings.businessName || "Not set"}
                     </div>
                     <div className="text-blue-600">
-                      {(settings.businessEmail || "").length > 0 ? '✓' : '✗'} Email: {settings.businessEmail || 'Not set'}
+                      {(settings.businessEmail || "").length > 0 ? "✓" : "✗"}{" "}
+                      Email: {settings.businessEmail || "Not set"}
                     </div>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <div className="font-medium text-green-800">Stock Alerts</div>
+                    <div className="font-medium text-green-800">
+                      Stock Alerts
+                    </div>
                     <div className="text-green-600 mt-1">
                       Low Stock: {settings.lowStockThreshold || 0} items
                     </div>
@@ -1618,7 +1656,7 @@ export default function Settings() {
                   <div className="p-4 bg-purple-50 rounded-lg">
                     <div className="font-medium text-purple-800">Security</div>
                     <div className="text-purple-600 mt-1">
-                      2FA: {settings.twoFactorAuth ? 'Enabled' : 'Disabled'}
+                      2FA: {settings.twoFactorAuth ? "Enabled" : "Disabled"}
                     </div>
                     <div className="text-purple-600">
                       Session: {settings.sessionTimeout || 30} minutes
@@ -1626,7 +1664,7 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
-              
+
               <BackendStatus />
             </div>
           )}

@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import PropTypes from "prop-types";
 import { BrandingContext } from "./BrandingContext";
-import { getBrandingSettings, getProfileSettings } from "../services/settingsService";
+import {
+  getBrandingSettings,
+  getProfileSettings,
+} from "../services/settingsService";
 
 export const BrandingProvider = ({ children }) => {
   const [branding, setBranding] = useState({
@@ -27,7 +30,7 @@ export const BrandingProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
 
-  const loadBrandingSettings = async () => {
+  const loadBrandingSettings = useCallback(async () => {
     try {
       const [brandingResult, profileResult] = await Promise.all([
         getBrandingSettings(),
@@ -46,28 +49,38 @@ export const BrandingProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadBrandingSettings();
+  }, [loadBrandingSettings]);
+
+  const updateBranding = useCallback((newBranding) => {
+    setBranding((prev) => ({ ...prev, ...newBranding }));
   }, []);
 
-  const updateBranding = (newBranding) => {
-    setBranding((prev) => ({ ...prev, ...newBranding }));
-  };
-
-  const updateProfile = (newProfile) => {
+  const updateProfile = useCallback((newProfile) => {
     setProfile((prev) => ({ ...prev, ...newProfile }));
-  };
+  }, []);
 
-  const value = {
-    branding,
-    profile,
-    loading,
-    updateBranding,
-    updateProfile,
-    refreshSettings: loadBrandingSettings,
-  };
+  const value = useMemo(
+    () => ({
+      branding,
+      profile,
+      loading,
+      updateBranding,
+      updateProfile,
+      refreshSettings: loadBrandingSettings,
+    }),
+    [
+      branding,
+      profile,
+      loading,
+      updateBranding,
+      updateProfile,
+      loadBrandingSettings,
+    ]
+  );
 
   return (
     <BrandingContext.Provider value={value}>

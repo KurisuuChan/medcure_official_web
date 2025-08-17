@@ -470,24 +470,30 @@ export default function Header({ onLogout, user }) {
           >
             <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-semibold shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
               {profile?.profileAvatar ? (
-                <img 
-                  src={handleImageSrc(profile.profileAvatar, 'avatar')} 
-                  alt={`${profile?.firstName || user?.name || 'User'} Avatar`}
+                <img
+                  src={handleImageSrc(profile.profileAvatar, "avatar")}
+                  alt={`${profile?.firstName || user?.name || "User"} Avatar`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
                   }}
                 />
               ) : null}
-              <div className={`w-full h-full flex items-center justify-center ${profile?.profileAvatar ? 'hidden' : ''}`}>
-                {profile?.firstName ? profile.firstName.charAt(0).toUpperCase() : user?.initials || "A"}
+              <div
+                className={`w-full h-full flex items-center justify-center ${
+                  profile?.profileAvatar ? "hidden" : ""
+                }`}
+              >
+                {profile?.firstName
+                  ? profile.firstName.charAt(0).toUpperCase()
+                  : user?.initials || "A"}
               </div>
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-sm font-semibold text-gray-900">
-                {profile?.firstName && profile?.lastName 
-                  ? `${profile.firstName} ${profile.lastName}` 
+                {profile?.firstName && profile?.lastName
+                  ? `${profile.firstName} ${profile.lastName}`
                   : user?.name || "Admin User"}
               </div>
               <div className="text-xs text-gray-500 font-medium">
@@ -507,8 +513,8 @@ export default function Header({ onLogout, user }) {
               {/* User Info Header */}
               <div className="px-3 sm:px-4 py-3 border-b border-gray-100">
                 <div className="font-semibold text-gray-900">
-                  {profile?.firstName && profile?.lastName 
-                    ? `${profile.firstName} ${profile.lastName}` 
+                  {profile?.firstName && profile?.lastName
+                    ? `${profile.firstName} ${profile.lastName}`
                     : user?.name || "Admin User"}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">

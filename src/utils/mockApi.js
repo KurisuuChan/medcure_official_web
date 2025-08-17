@@ -266,7 +266,7 @@ export async function mockFetchProducts(filters = {}) {
     products = products.filter(
       (p) =>
         p.name.toLowerCase().includes(search) ||
-        (p.generic_name && p.generic_name.toLowerCase().includes(search)) ||
+        p.generic_name?.toLowerCase().includes(search) ||
         p.category.toLowerCase().includes(search)
     );
   }
@@ -336,7 +336,7 @@ export async function mockGetSalesTransactions(filters = {}) {
   return { data: transactions, error: null };
 }
 
-export async function mockGetSalesSummary(period = "today") {
+export async function mockGetSalesSummary(_period = "today") {
   await delay();
 
   // Mock sales summary based on sample data
@@ -651,7 +651,7 @@ export async function mockCancelTransaction(transactionId, reason = "") {
   }
 }
 
-export async function mockGetHourlySales(date) {
+export async function mockGetHourlySales(_date) {
   await delay();
 
   // Generate mock hourly data
@@ -1364,12 +1364,12 @@ export async function mockArchiveEmployee(employeeId, reason) {
 // Load settings from localStorage or use defaults
 const loadPersistedSettings = () => {
   try {
-    const saved = localStorage.getItem('medcure-mock-settings');
+    const saved = localStorage.getItem("medcure-mock-settings");
     if (saved) {
       return JSON.parse(saved);
     }
   } catch (error) {
-    console.warn('Failed to load persisted settings:', error);
+    console.warn("Failed to load persisted settings:", error);
   }
   return null;
 };
@@ -1377,9 +1377,9 @@ const loadPersistedSettings = () => {
 // Save settings to localStorage
 const savePersistedSettings = (settings) => {
   try {
-    localStorage.setItem('medcure-mock-settings', JSON.stringify(settings));
+    localStorage.setItem("medcure-mock-settings", JSON.stringify(settings));
   } catch (error) {
-    console.warn('Failed to save settings to localStorage:', error);
+    console.warn("Failed to save settings to localStorage:", error);
   }
 };
 
@@ -1469,7 +1469,7 @@ export async function mockUpdateSettings(settingsData, section = "all") {
 
     // Merge with existing settings
     MOCK_SETTINGS = { ...MOCK_SETTINGS, ...settingsData };
-    
+
     // Persist to localStorage
     savePersistedSettings(MOCK_SETTINGS);
 
@@ -1521,7 +1521,7 @@ export async function mockResetSettings() {
     };
 
     // Clear localStorage
-    localStorage.removeItem('medcure-mock-settings');
+    localStorage.removeItem("medcure-mock-settings");
 
     return {
       data: MOCK_SETTINGS,
@@ -1570,7 +1570,7 @@ export async function mockImportSettings(importData) {
   try {
     console.log("📋 Mock: Importing settings:", importData);
 
-    if (!importData || !importData.settings) {
+    if (!importData?.settings) {
       throw new Error("Invalid import data format");
     }
 
@@ -1591,8 +1591,23 @@ export async function mockImportSettings(importData) {
   }
 }
 
-// Check if mock mode is enabled
-export function isMockMode() {
+// Check if mock mode is enabled (including automatic fallback)
+export async function isMockMode() {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { shouldUseMockAPI } = await import("../services/backendService.js");
+    return await shouldUseMockAPI();
+  } catch (error) {
+    console.warn(
+      "⚠️ Error checking backend status, defaulting to mock mode:",
+      error.message
+    );
+    return true;
+  }
+}
+
+// Synchronous version for non-async contexts - fallback to environment check
+export function isMockModeSync() {
   console.log(
     "🔧 Environment check - VITE_USE_MOCK_API:",
     import.meta.env.VITE_USE_MOCK_API
@@ -1602,9 +1617,15 @@ export function isMockMode() {
     import.meta.env.VITE_USE_MOCK_API === "true"
   );
 
-  // Temporarily force mock mode to true for testing
-  return true; // Force mock mode for now
-  // return import.meta.env.VITE_USE_MOCK_API === 'true';
+  // Check environment variable to determine mock mode
+  return import.meta.env.VITE_USE_MOCK_API === "true";
 }
 
-console.log("🔧 Mock API mode:", isMockMode() ? "ENABLED" : "DISABLED");
+// Initialize async check
+isMockMode()
+  .then((mockEnabled) => {
+    console.log("🔧 Mock API mode:", mockEnabled ? "ENABLED" : "DISABLED");
+  })
+  .catch((error) => {
+    console.warn("⚠️ Mock mode check failed:", error.message);
+  });

@@ -12,12 +12,8 @@ import {
   mockArchiveTransaction,
   mockArchiveSupplier,
   mockArchiveEmployee,
+  isMockMode,
 } from "../utils/mockApi.js";
-
-// Environment check for mock vs real API
-function isMockMode() {
-  return import.meta.env.VITE_USE_MOCK_API === "true" || false; // Enable backend integration
-}
 
 /**
  * Get all archived items with filtering and pagination
