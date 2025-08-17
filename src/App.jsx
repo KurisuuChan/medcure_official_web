@@ -13,29 +13,32 @@ import ReportsFixed from "./pages/ReportsFixed";
 import Settings from "./pages/Settings";
 import { MockApiStatus } from "./components/MockApiStatus";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ProtectedRoute>
-        <MockApiStatus />
-        <Routes>
-          <Route element={<FullLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="management" element={<Management />} />
-            <Route path="archived" element={<Archived />} />
-            <Route path="point-of-sales" element={<Pos />} />
-            <Route path="contacts" element={<Contacts />} />
-            <Route path="notifications" element={<NotificationHistory />} />
-            <Route path="financials" element={<Financials />} />
-            <Route path="reports" element={<ReportsFixed />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="*" element={<Dashboard />} />
-          </Route>
-        </Routes>
-      </ProtectedRoute>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ProtectedRoute>
+          <MockApiStatus />
+          <Routes>
+            <Route element={<FullLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="management" element={<Management />} />
+              <Route path="archived" element={<Archived />} />
+              <Route path="point-of-sales" element={<Pos />} />
+              <Route path="contacts" element={<Contacts />} />
+              <Route path="notifications" element={<NotificationHistory />} />
+              <Route path="financials" element={<Financials />} />
+              <Route path="reports" element={<ReportsFixed />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="*" element={<Dashboard />} />
+            </Route>
+          </Routes>
+        </ProtectedRoute>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

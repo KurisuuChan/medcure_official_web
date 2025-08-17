@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useContacts } from "../hooks/useContacts";
 import { useNotification } from "../hooks/useNotification";
+import SupplierHistoryModal from "../components/modals/SupplierHistoryModal";
 
 // Contact Card Component
 const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }) => {
@@ -200,10 +201,13 @@ const Pagination = () => {
 
 // Main Contacts Component
 export default function Contacts() {
-  const { contacts, loading, error, deleteContact } = useContacts();
+  const { contacts, loading, error, addContact, updateContact, deleteContact } = useContacts();
   const { showNotification } = useNotification();
   const [selectedTab, setSelectedTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [showSupplierHistory, setShowSupplierHistory] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
   
   // Filter contacts based on search term and selected tab
   const filteredContacts = contacts.filter(contact => {
@@ -224,24 +228,22 @@ export default function Contacts() {
     customers: contacts.filter(c => c.type === 'customer').length,
   };
 
-  // Dynamic button text based on selected tab
-  const addButtonText = selectedTab === 'supplier' ? 'Add Supplier' : 
-                       selectedTab === 'employee' ? 'Add Employee' :
-                       selectedTab === 'customer' ? 'Add Customer' : 'Add Contact';
-
   // Handle viewing supplier history
   const handleViewHistory = (supplierName) => {
-    showNotification(`Viewing supply history for ${supplierName}`, 'info');
+    setSelectedSupplier(supplierName);
+    setShowSupplierHistory(true);
   };
 
   // Handle contact details
   const handleViewDetails = (contact) => {
-    showNotification(`Viewing details for ${contact.name}`, 'info');
+    setSelectedContact(contact);
+    showNotification('Contact details view coming soon!', 'info');
   };
 
   // Handle edit contact
   const handleEdit = (contact) => {
-    showNotification(`Edit modal for ${contact.name} coming soon!`, 'info');
+    setSelectedContact(contact);
+    showNotification('Contact edit modal coming soon!', 'info');
   };
 
   // Handle delete contact
@@ -250,8 +252,7 @@ export default function Contacts() {
       try {
         await deleteContact(contact.id);
         showNotification('Contact deleted successfully', 'success');
-      } catch (err) {
-        console.error('Error deleting contact:', err);
+      } catch (error) {
         showNotification('Failed to delete contact', 'error');
       }
     }
@@ -347,33 +348,33 @@ export default function Contacts() {
         </div>
 
         {/* Search and Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex items-center gap-3">
           <div className="relative">
             <Search
+              size={20}
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={16}
             />
             <input
               type="text"
               placeholder="Search contacts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Filter size={16} />
-            Filters
+          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+            <Plus size={16} />
+            Add Contact
           </button>
-          <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow">
-            <Plus size={18} />
-            {addButtonText}
+          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
+            <Filter size={16} />
+            Filter
           </button>
         </div>
       </div>
 
-      {/* Statistics Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -450,6 +451,15 @@ export default function Contacts() {
             Add Contact
           </button>
         </div>
+      )}
+
+      {/* Supplier History Modal */}
+      {showSupplierHistory && (
+        <SupplierHistoryModal
+          supplierName={selectedSupplier}
+          isOpen={showSupplierHistory}
+          onClose={() => setShowSupplierHistory(false)}
+        />
       )}
     </div>
   );

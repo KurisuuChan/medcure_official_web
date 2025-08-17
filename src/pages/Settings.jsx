@@ -27,6 +27,7 @@ import {
   Zap,
   Brush,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
 import BackendStatus from "../components/BackendStatus";
 import {
@@ -44,6 +45,7 @@ import {
 } from "../services/settingsService";
 import { useNotification } from "../hooks/useNotification";
 import { useBranding } from "../hooks/useBranding";
+import { useTheme } from "../hooks/useTheme";
 import { handleImageSrc } from "../utils/imageUtils";
 
 export default function Settings() {
@@ -55,6 +57,7 @@ export default function Settings() {
   const [validationErrors, setValidationErrors] = useState({});
   const { showNotification } = useNotification();
   const { refreshSettings } = useBranding();
+  const { theme, updateTheme, resetTheme, getThemeClasses } = useTheme();
 
   const [settings, setSettings] = useState({
     // General Settings
@@ -62,10 +65,10 @@ export default function Settings() {
     businessAddress: "123 Health Street, Medical District, City",
     businessPhone: "+63 912 345 6789",
     businessEmail: "contact@medcure.com",
-    primaryColor: "#2563eb",
-    timezone: "Asia/Manila",
-    currency: "PHP",
-    language: "en",
+    primaryColor: theme.primaryColor,
+    timezone: theme.timezone,
+    currency: theme.currency,
+    language: theme.language,
 
     // Branding Settings
     brandingName: "MedCure",
@@ -123,8 +126,28 @@ export default function Settings() {
         });
       }
 
+      // If appearance settings changed, also update theme
+      if (['primaryColor', 'language', 'timezone', 'currency'].includes(key)) {
+        updateTheme({ [key]: value });
+      }
+
       return newSettings;
     });
+  };
+
+  // Handle theme reset
+  const handleThemeReset = () => {
+    if (confirm("Reset appearance settings to defaults?")) {
+      resetTheme();
+      setSettings(prev => ({
+        ...prev,
+        primaryColor: '#2563eb',
+        language: 'en',
+        timezone: 'Asia/Manila',
+        currency: 'PHP'
+      }));
+      showNotification("Appearance settings reset to defaults", "success");
+    }
   };
 
   const loadSettings = useCallback(async () => {
@@ -460,12 +483,12 @@ export default function Settings() {
   // Helper function to get input class names with validation styling
   const getInputClassName = (
     fieldName,
-    baseClassName = "w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+    baseClassName = "w-full px-3 py-2 border rounded-lg focus:ring-2 ring-primary focus:border-primary"
   ) => {
     if (validationErrors[fieldName]) {
       return `${baseClassName} border-red-300 focus:border-red-500`;
     }
-    return `${baseClassName} border-gray-300 focus:border-blue-500`;
+    return `${baseClassName} border-gray-300`;
   };
 
   const tabs = [
@@ -507,7 +530,7 @@ export default function Settings() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                     activeTab === tab.id
-                      ? "bg-blue-100 text-blue-700 font-semibold"
+                      ? "bg-primary text-white font-semibold shadow-sm"
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
@@ -568,7 +591,7 @@ export default function Settings() {
                       onChange={(e) =>
                         handleSettingChange("businessPhone", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 ring-primary focus:border-primary"
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -581,7 +604,7 @@ export default function Settings() {
                         handleSettingChange("businessAddress", e.target.value)
                       }
                       rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 ring-primary focus:border-primary"
                     />
                   </div>
                   <div>
@@ -611,6 +634,40 @@ export default function Settings() {
                   <Palette size={20} />
                   Appearance
                 </h3>
+                
+                {/* Live Preview */}
+                <div className="mb-6 p-4 bg-white rounded-lg border">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-gray-700">Live Preview</p>
+                    <button
+                      onClick={handleThemeReset}
+                      className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                    >
+                      <RefreshCw size={12} />
+                      Reset
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-8 h-8 rounded-lg shadow-sm border"
+                      style={{ backgroundColor: settings.primaryColor }}
+                    ></div>
+                    <div 
+                      className="px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm transition-colors"
+                      style={{ 
+                        backgroundColor: settings.primaryColor,
+                        boxShadow: `0 1px 3px rgba(${theme.primaryColorRGB}, 0.3)`
+                      }}
+                    >
+                      Sample Button
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {settings.language === 'en' ? 'English' : 
+                       settings.language === 'fil' ? 'Filipino' : 'Spanish'} • {settings.timezone}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -632,8 +689,12 @@ export default function Settings() {
                           handleSettingChange("primaryColor", e.target.value)
                         }
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#2563eb"
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Changes instantly across the entire app
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -650,6 +711,9 @@ export default function Settings() {
                       <option value="fil">Filipino</option>
                       <option value="es">Spanish</option>
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Interface language preference
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -662,10 +726,41 @@ export default function Settings() {
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="Asia/Manila">Asia/Manila</option>
-                      <option value="UTC">UTC</option>
-                      <option value="America/New_York">America/New_York</option>
+                      <option value="Asia/Manila">Asia/Manila (UTC+8)</option>
+                      <option value="UTC">UTC (UTC+0)</option>
+                      <option value="America/New_York">America/New_York (UTC-5)</option>
+                      <option value="Europe/London">Europe/London (UTC+0)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+                      <option value="Australia/Sydney">Australia/Sydney (UTC+10)</option>
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      For date and time display
+                    </p>
+                  </div>
+                </div>
+
+                {/* Additional Currency Setting */}
+                <div className="mt-4 grid sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Currency
+                    </label>
+                    <select
+                      value={settings.currency}
+                      onChange={(e) =>
+                        handleSettingChange("currency", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="PHP">Philippine Peso (₱)</option>
+                      <option value="USD">US Dollar ($)</option>
+                      <option value="EUR">Euro (€)</option>
+                      <option value="GBP">British Pound (£)</option>
+                      <option value="JPY">Japanese Yen (¥)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      For price display and reports
+                    </p>
                   </div>
                 </div>
               </div>
@@ -673,10 +768,10 @@ export default function Settings() {
               <button
                 onClick={() => handleSave("general")}
                 disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
                   isSaving || isLoading
                     ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-primary hover:bg-primary-hover text-white"
                 }`}
               >
                 <Save size={18} />
@@ -736,7 +831,7 @@ export default function Settings() {
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           disabled={isLoading}
                         />
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50">
                           <Upload size={16} />
                           Choose Logo
                         </button>
@@ -882,10 +977,10 @@ export default function Settings() {
               <button
                 onClick={handleBrandingSave}
                 disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
                   isSaving || isLoading
                     ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-primary hover:bg-primary-hover text-white"
                 }`}
               >
                 <Save size={18} />
