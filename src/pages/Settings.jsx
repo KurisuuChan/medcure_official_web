@@ -1693,12 +1693,13 @@ export default function Settings() {
                   System Reset
                 </h3>
                 <p className="text-red-700 mb-4 text-sm">
-                  Reset your system to a fresh state. This is useful for development, 
-                  testing, or when you need to start over with clean data.
+                  Reset your system to a fresh state. This is useful for
+                  development, testing, or when you need to start over with
+                  clean data.
                 </p>
                 <div className="space-y-3">
                   <button
-                    onClick={() => window.open('/system-reset', '_blank')}
+                    onClick={() => window.open("/system-reset", "_blank")}
                     className="flex items-center gap-2 p-4 bg-white border border-red-300 rounded-lg hover:bg-red-50 text-left w-full transition-colors"
                   >
                     <RefreshCw size={20} className="text-red-500" />
@@ -1712,7 +1713,9 @@ export default function Settings() {
                     </div>
                   </button>
                   <div className="text-xs text-red-600 bg-red-100 p-3 rounded">
-                    <strong>Console Commands Available:</strong> Type <code>MedCureReset.help()</code> in browser console for quick reset commands.
+                    <strong>Console Commands Available:</strong> Type{" "}
+                    <code>MedCureReset.help()</code> in browser console for
+                    quick reset commands.
                   </div>
                 </div>
               </div>

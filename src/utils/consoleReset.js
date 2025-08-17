@@ -3,80 +3,80 @@
  * Quick reset commands you can run in the browser console
  */
 
-import { 
-  clearLocalStorage, 
-  clearSessionStorage, 
-  resetDatabase, 
+import {
+  clearLocalStorage,
+  clearSessionStorage,
+  resetDatabase,
   resetSystemSettings,
   performCompleteReset,
-  quickDevReset
-} from './systemReset.js';
+  quickDevReset,
+} from "./systemReset.js";
 
 // Make reset functions available globally in console
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.MedCureReset = {
     // Quick commands
     quickReset: quickDevReset,
     clearStorage: () => {
       clearLocalStorage();
       clearSessionStorage();
-      console.log('✅ Storage cleared! Refresh the page.');
+      console.log("✅ Storage cleared! Refresh the page.");
     },
-    
+
     // Full reset (requires confirmation)
     fullReset: async () => {
       const confirm = window.confirm(
-        '⚠️ This will delete ALL data permanently!\n\nAre you sure you want to continue?'
+        "⚠️ This will delete ALL data permanently!\n\nAre you sure you want to continue?"
       );
-      
+
       if (confirm) {
         const result = await performCompleteReset({
           clearStorage: true,
           resetDatabase: true,
           resetSettings: true,
           createDemo: false,
-          confirmReset: true
+          confirmReset: true,
         });
-        
+
         console.log(result);
         if (result.success) {
-          console.log('✅ Full reset complete! Refresh the page.');
+          console.log("✅ Full reset complete! Refresh the page.");
         }
       } else {
-        console.log('❌ Reset cancelled.');
+        console.log("❌ Reset cancelled.");
       }
     },
-    
+
     // Reset with demo data
     resetWithDemo: async () => {
       const confirm = window.confirm(
-        '⚠️ This will delete ALL data and create demo data!\n\nAre you sure you want to continue?'
+        "⚠️ This will delete ALL data and create demo data!\n\nAre you sure you want to continue?"
       );
-      
+
       if (confirm) {
         const result = await performCompleteReset({
           clearStorage: true,
           resetDatabase: true,
           resetSettings: true,
           createDemo: true,
-          confirmReset: true
+          confirmReset: true,
         });
-        
+
         console.log(result);
         if (result.success) {
-          console.log('✅ Reset with demo data complete! Refresh the page.');
+          console.log("✅ Reset with demo data complete! Refresh the page.");
         }
       } else {
-        console.log('❌ Reset cancelled.');
+        console.log("❌ Reset cancelled.");
       }
     },
-    
+
     // Individual functions
     clearLocalStorage,
     clearSessionStorage,
     resetDatabase,
     resetSystemSettings,
-    
+
     // Help
     help: () => {
       console.log(`
@@ -106,11 +106,13 @@ Usage Examples:
 
 ⚠️ Always backup important data before running reset commands!
       `);
-    }
+    },
   };
 
   // Show help on first load
-  console.log('🔧 MedCure Reset commands loaded! Type MedCureReset.help() for instructions.');
+  console.log(
+    "🔧 MedCure Reset commands loaded! Type MedCureReset.help() for instructions."
+  );
 }
 
 export default window.MedCureReset;

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNotification } from "../../hooks/useNotification";
-import { useNotifications } from "../../hooks/useNotifications";
+import { useNotificationDropdown } from "../../hooks/useNotificationDropdown";
 import { useBranding } from "../../hooks/useBranding";
 import { useAuth } from "../../hooks/useAuth";
 import { handleImageSrc } from "../../utils/imageUtils";
@@ -31,12 +31,21 @@ export default function Header({ user }) {
   const { profile } = useBranding();
   const { logout } = useAuth();
 
-  // Use the notifications hook for backend integration
-  const { notifications, stats, markAsRead, markMultipleRead } =
-    useNotifications();
+  // Use the enhanced notifications hook for dropdown backend integration
+  const {
+    notifications,
+    stats,
+    unreadCount,
+    isOpen: notifOpen,
+    markAsRead,
+    markAllAsRead: markAllNotificationsAsRead,
+    closeDropdown: closeNotificationDropdown,
+    toggleDropdown,
+    formatTime: formatNotificationTime,
+    getDisplayConfig: getNotificationDisplayConfig,
+  } = useNotificationDropdown();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const menuRef = useRef(null);
@@ -105,59 +114,16 @@ export default function Header({ user }) {
     }
   };
 
-  // Get notification colors based on type
-  const getNotificationColors = (type) => {
-    switch (type) {
-      case "error":
-        return {
-          color: "text-red-600",
-          bgColor: "bg-red-50",
-          borderColor: "border-red-200",
-        };
-      case "warning":
-        return {
-          color: "text-orange-600",
-          bgColor: "bg-orange-50",
-          borderColor: "border-orange-200",
-        };
-      case "success":
-        return {
-          color: "text-green-600",
-          bgColor: "bg-green-50",
-          borderColor: "border-green-200",
-        };
-      case "info":
-      default:
-        return {
-          color: "text-blue-600",
-          bgColor: "bg-blue-50",
-          borderColor: "border-blue-200",
-        };
-    }
-  };
-
-  // Format notification time
-  const formatNotificationTime = (timestamp) => {
-    const now = new Date();
-    const notifTime = new Date(timestamp);
-    const diffMinutes = Math.floor((now - notifTime) / (1000 * 60));
-
-    if (diffMinutes < 1) return "Just now";
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
-  };
-
-  const unreadCount = stats?.unread || 0;
-
+  // Enhanced notification handling with the new dropdown service
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await markAsRead(notificationId);
-      addNotification("Notification marked as read", "success");
+      const result = await markAsRead(notificationId);
+
+      if (result.success) {
+        addNotification("Notification marked as read", "success");
+      } else {
+        throw new Error(result.error || "Failed to mark notification as read");
+      }
     } catch (err) {
       console.error("Failed to mark notification as read:", err);
       addNotification("Failed to mark notification as read", "error");
@@ -166,25 +132,24 @@ export default function Header({ user }) {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const unreadIds = notifications
-        .filter((n) => !n.is_read)
-        .map((n) => n.id);
+      const result = await markAllNotificationsAsRead();
 
-      if (unreadIds.length === 0) {
-        addNotification("No unread notifications", "info");
-        return;
+      if (result.success) {
+        addNotification(
+          result.message || "All notifications marked as read",
+          "success"
+        );
+      } else {
+        throw new Error(result.error || "Failed to mark notifications as read");
       }
-
-      await markMultipleRead(unreadIds);
-      addNotification("All notifications marked as read", "success");
     } catch (err) {
-      console.error("Failed to mark notifications as read:", err);
-      addNotification("Failed to mark notifications as read", "error");
+      console.error("Failed to mark all notifications as read:", err);
+      addNotification("Failed to mark all notifications as read", "error");
     }
   };
 
   const handleViewAllNotifications = () => {
-    setNotifOpen(false);
+    closeNotificationDropdown();
     navigate("/notification-history");
   };
 
@@ -193,13 +158,13 @@ export default function Header({ user }) {
       if (menuRef.current && !menuRef.current.contains(e.target))
         setMenuOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target))
-        setNotifOpen(false);
+        closeNotificationDropdown();
       if (actionsRef.current && !actionsRef.current.contains(e.target))
         setActionsOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [closeNotificationDropdown]);
 
   return (
     <header className="h-14 sm:h-16 bg-white/95 backdrop-blur-sm border-b border-gray-200/80 flex items-center justify-between px-3 sm:px-4 md:px-6 sticky top-0 z-50 shadow-sm">
@@ -411,7 +376,7 @@ export default function Header({ user }) {
         {/* Notifications */}
         <div ref={notifRef} className="relative">
           <button
-            onClick={() => setNotifOpen((o) => !o)}
+            onClick={toggleDropdown}
             className="relative p-2 sm:p-2.5 rounded-lg sm:rounded-xl hover:bg-gray-50 text-gray-600 hover:text-gray-800 transition-all duration-200 group"
             aria-label="Notifications"
           >
@@ -434,7 +399,7 @@ export default function Header({ user }) {
                     Notifications
                   </h3>
                   <button
-                    onClick={() => setNotifOpen(false)}
+                    onClick={closeNotificationDropdown}
                     className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-all"
                   >
                     <X size={16} />
@@ -470,7 +435,9 @@ export default function Header({ user }) {
                       const IconComponent = getNotificationIcon(
                         notification.type
                       );
-                      const colors = getNotificationColors(notification.type);
+                      const displayConfig = getNotificationDisplayConfig(
+                        notification.type
+                      );
 
                       return (
                         <button
@@ -484,11 +451,11 @@ export default function Header({ user }) {
                         >
                           <div className="flex items-start gap-3">
                             <div
-                              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${colors.bgColor} ${colors.borderColor} border shadow-sm`}
+                              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${displayConfig.bgColor} ${displayConfig.borderColor} border shadow-sm`}
                             >
                               <IconComponent
                                 size={16}
-                                className={colors.color}
+                                className={displayConfig.iconColor}
                               />
                             </div>
                             <div className="flex-1 min-w-0">

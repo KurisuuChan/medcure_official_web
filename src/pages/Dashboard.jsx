@@ -10,7 +10,7 @@ import {
   LineChart,
   Zap,
   ArrowUpRight,
-  BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import SalesByHourChart from "@/components/charts/SalesByHourChart";
@@ -67,11 +67,26 @@ const summaryCardsConfig = [
   },
 ];
 
-const SummaryCard = ({ title, value, config, onClick }) => {
+const SummaryCard = ({
+  title,
+  value,
+  config,
+  onClick,
+  loading = false,
+  trend,
+}) => {
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <div
+    <button
       onClick={onClick}
-      className={`bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border-2 ${config.colors.border} ${config.colors.hover} hover:shadow-lg transition-all duration-300 group cursor-pointer hover:-translate-y-1 sm:hover:-translate-y-2 relative overflow-hidden`}
+      onKeyPress={handleKeyPress}
+      className={`bg-white p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl shadow-sm border-2 ${config.colors.border} ${config.colors.hover} hover:shadow-lg transition-all duration-300 group cursor-pointer hover:-translate-y-1 sm:hover:-translate-y-2 relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-left`}
     >
       {/* Background Pattern */}
       <div className="absolute top-0 right-0 w-16 sm:w-20 h-16 sm:h-20 opacity-5">
@@ -94,15 +109,23 @@ const SummaryCard = ({ title, value, config, onClick }) => {
 
         <div className="space-y-1 sm:space-y-2">
           <p className="text-2xl sm:text-3xl font-bold text-gray-800 tabular-nums">
-            {value}
+            {loading ? (
+              <span className="inline-block w-20 h-8 bg-gray-200 rounded animate-pulse"></span>
+            ) : (
+              value
+            )}
           </p>
           <p className="text-sm font-semibold text-gray-900">{title}</p>
           <p className="text-xs text-gray-500 font-medium">
-            {config.description}
+            {loading ? (
+              <span className="inline-block w-24 h-4 bg-gray-200 rounded animate-pulse"></span>
+            ) : (
+              trend || config.description
+            )}
           </p>
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 
@@ -111,6 +134,8 @@ SummaryCard.propTypes = {
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   config: PropTypes.object.isRequired,
   onClick: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
+  trend: PropTypes.string,
 };
 
 export default function Dashboard() {
@@ -121,19 +146,40 @@ export default function Dashboard() {
     navigate(route);
   };
 
+  const handleRefresh = () => {
+    // Add refresh functionality here if needed
+    window.location.reload();
+  };
+
   // Get the main summary cards we want to display
-  const mainCards = summaryCards.filter((card) =>
-    summaryCardsConfig.some((config) => config.title === card.title)
-  );
+  const mainCards = summaryCards.slice(0, 4).map((card, index) => {
+    const config = summaryCardsConfig[index];
+    return {
+      ...card,
+      ...config,
+    };
+  });
 
   return (
     <div className="space-y-6 sm:space-y-8 lg:space-y-10 p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen">
       {/* Hero Header */}
       <div className="text-center space-y-3 sm:space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-          <Zap className="w-4 h-4" />
-          Real-time
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+            <Zap className="w-4 h-4" />
+            Real-time
+          </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm font-medium transition-all"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
         </div>
+
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">
           MedCure Dashboard
         </h1>
@@ -145,18 +191,17 @@ export default function Dashboard() {
 
       {/* Main Summary Cards */}
       <div className="grid gap-4 sm:gap-6 lg:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {mainCards.map((card) => {
-          const config = summaryCardsConfig.find((c) => c.title === card.title);
-          return (
-            <SummaryCard
-              key={card.title}
-              title={card.title}
-              value={card.value}
-              config={config}
-              onClick={() => handleCardClick(config.route)}
-            />
-          );
-        })}
+        {mainCards.map((card) => (
+          <SummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            config={card}
+            loading={card.loading}
+            trend={card.trend}
+            onClick={() => handleCardClick(card.route)}
+          />
+        ))}
       </div>
 
       {/* Analytics Section */}
@@ -255,46 +300,51 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200">
                   <div className="text-2xl font-bold text-emerald-600 mb-1">
-                    ₱24.5K
+                    {summaryCards.find((card) => card.title === "Today Sales")
+                      ?.value || "₱0"}
                   </div>
                   <div className="text-sm font-medium text-emerald-800">
                     Today's Revenue
                   </div>
                   <div className="text-xs text-emerald-600 mt-1">
-                    ↗ +12% from yesterday
+                    From sales transactions
                   </div>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200">
                   <div className="text-2xl font-bold text-blue-600 mb-1">
-                    148
+                    {summaryCards.find(
+                      (card) => card.title === "Total Products"
+                    )?.value || "0"}
                   </div>
                   <div className="text-sm font-medium text-blue-800">
-                    Products Sold
+                    Total Products
                   </div>
                   <div className="text-xs text-blue-600 mt-1">
-                    ↗ +8% from yesterday
+                    Active inventory items
                   </div>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl border border-orange-200">
                   <div className="text-2xl font-bold text-orange-600 mb-1">
-                    23
+                    {summaryCards.find((card) => card.title === "Low Stock")
+                      ?.value || "0"}
                   </div>
                   <div className="text-sm font-medium text-orange-800">
-                    Avg/Hour
+                    Low Stock Items
                   </div>
                   <div className="text-xs text-orange-600 mt-1">
-                    Peak: 2-3 PM
+                    Need restocking
                   </div>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200">
                   <div className="text-2xl font-bold text-purple-600 mb-1">
-                    98%
+                    {summaryCards.find((card) => card.title === "Expiring Soon")
+                      ?.value || "0"}
                   </div>
                   <div className="text-sm font-medium text-purple-800">
-                    Satisfaction
+                    Expiring Soon
                   </div>
                   <div className="text-xs text-purple-600 mt-1">
-                    Based on feedback
+                    Check expiry dates
                   </div>
                 </div>
               </div>
