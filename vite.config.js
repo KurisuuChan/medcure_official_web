@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [tailwindcss(), react()],
+  //ase: process.env.VITE_BASE_PATH || "/react-vite-deploy",
   build: {
     // Slightly raise warning limit and create separate vendor chunk
     chunkSizeWarningLimit: 1000,

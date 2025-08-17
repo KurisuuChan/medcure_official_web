@@ -21,12 +21,14 @@ import {
 import PropTypes from "prop-types";
 import { useNotification } from "../../hooks/useNotification";
 import { useBranding } from "../../hooks/useBranding";
+import { useAuth } from "../../hooks/useAuth";
 import { handleImageSrc } from "../../utils/imageUtils";
 
-export default function Header({ onLogout, user }) {
+export default function Header({ user }) {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { profile } = useBranding();
+  const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -548,7 +550,7 @@ export default function Header({ onLogout, user }) {
               <div className="border-t border-gray-100 py-1">
                 <button
                   onClick={() => {
-                    onLogout?.();
+                    logout();
                     addNotification("Logged out successfully", "success");
                     setMenuOpen(false);
                   }}
@@ -567,7 +569,6 @@ export default function Header({ onLogout, user }) {
 }
 
 Header.propTypes = {
-  onLogout: PropTypes.func,
   user: PropTypes.shape({
     name: PropTypes.string,
     role: PropTypes.string,

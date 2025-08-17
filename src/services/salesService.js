@@ -28,7 +28,7 @@ function generateTransactionNumber() {
 
 // Create a new sale transaction
 export async function createSale(saleData) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 createSale called - using mock mode");
     return await mockCreateSale(saleData);
   }
@@ -144,7 +144,7 @@ export async function createSale(saleData) {
 
 // Get sales transactions with filtering
 export async function getSalesTransactions(filters = {}) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getSalesTransactions called - using mock mode");
     return await mockGetSalesTransactions(filters);
   }
@@ -263,7 +263,7 @@ export async function getSalesSummary(period = "today") {
 
 // Get hourly sales data
 export async function getHourlySales(date = new Date()) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getHourlySales called - using mock mode");
     return await mockGetHourlySales(date);
   }
@@ -314,7 +314,7 @@ export async function getHourlySales(date = new Date()) {
 
 // Get top selling products
 export async function getTopSellingProducts(limit = 10, period = "month") {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getTopSellingProducts called - using mock mode");
     return await mockGetTopSellingProducts(limit, period);
   }
@@ -406,7 +406,7 @@ export async function cancelTransaction(
   transactionId,
   reason = "Cancelled by user"
 ) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 cancelTransaction called - using mock mode");
     return await mockCancelTransaction(transactionId, reason);
   }
@@ -479,7 +479,7 @@ export async function cancelTransaction(
 
 // Print receipt (placeholder for backend integration)
 export async function printReceipt(transactionId) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 printReceipt called - using mock mode");
     return await mockPrintReceipt(transactionId);
   }
@@ -521,7 +521,7 @@ export async function printReceipt(transactionId) {
 
 // Get transaction history
 export async function getTransactionHistory(filters = {}) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 getTransactionHistory called - using mock mode");
     return await mockGetTransactionHistory(filters);
   }

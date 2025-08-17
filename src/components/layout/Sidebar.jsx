@@ -215,8 +215,23 @@ export default function Sidebar() {
             </>
           ) : (
             <>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300 hover:scale-105">
-                <span>M</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300 hover:scale-105 overflow-hidden">
+                {branding?.logoUrl ? (
+                  <img
+                    src={handleImageSrc(branding.logoUrl, "logo")}
+                    alt={`${branding?.brandingName || "MedCure"} Logo`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                <span className={`${branding?.logoUrl ? "hidden" : ""}`}>
+                  {branding?.brandingName
+                    ? branding.brandingName.charAt(0).toUpperCase()
+                    : "M"}
+                </span>
               </div>
               {/* Toggle Button - Floating when collapsed */}
               <button

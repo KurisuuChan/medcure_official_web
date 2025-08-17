@@ -402,7 +402,7 @@ export async function updateProductStock(
   movementType = "adjustment",
   options = {}
 ) {
-  if (isMockMode()) {
+  if (await isMockMode()) {
     console.log("🔧 updateProductStock called - using mock mode");
     // Mock doesn't have this function, return success
     return { data: { success: true }, error: null, success: true };

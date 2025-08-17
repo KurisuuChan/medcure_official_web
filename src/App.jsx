@@ -9,31 +9,33 @@ import Pos from "./pages/POS";
 import Contacts from "./pages/Contacts";
 import NotificationHistory from "./pages/NotificationHistory";
 import Financials from "./pages/Financials";
-import Reports from "./pages/Reports";
+import ReportsFixed from "./pages/ReportsFixed";
 import Settings from "./pages/Settings";
 import { MockApiStatus } from "./components/MockApiStatus";
-
-const user = { name: "Admin User", role: "Administrator", initials: "AU" };
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
-    <>
-      <MockApiStatus />
-      <Routes>
-        <Route element={<FullLayout user={user} />}>
-          <Route index element={<Dashboard />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="management" element={<Management />} />
-          <Route path="archived" element={<Archived />} />
-          <Route path="point-of-sales" element={<Pos />} />
-          <Route path="contacts" element={<Contacts />} />
-          <Route path="notifications" element={<NotificationHistory />} />
-          <Route path="financials" element={<Financials />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="*" element={<Dashboard />} />
-        </Route>
-      </Routes>
-    </>
+    <AuthProvider>
+      <ProtectedRoute>
+        <MockApiStatus />
+        <Routes>
+          <Route element={<FullLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="management" element={<Management />} />
+            <Route path="archived" element={<Archived />} />
+            <Route path="point-of-sales" element={<Pos />} />
+            <Route path="contacts" element={<Contacts />} />
+            <Route path="notifications" element={<NotificationHistory />} />
+            <Route path="financials" element={<Financials />} />
+            <Route path="reports" element={<ReportsFixed />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="*" element={<Dashboard />} />
+          </Route>
+        </Routes>
+      </ProtectedRoute>
+    </AuthProvider>
   );
 }

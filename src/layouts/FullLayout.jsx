@@ -1,10 +1,12 @@
 import React from "react";
-import PropTypes from "prop-types";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { Outlet } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
-export default function FullLayout({ user }) {
+export default function FullLayout() {
+  const { user } = useAuth();
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-800">
       <Sidebar />
@@ -17,7 +19,3 @@ export default function FullLayout({ user }) {
     </div>
   );
 }
-
-FullLayout.propTypes = {
-  user: PropTypes.object,
-};
