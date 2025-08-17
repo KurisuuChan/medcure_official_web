@@ -67,7 +67,7 @@ const mockUsers = [
       notifications: false,
       language: "en",
     },
-  }
+  },
 ];
 
 // Mock session storage
@@ -82,45 +82,44 @@ let currentSession = null;
  */
 export async function login(credentials) {
   const { username, password } = credentials;
-  
+
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Using mock authentication');
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
-    
+    console.log("🔐 Using mock authentication");
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+
     // Mock authentication logic
-    const user = mockUsers.find(u => 
-      u.username === username || 
-      u.email === username
+    const user = mockUsers.find(
+      (u) => u.username === username || u.email === username
     );
-    
+
     if (!user) {
       return {
         data: null,
         error: "User not found",
-        success: false
+        success: false,
       };
     }
-    
+
     if (!user.isActive) {
       return {
         data: null,
         error: "Account is disabled",
-        success: false
+        success: false,
       };
     }
-    
+
     // In real implementation, verify password hash
     if (password !== "admin123") {
       return {
         data: null,
         error: "Invalid password",
-        success: false
+        success: false,
       };
     }
-    
+
     // Update last login
     user.lastLogin = new Date().toISOString();
-    
+
     // Create session
     const session = {
       id: Date.now().toString(),
@@ -128,96 +127,95 @@ export async function login(credentials) {
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(), // 8 hours
       refreshToken: `refresh_${Date.now()}`,
-      accessToken: `access_${Date.now()}`
+      accessToken: `access_${Date.now()}`,
     };
-    
+
     currentSession = session;
-    
+
     return {
       data: {
         user,
-        session
+        session,
       },
       error: null,
-      success: true
+      success: true,
     };
   }
 
   try {
-    console.log('🔐 Authenticating with backend...');
-    
+    console.log("🔐 Authenticating with backend...");
+
     // Supabase authentication
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: username.includes('@') ? username : `${username}@medcure.com`,
-      password: password
+      email: username.includes("@") ? username : `${username}@medcure.com`,
+      password: password,
     });
 
     if (error) {
       return {
         data: null,
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
     // Get user profile from our users table
     const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', data.user.id)
+      .from("users")
+      .select("*")
+      .eq("auth_id", data.user.id)
       .single();
 
     if (profileError) {
-      console.error('Profile fetch error:', profileError);
+      console.error("Profile fetch error:", profileError);
       // Create basic profile if not exists
       const newProfile = {
         auth_id: data.user.id,
         email: data.user.email,
-        username: data.user.email.split('@')[0],
-        firstName: 'User',
-        lastName: 'Profile',
-        role: 'user',
+        username: data.user.email.split("@")[0],
+        firstName: "User",
+        lastName: "Profile",
+        role: "user",
         isActive: true,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
-      
+
       const { data: createdProfile } = await supabase
-        .from('users')
+        .from("users")
         .insert([newProfile])
         .select()
         .single();
-        
+
       return {
         data: {
           user: createdProfile,
-          session: data.session
+          session: data.session,
         },
         error: null,
-        success: true
+        success: true,
       };
     }
 
     // Update last login
     await supabase
-      .from('users')
+      .from("users")
       .update({ lastLogin: new Date().toISOString() })
-      .eq('id', userProfile.id);
+      .eq("id", userProfile.id);
 
     return {
       data: {
         user: userProfile,
-        session: data.session
+        session: data.session,
       },
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error("❌ Login error:", error);
     return {
       data: null,
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -228,34 +226,33 @@ export async function login(credentials) {
  */
 export async function logout() {
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Mock logout');
+    console.log("🔐 Mock logout");
     currentSession = null;
     return {
       error: null,
-      success: true
+      success: true,
     };
   }
 
   try {
     const { error } = await supabase.auth.signOut();
-    
+
     if (error) {
       return {
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
     return {
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Logout error:', error);
+    console.error("❌ Logout error:", error);
     return {
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -266,79 +263,78 @@ export async function logout() {
  */
 export async function getCurrentSession() {
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Getting mock session');
-    
+    console.log("🔐 Getting mock session");
+
     if (!currentSession) {
       return {
         data: null,
         error: "No active session",
-        success: false
+        success: false,
       };
     }
-    
+
     // Check if session expired
     if (new Date() > new Date(currentSession.expiresAt)) {
       currentSession = null;
       return {
         data: null,
         error: "Session expired",
-        success: false
+        success: false,
       };
     }
-    
-    const user = mockUsers.find(u => u.id === currentSession.userId);
-    
+
+    const user = mockUsers.find((u) => u.id === currentSession.userId);
+
     return {
       data: {
         user,
-        session: currentSession
+        session: currentSession,
       },
       error: null,
-      success: true
+      success: true,
     };
   }
 
   try {
     const { data: sessionData, error } = await supabase.auth.getSession();
-    
+
     if (error || !sessionData.session) {
       return {
         data: null,
         error: error?.message || "No active session",
-        success: false
+        success: false,
       };
     }
 
     // Get user profile
     const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', sessionData.session.user.id)
+      .from("users")
+      .select("*")
+      .eq("auth_id", sessionData.session.user.id)
       .single();
 
     if (profileError) {
       return {
         data: null,
         error: "User profile not found",
-        success: false
+        success: false,
       };
     }
 
     return {
       data: {
         user: userProfile,
-        session: sessionData.session
+        session: sessionData.session,
       },
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Session check error:', error);
+    console.error("❌ Session check error:", error);
     return {
       data: null,
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -349,25 +345,32 @@ export async function getCurrentSession() {
  * @returns {Promise<Object>} Registration result
  */
 export async function register(userData) {
-  const { email, password, firstName, lastName, role = 'user', permissions = [] } = userData;
-  
+  const {
+    email,
+    password,
+    firstName,
+    lastName,
+    role = "user",
+    permissions = [],
+  } = userData;
+
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Mock user registration');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    console.log("🔐 Mock user registration");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     // Check if user exists
-    const existingUser = mockUsers.find(u => u.email === email);
+    const existingUser = mockUsers.find((u) => u.email === email);
     if (existingUser) {
       return {
         data: null,
         error: "User already exists",
-        success: false
+        success: false,
       };
     }
-    
+
     const newUser = {
       id: mockUsers.length + 1,
-      username: email.split('@')[0],
+      username: email.split("@")[0],
       email,
       firstName,
       lastName,
@@ -383,15 +386,15 @@ export async function register(userData) {
         theme: "light",
         notifications: true,
         language: "en",
-      }
+      },
     };
-    
+
     mockUsers.push(newUser);
-    
+
     return {
       data: newUser,
       error: null,
-      success: true
+      success: true,
     };
   }
 
@@ -399,14 +402,14 @@ export async function register(userData) {
     // Create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password
+      password,
     });
 
     if (authError) {
       return {
         data: null,
         error: authError.message,
-        success: false
+        success: false,
       };
     }
 
@@ -414,17 +417,17 @@ export async function register(userData) {
     const userProfile = {
       auth_id: authData.user.id,
       email,
-      username: email.split('@')[0],
+      username: email.split("@")[0],
       firstName,
       lastName,
       role,
       permissions,
       isActive: true,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     const { data: profileData, error: profileError } = await supabase
-      .from('users')
+      .from("users")
       .insert([userProfile])
       .select()
       .single();
@@ -433,22 +436,21 @@ export async function register(userData) {
       return {
         data: null,
         error: profileError.message,
-        success: false
+        success: false,
       };
     }
 
     return {
       data: profileData,
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Registration error:', error);
+    console.error("❌ Registration error:", error);
     return {
       data: null,
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -461,32 +463,32 @@ export async function register(userData) {
  */
 export async function updateUserProfile(userId, updates) {
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Mock profile update');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const userIndex = mockUsers.findIndex(u => u.id === userId);
+    console.log("🔐 Mock profile update");
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const userIndex = mockUsers.findIndex((u) => u.id === userId);
     if (userIndex === -1) {
       return {
         data: null,
         error: "User not found",
-        success: false
+        success: false,
       };
     }
-    
+
     mockUsers[userIndex] = { ...mockUsers[userIndex], ...updates };
-    
+
     return {
       data: mockUsers[userIndex],
       error: null,
-      success: true
+      success: true,
     };
   }
 
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from("users")
       .update(updates)
-      .eq('id', userId)
+      .eq("id", userId)
       .select()
       .single();
 
@@ -494,22 +496,21 @@ export async function updateUserProfile(userId, updates) {
       return {
         data: null,
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
     return {
       data,
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Profile update error:', error);
+    console.error("❌ Profile update error:", error);
     return {
       data: null,
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -521,47 +522,46 @@ export async function updateUserProfile(userId, updates) {
  */
 export async function changePassword(passwordData) {
   const { currentPassword, newPassword } = passwordData;
-  
+
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Mock password change');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    console.log("🔐 Mock password change");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     // Mock password validation
     if (currentPassword !== "admin123") {
       return {
         error: "Current password is incorrect",
-        success: false
+        success: false,
       };
     }
-    
+
     return {
       error: null,
-      success: true
+      success: true,
     };
   }
 
   try {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword
+      password: newPassword,
     });
 
     if (error) {
       return {
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
     return {
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Password change error:', error);
+    console.error("❌ Password change error:", error);
     return {
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -573,20 +573,20 @@ export async function changePassword(passwordData) {
  */
 export async function requestPasswordReset(email) {
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Mock password reset request');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const user = mockUsers.find(u => u.email === email);
+    console.log("🔐 Mock password reset request");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const user = mockUsers.find((u) => u.email === email);
     if (!user) {
       return {
         error: "User not found",
-        success: false
+        success: false,
       };
     }
-    
+
     return {
       error: null,
-      success: true
+      success: true,
     };
   }
 
@@ -596,20 +596,19 @@ export async function requestPasswordReset(email) {
     if (error) {
       return {
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
     return {
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Password reset error:', error);
+    console.error("❌ Password reset error:", error);
     return {
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -620,42 +619,41 @@ export async function requestPasswordReset(email) {
  */
 export async function getAllUsers() {
   if (await shouldUseMockAPI()) {
-    console.log('🔐 Getting mock users list');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+    console.log("🔐 Getting mock users list");
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     return {
       data: mockUsers,
       error: null,
-      success: true
+      success: true,
     };
   }
 
   try {
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('createdAt', { ascending: false });
+      .from("users")
+      .select("*")
+      .order("createdAt", { ascending: false });
 
     if (error) {
       return {
         data: null,
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
     return {
       data,
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Get users error:', error);
+    console.error("❌ Get users error:", error);
     return {
       data: null,
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -668,12 +666,12 @@ export async function getAllUsers() {
  */
 export function hasPermission(user, permission) {
   if (!user || !user.permissions) return false;
-  
+
   // Admin role has all permissions
-  if (user.role === 'administrator' || user.permissions.includes('all')) {
+  if (user.role === "administrator" || user.permissions.includes("all")) {
     return true;
   }
-  
+
   return user.permissions.includes(permission);
 }
 
@@ -688,12 +686,12 @@ export async function validateSession() {
 
   try {
     const { data, error } = await supabase.auth.refreshSession();
-    
+
     if (error) {
       return {
         data: null,
         error: error.message,
-        success: false
+        success: false,
       };
     }
 
@@ -701,32 +699,31 @@ export async function validateSession() {
       return {
         data: null,
         error: "No valid session",
-        success: false
+        success: false,
       };
     }
 
     // Get updated user profile
     const { data: userProfile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', data.session.user.id)
+      .from("users")
+      .select("*")
+      .eq("auth_id", data.session.user.id)
       .single();
 
     return {
       data: {
         user: userProfile,
-        session: data.session
+        session: data.session,
       },
       error: null,
-      success: true
+      success: true,
     };
-
   } catch (error) {
-    console.error('❌ Session validation error:', error);
+    console.error("❌ Session validation error:", error);
     return {
       data: null,
       error: error.message,
-      success: false
+      success: false,
     };
   }
 }
@@ -742,5 +739,5 @@ export default {
   requestPasswordReset,
   getAllUsers,
   hasPermission,
-  validateSession
+  validateSession,
 };
