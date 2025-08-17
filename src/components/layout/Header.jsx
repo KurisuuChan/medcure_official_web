@@ -8,8 +8,6 @@ import {
   AlertTriangle,
   Clock,
   Package,
-  TrendingUp,
-  Shield,
   X,
   Settings,
   UserCircle,
@@ -17,9 +15,12 @@ import {
   PackageX,
   BarChart3,
   Plus,
+  CheckCircle,
+  Info,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNotification } from "../../hooks/useNotification";
+import { useNotifications } from "../../hooks/useNotifications";
 import { useBranding } from "../../hooks/useBranding";
 import { useAuth } from "../../hooks/useAuth";
 import { handleImageSrc } from "../../utils/imageUtils";
@@ -29,95 +30,163 @@ export default function Header({ user }) {
   const { addNotification } = useNotification();
   const { profile } = useBranding();
   const { logout } = useAuth();
+
+  // Use the notifications hook for backend integration
+  const { notifications, stats, markAsRead, markMultipleRead } =
+    useNotifications();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const menuRef = useRef(null);
   const notifRef = useRef(null);
   const actionsRef = useRef(null);
 
-  // Mock notification data with pharmacy-specific content
-  const notifications = [
-    {
-      id: 1,
-      type: "critical",
-      title: "Critical Stock Alert",
-      message: "Paracetamol 500mg is out of stock",
-      time: "2 min ago",
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      unread: true,
-    },
-    {
-      id: 2,
-      type: "warning",
-      title: "Low Stock Warning",
-      message: "Amoxicillin 500mg - Only 8 units remaining",
-      time: "15 min ago",
-      icon: Package,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      borderColor: "border-orange-200",
-      unread: true,
-    },
-    {
-      id: 3,
-      type: "expiry",
-      title: "Expiry Alert",
-      message: "Vitamin C expires in 10 days",
-      time: "1 hour ago",
-      icon: Clock,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      unread: false,
-    },
-    {
-      id: 4,
-      type: "sales",
-      title: "High Sales Activity",
-      message: "₱15,240 in sales today (+23%)",
-      time: "2 hours ago",
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      unread: false,
-    },
-    {
-      id: 5,
-      type: "system",
-      title: "Backup Completed",
-      message: "Daily backup completed successfully",
-      time: "3 hours ago",
-      icon: Shield,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      unread: false,
-    },
-  ];
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
-
-  const markAsRead = () => {
-    // In a real app, this would update the notification status
-    addNotification("Notification marked as read", "success");
+  // Handle search functionality
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/inventory?search=${encodeURIComponent(searchTerm.trim())}`);
+      setSearchTerm("");
+    }
   };
 
-  const markAllAsRead = () => {
-    addNotification("All notifications marked as read", "success");
+  // Debug function to create sample notifications
+  const createSampleNotifications = async () => {
+    const { createNotification } = await import(
+      "../../services/notificationService"
+    );
+
+    const sampleNotifications = [
+      {
+        title: "Low Stock Alert",
+        message: "Paracetamol 500mg is running low. Only 15 units remaining.",
+        type: "warning",
+        category: "Inventory",
+        priority: 2,
+        reference_type: "product",
+        reference_id: 1,
+      },
+      {
+        title: "Sale Completed",
+        message: "Transaction #1234 completed successfully. Total: ₱750.00",
+        type: "success",
+        category: "Sales",
+        priority: 1,
+        reference_type: "transaction",
+        reference_id: 1234,
+      },
+    ];
+
+    try {
+      for (const notification of sampleNotifications) {
+        await createNotification(notification);
+      }
+      addNotification("Sample notifications created", "success");
+    } catch (err) {
+      console.error("Failed to create sample notifications:", err);
+      addNotification("Failed to create sample notifications", "error");
+    }
   };
 
-  const getNotificationStats = () => {
-    const critical = notifications.filter((n) => n.type === "critical").length;
-    const warnings = notifications.filter((n) => n.type === "warning").length;
-    return { critical, warnings };
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case "error":
+        return AlertTriangle;
+      case "warning":
+        return Package;
+      case "success":
+        return CheckCircle;
+      case "info":
+      default:
+        return Info;
+    }
   };
 
-  const stats = getNotificationStats();
+  // Get notification colors based on type
+  const getNotificationColors = (type) => {
+    switch (type) {
+      case "error":
+        return {
+          color: "text-red-600",
+          bgColor: "bg-red-50",
+          borderColor: "border-red-200",
+        };
+      case "warning":
+        return {
+          color: "text-orange-600",
+          bgColor: "bg-orange-50",
+          borderColor: "border-orange-200",
+        };
+      case "success":
+        return {
+          color: "text-green-600",
+          bgColor: "bg-green-50",
+          borderColor: "border-green-200",
+        };
+      case "info":
+      default:
+        return {
+          color: "text-blue-600",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-200",
+        };
+    }
+  };
+
+  // Format notification time
+  const formatNotificationTime = (timestamp) => {
+    const now = new Date();
+    const notifTime = new Date(timestamp);
+    const diffMinutes = Math.floor((now - notifTime) / (1000 * 60));
+
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const unreadCount = stats?.unread || 0;
+
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markAsRead(notificationId);
+      addNotification("Notification marked as read", "success");
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+      addNotification("Failed to mark notification as read", "error");
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const unreadIds = notifications
+        .filter((n) => !n.is_read)
+        .map((n) => n.id);
+
+      if (unreadIds.length === 0) {
+        addNotification("No unread notifications", "info");
+        return;
+      }
+
+      await markMultipleRead(unreadIds);
+      addNotification("All notifications marked as read", "success");
+    } catch (err) {
+      console.error("Failed to mark notifications as read:", err);
+      addNotification("Failed to mark notifications as read", "error");
+    }
+  };
+
+  const handleViewAllNotifications = () => {
+    setNotifOpen(false);
+    navigate("/notification-history");
+  };
 
   useEffect(() => {
     const handler = (e) => {
@@ -137,17 +206,22 @@ export default function Header({ user }) {
       {/* Left Section - Search */}
       <div className="flex items-center gap-3 sm:gap-4 md:gap-6 flex-1">
         {/* Search Bar */}
-        <div className="relative max-w-sm sm:max-w-md lg:max-w-lg w-full">
+        <form
+          onSubmit={handleSearch}
+          className="relative max-w-sm sm:max-w-md lg:max-w-lg w-full"
+        >
           <Search
             size={16}
-            className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
           />
           <input
             type="text"
             placeholder="Search medicines, patients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-gray-50/80 border border-gray-200 rounded-lg sm:rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all duration-200 placeholder:text-gray-500"
           />
-        </div>
+        </form>
 
         {/* Quick Actions - Desktop */}
         <div className="hidden lg:flex items-center gap-3">
@@ -370,17 +444,17 @@ export default function Header({ user }) {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     <span className="text-gray-600">
-                      {stats.critical} Critical
+                      {stats?.byType?.error || 0} Critical
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                     <span className="text-gray-600">
-                      {stats.warnings} Warnings
+                      {stats?.byType?.warning || 0} Warnings
                     </span>
                   </div>
                   <button
-                    onClick={markAllAsRead}
+                    onClick={handleMarkAllAsRead}
                     className="ml-auto text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors text-xs sm:text-sm"
                   >
                     Mark all read
@@ -390,27 +464,31 @@ export default function Header({ user }) {
 
               {/* Notifications List */}
               <div className="max-h-72 sm:max-h-80 overflow-y-auto">
-                {notifications.length > 0 ? (
+                {notifications && notifications.length > 0 ? (
                   <div className="divide-y divide-gray-100/80">
-                    {notifications.map((notification) => {
-                      const IconComponent = notification.icon;
+                    {notifications.slice(0, 5).map((notification) => {
+                      const IconComponent = getNotificationIcon(
+                        notification.type
+                      );
+                      const colors = getNotificationColors(notification.type);
+
                       return (
-                        <div
+                        <button
                           key={notification.id}
-                          className={`p-3 sm:p-4 hover:bg-gray-50/80 transition-all duration-200 cursor-pointer ${
-                            notification.unread
+                          className={`w-full text-left p-3 sm:p-4 hover:bg-gray-50/80 transition-all duration-200 ${
+                            !notification.is_read
                               ? "bg-blue-50/30 border-l-2 border-l-blue-500"
                               : ""
                           }`}
-                          onClick={() => markAsRead()}
+                          onClick={() => handleMarkAsRead(notification.id)}
                         >
                           <div className="flex items-start gap-3">
                             <div
-                              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${notification.bgColor} ${notification.borderColor} border shadow-sm`}
+                              className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl ${colors.bgColor} ${colors.borderColor} border shadow-sm`}
                             >
                               <IconComponent
                                 size={16}
-                                className={notification.color}
+                                className={colors.color}
                               />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -418,7 +496,7 @@ export default function Header({ user }) {
                                 <h4 className="text-sm font-semibold text-gray-900">
                                   {notification.title}
                                 </h4>
-                                {notification.unread && (
+                                {!notification.is_read && (
                                   <div className="w-2.5 h-2.5 bg-blue-500 rounded-full"></div>
                                 )}
                               </div>
@@ -426,11 +504,13 @@ export default function Header({ user }) {
                                 {notification.message}
                               </p>
                               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-                                {notification.time}
+                                {formatNotificationTime(
+                                  notification.created_at
+                                )}
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -450,9 +530,7 @@ export default function Header({ user }) {
               {/* Footer */}
               <div className="p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 border-t border-gray-200/80">
                 <button
-                  onClick={() => {
-                    setNotifOpen(false);
-                  }}
+                  onClick={handleViewAllNotifications}
                   className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2.5 rounded-lg sm:rounded-xl hover:bg-blue-50 transition-all duration-200"
                 >
                   View all notifications
@@ -527,17 +605,17 @@ export default function Header({ user }) {
               <div className="py-1">
                 <button
                   onClick={() => {
-                    addNotification("Profile settings not implemented", "info");
+                    createSampleNotifications();
                     setMenuOpen(false);
                   }}
                   className="flex items-center gap-3 w-full text-left px-3 sm:px-4 py-2.5 hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-colors"
                 >
                   <UserCircle size={18} className="text-gray-500" />
-                  <span className="font-medium">Profile Settings</span>
+                  <span className="font-medium">Test Notifications</span>
                 </button>
                 <button
                   onClick={() => {
-                    addNotification("Settings not implemented", "info");
+                    navigate("/settings");
                     setMenuOpen(false);
                   }}
                   className="flex items-center gap-3 w-full text-left px-3 sm:px-4 py-2.5 hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-colors"

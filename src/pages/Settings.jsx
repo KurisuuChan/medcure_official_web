@@ -127,7 +127,7 @@ export default function Settings() {
       }
 
       // If appearance settings changed, also update theme
-      if (['primaryColor', 'language', 'timezone', 'currency'].includes(key)) {
+      if (["primaryColor", "language", "timezone", "currency"].includes(key)) {
         updateTheme({ [key]: value });
       }
 
@@ -139,12 +139,12 @@ export default function Settings() {
   const handleThemeReset = () => {
     if (confirm("Reset appearance settings to defaults?")) {
       resetTheme();
-      setSettings(prev => ({
+      setSettings((prev) => ({
         ...prev,
-        primaryColor: '#2563eb',
-        language: 'en',
-        timezone: 'Asia/Manila',
-        currency: 'PHP'
+        primaryColor: "#2563eb",
+        language: "en",
+        timezone: "Asia/Manila",
+        currency: "PHP",
       }));
       showNotification("Appearance settings reset to defaults", "success");
     }
@@ -634,11 +634,13 @@ export default function Settings() {
                   <Palette size={20} />
                   Appearance
                 </h3>
-                
+
                 {/* Live Preview */}
                 <div className="mb-6 p-4 bg-white rounded-lg border">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-gray-700">Live Preview</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Live Preview
+                    </p>
                     <button
                       onClick={handleThemeReset}
                       className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
@@ -648,22 +650,26 @@ export default function Settings() {
                     </button>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-lg shadow-sm border"
                       style={{ backgroundColor: settings.primaryColor }}
                     ></div>
-                    <div 
+                    <div
                       className="px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm transition-colors"
-                      style={{ 
+                      style={{
                         backgroundColor: settings.primaryColor,
-                        boxShadow: `0 1px 3px rgba(${theme.primaryColorRGB}, 0.3)`
+                        boxShadow: `0 1px 3px rgba(${theme.primaryColorRGB}, 0.3)`,
                       }}
                     >
                       Sample Button
                     </div>
                     <div className="text-sm text-gray-600">
-                      {settings.language === 'en' ? 'English' : 
-                       settings.language === 'fil' ? 'Filipino' : 'Spanish'} • {settings.timezone}
+                      {settings.language === "en"
+                        ? "English"
+                        : settings.language === "fil"
+                        ? "Filipino"
+                        : "Spanish"}{" "}
+                      • {settings.timezone}
                     </div>
                   </div>
                 </div>
@@ -728,10 +734,16 @@ export default function Settings() {
                     >
                       <option value="Asia/Manila">Asia/Manila (UTC+8)</option>
                       <option value="UTC">UTC (UTC+0)</option>
-                      <option value="America/New_York">America/New_York (UTC-5)</option>
-                      <option value="Europe/London">Europe/London (UTC+0)</option>
+                      <option value="America/New_York">
+                        America/New_York (UTC-5)
+                      </option>
+                      <option value="Europe/London">
+                        Europe/London (UTC+0)
+                      </option>
                       <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
-                      <option value="Australia/Sydney">Australia/Sydney (UTC+10)</option>
+                      <option value="Australia/Sydney">
+                        Australia/Sydney (UTC+10)
+                      </option>
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
                       For date and time display

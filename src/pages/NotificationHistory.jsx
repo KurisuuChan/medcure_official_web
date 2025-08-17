@@ -11,92 +11,37 @@ import {
   Trash2,
   Archive,
   MoreVertical,
+  RotateCcw,
 } from "lucide-react";
+import { useNotifications } from "../hooks/useNotifications";
 
 export default function NotificationHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [selectedNotifications, setSelectedNotifications] = useState([]);
 
-  // Mock notification data
-  const notifications = [
-    {
-      id: 1,
-      type: "warning",
-      title: "Low Stock Alert",
-      message: "Paracetamol 500mg is running low. Only 8 units remaining.",
-      time: "2024-08-16 14:30",
-      read: false,
-      category: "Inventory",
-    },
-    {
-      id: 2,
-      type: "error",
-      title: "Out of Stock",
-      message:
-        "Vitamin C 1000mg is now out of stock. Please reorder immediately.",
-      time: "2024-08-16 12:15",
-      read: false,
-      category: "Inventory",
-    },
-    {
-      id: 3,
-      type: "info",
-      title: "New Product Added",
-      message: "Aspirin 81mg has been successfully added to inventory.",
-      time: "2024-08-16 10:45",
-      read: true,
-      category: "System",
-    },
-    {
-      id: 4,
-      type: "success",
-      title: "Sale Completed",
-      message: "Transaction #1248 completed successfully. Total: ₱1,250.00",
-      time: "2024-08-16 09:20",
-      read: true,
-      category: "Sales",
-    },
-    {
-      id: 5,
-      type: "warning",
-      title: "Expiry Alert",
-      message:
-        "Amoxicillin 500mg expires in 30 days. Consider promotional pricing.",
-      time: "2024-08-15 16:30",
-      read: true,
-      category: "Inventory",
-    },
-    {
-      id: 6,
-      type: "info",
-      title: "Daily Report",
-      message: "Your daily sales report is now available for download.",
-      time: "2024-08-15 18:00",
-      read: true,
-      category: "Reports",
-    },
-    {
-      id: 7,
-      type: "error",
-      title: "Payment Failed",
-      message:
-        "Payment processing failed for transaction #1247. Manual review required.",
-      time: "2024-08-15 14:22",
-      read: false,
-      category: "Sales",
-    },
-    {
-      id: 8,
-      type: "success",
-      title: "Backup Completed",
-      message: "Daily database backup completed successfully.",
-      time: "2024-08-15 02:00",
-      read: true,
-      category: "System",
-    },
-  ];
+  // Use the notifications hook for backend integration
+  const {
+    notifications,
+    stats,
+    loading,
+    error,
+    markAsRead,
+    markMultipleRead,
+    deleteNotificationItem,
+    deleteMultiple,
+    refresh,
+  } = useNotifications();
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log("🔔 Notifications Data:", {
+      notifications: notifications?.length || 0,
+      loading,
+      error,
+      stats,
+    });
+  }, [notifications, loading, error, stats]);
   const getNotificationIcon = (type) => {
     switch (type) {
       case "warning":
@@ -132,8 +77,8 @@ export default function NotificationHistory() {
       notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
       filterType === "all" ||
-      (filterType === "unread" && !notification.read) ||
-      (filterType === "read" && notification.read) ||
+      (filterType === "unread" && !notification.is_read) ||
+      (filterType === "read" && notification.is_read) ||
       notification.category.toLowerCase() === filterType.toLowerCase();
     return matchesSearch && matchesFilter;
   });
@@ -144,13 +89,48 @@ export default function NotificationHistory() {
     );
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = stats?.unread || 0;
   const categoryStats = {
-    inventory: notifications.filter((n) => n.category === "Inventory").length,
-    sales: notifications.filter((n) => n.category === "Sales").length,
-    system: notifications.filter((n) => n.category === "System").length,
-    reports: notifications.filter((n) => n.category === "Reports").length,
+    inventory: stats?.byCategory?.inventory || 0,
+    sales: stats?.byCategory?.sales || 0,
+    system: stats?.byCategory?.system || 0,
+    reports: stats?.byCategory?.reports || 0,
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading notifications...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertTriangle size={48} className="mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-semibold text-red-600 mb-2">
+              Error Loading Notifications
+            </h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={refresh}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -169,6 +149,12 @@ export default function NotificationHistory() {
             </p>
           </div>
         </div>
+        <button
+          onClick={refresh}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold hover:bg-blue-200"
+        >
+          <RotateCcw size={16} /> Refresh
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -233,13 +219,19 @@ export default function NotificationHistory() {
           <p className="font-semibold text-blue-800 flex-grow">
             {selectedNotifications.length} selected
           </p>
-          <button className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold hover:bg-green-200">
+          <button
+            onClick={() => markMultipleRead(selectedNotifications)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold hover:bg-green-200"
+          >
             <CheckCircle size={16} /> Mark as Read
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200">
             <Archive size={16} /> Archive
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200">
+          <button
+            onClick={() => deleteMultiple(selectedNotifications)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200"
+          >
             <Trash2 size={16} /> Delete
           </button>
         </div>
@@ -292,7 +284,7 @@ export default function NotificationHistory() {
               key={notification.id}
               className={`${getNotificationBg(
                 notification.type,
-                notification.read
+                notification.is_read
               )} border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all`}
             >
               <div className="flex items-start justify-between">
@@ -310,12 +302,14 @@ export default function NotificationHistory() {
                     <div className="flex items-center gap-2 mb-2">
                       <h3
                         className={`font-semibold ${
-                          !notification.read ? "text-gray-900" : "text-gray-700"
+                          !notification.is_read
+                            ? "text-gray-900"
+                            : "text-gray-700"
                         }`}
                       >
                         {notification.title}
                       </h3>
-                      {!notification.read && (
+                      {!notification.is_read && (
                         <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                       )}
                       <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
@@ -324,20 +318,35 @@ export default function NotificationHistory() {
                     </div>
                     <p
                       className={`mb-3 ${
-                        !notification.read ? "text-gray-800" : "text-gray-600"
+                        !notification.is_read
+                          ? "text-gray-800"
+                          : "text-gray-600"
                       }`}
                     >
                       {notification.message}
                     </p>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Clock size={14} />
-                      {notification.time}
+                      {new Date(notification.created_at).toLocaleString()}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50">
-                    <Eye size={16} />
+                  {!notification.is_read && (
+                    <button
+                      onClick={() => markAsRead(notification.id)}
+                      className="p-2 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50"
+                      title="Mark as read"
+                    >
+                      <CheckCircle size={16} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => deleteNotificationItem(notification.id)}
+                    className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                    title="Delete notification"
+                  >
+                    <Trash2 size={16} />
                   </button>
                   <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
                     <MoreVertical size={16} />

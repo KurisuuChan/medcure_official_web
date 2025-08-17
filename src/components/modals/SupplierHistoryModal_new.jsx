@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   X,
   Package,
@@ -9,7 +9,7 @@ import {
   Box,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
 } from "lucide-react";
 import { useSupplierHistory } from "../../hooks/useContacts";
 
@@ -19,25 +19,27 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
   if (!isOpen) return null;
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
     }).format(amount);
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-PH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-PH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const getStockStatus = (currentStock, minStock) => {
     const ratio = currentStock / minStock;
-    if (ratio <= 0.2) return { status: 'Critical', color: 'text-red-600', bg: 'bg-red-100' };
-    if (ratio <= 0.5) return { status: 'Low', color: 'text-orange-600', bg: 'bg-orange-100' };
-    return { status: 'Good', color: 'text-green-600', bg: 'bg-green-100' };
+    if (ratio <= 0.2)
+      return { status: "Critical", color: "text-red-600", bg: "bg-red-100" };
+    if (ratio <= 0.5)
+      return { status: "Low", color: "text-orange-600", bg: "bg-orange-100" };
+    return { status: "Good", color: "text-green-600", bg: "bg-green-100" };
   };
 
   return (
@@ -62,11 +64,15 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-lg text-gray-600">Loading supplier history...</div>
+              <div className="text-lg text-gray-600">
+                Loading supplier history...
+              </div>
             </div>
           ) : error ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-lg text-red-600">Error loading history: {error}</div>
+              <div className="text-lg text-red-600">
+                Error loading history: {error}
+              </div>
             </div>
           ) : (
             <>
@@ -108,7 +114,9 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
                     <div>
                       <p className="text-sm text-purple-600">Last Supply</p>
                       <p className="text-lg font-bold text-purple-800">
-                        {summary.lastSupplyDate ? formatDate(summary.lastSupplyDate) : 'N/A'}
+                        {summary.lastSupplyDate
+                          ? formatDate(summary.lastSupplyDate)
+                          : "N/A"}
                       </p>
                     </div>
                   </div>
@@ -132,9 +140,11 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
               {/* Products Table */}
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-800">Product Supply History</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Product Supply History
+                  </h3>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50">
@@ -161,7 +171,10 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {history.map((product, index) => {
-                        const stockStatus = getStockStatus(product.current_stock, product.min_stock || 10);
+                        const stockStatus = getStockStatus(
+                          product.current_stock,
+                          product.min_stock || 10
+                        );
                         return (
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -176,7 +189,7 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
                                     {product.name}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {product.generic_name || 'N/A'}
+                                    {product.generic_name || "N/A"}
                                   </div>
                                 </div>
                               </div>
@@ -188,8 +201,12 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               <div className="flex items-center">
-                                <span className="font-medium">{product.current_stock}</span>
-                                <span className="text-gray-500 ml-1">units</span>
+                                <span className="font-medium">
+                                  {product.current_stock}
+                                </span>
+                                <span className="text-gray-500 ml-1">
+                                  units
+                                </span>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -202,9 +219,15 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stockStatus.bg} ${stockStatus.color}`}>
-                                {stockStatus.status === 'Critical' && <AlertTriangle size={12} className="mr-1" />}
-                                {stockStatus.status === 'Good' && <CheckCircle size={12} className="mr-1" />}
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stockStatus.bg} ${stockStatus.color}`}
+                              >
+                                {stockStatus.status === "Critical" && (
+                                  <AlertTriangle size={12} className="mr-1" />
+                                )}
+                                {stockStatus.status === "Good" && (
+                                  <CheckCircle size={12} className="mr-1" />
+                                )}
                                 {stockStatus.status}
                               </span>
                             </td>
@@ -216,7 +239,10 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
 
                   {history.length === 0 && (
                     <div className="text-center py-12">
-                      <Package size={48} className="mx-auto mb-4 text-gray-400" />
+                      <Package
+                        size={48}
+                        className="mx-auto mb-4 text-gray-400"
+                      />
                       <h3 className="text-lg font-semibold text-gray-600 mb-2">
                         No products found
                       </h3>

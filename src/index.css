@@ -37,7 +37,7 @@ body {
   .animate-pulse-once {
     animation: pulse-once 2s ease-in-out;
   }
-  
+
   /* Theme-aware utility classes */
   .bg-primary {
     background-color: var(--primary-color);

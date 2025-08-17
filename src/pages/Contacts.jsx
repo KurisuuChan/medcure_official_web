@@ -19,39 +19,62 @@ import {
 } from "lucide-react";
 import { useContacts } from "../hooks/useContacts";
 import { useNotification } from "../hooks/useNotification";
+import {
+  deleteContact,
+  createContact,
+  updateContact,
+} from "../services/contactService";
+import SupplierHistoryModal from "../components/modals/SupplierHistoryModal_new";
+import ContactFormModal from "../components/modals/ContactFormModal";
+import ContactDetailsModal from "../components/modals/ContactDetailsModal";
 
 // Contact Card Component
-const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }) => {
+const ContactCard = ({
+  contact,
+  onViewHistory,
+  onViewDetails,
+  onEdit,
+  onDelete,
+}) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const isSupplier = contact.type === 'supplier';
+  const isSupplier = contact.type === "supplier";
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg hover:border-blue-500 transition-all duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
-            {contact.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+            {contact.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .substring(0, 2)
+              .toUpperCase()}
           </div>
           <div>
             <h3 className="font-bold text-lg text-gray-800">{contact.name}</h3>
-            <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-              isSupplier 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-blue-100 text-blue-700'
-            }`}>
-              {isSupplier ? contact.company || 'Supplier' : contact.position || 'Employee'}
+            <span
+              className={`text-xs font-medium px-3 py-1 rounded-full ${
+                isSupplier
+                  ? "bg-green-100 text-green-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {isSupplier
+                ? contact.company || "Supplier"
+                : contact.position || "Employee"}
             </span>
           </div>
         </div>
         <div className="relative">
-          <button 
+          <button
             onClick={() => setShowDropdown(!showDropdown)}
             className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
           >
             <MoreVertical size={20} />
           </button>
-          
+
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
               <div className="py-1">
@@ -143,14 +166,16 @@ const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }
           <div className="flex items-center gap-2">
             <Package size={16} className="text-gray-400" />
             <span className="text-gray-600">Payment Terms:</span>
-            <span className="font-medium text-gray-700">{contact.payment_terms}</span>
+            <span className="font-medium text-gray-700">
+              {contact.payment_terms}
+            </span>
           </div>
         )}
       </div>
 
       <div className="mt-6 pt-4 border-t border-gray-100">
         {isSupplier ? (
-          <button 
+          <button
             onClick={() => onViewHistory(contact.name)}
             className="w-full py-2 px-4 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 font-medium text-sm flex items-center justify-center gap-2"
           >
@@ -158,7 +183,7 @@ const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }
             View Supply History
           </button>
         ) : (
-          <button 
+          <button
             onClick={() => onViewDetails(contact)}
             className="w-full py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm"
           >
@@ -200,48 +225,91 @@ const Pagination = () => {
 
 // Main Contacts Component
 export default function Contacts() {
-  const { contacts, loading, error, deleteContact } = useContacts();
+  const { contacts, loading, error, refetch } = useContacts();
   const { showNotification } = useNotification();
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  
+  const [selectedTab, setSelectedTab] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Modal states
+  const [supplierHistoryModal, setSupplierHistoryModal] = useState({
+    isOpen: false,
+    supplierName: "",
+  });
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   // Filter contacts based on search term and selected tab
-  const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredContacts = contacts.filter((contact) => {
+    const matchesSearch =
+      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.phone.includes(searchTerm) ||
       contact.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesTab = selectedTab === 'all' || contact.type === selectedTab;
-    
+
+    const matchesTab = selectedTab === "all" || contact.type === selectedTab;
+
     return matchesSearch && matchesTab;
   });
 
   // Statistics for tabs
   const stats = {
     all: contacts.length,
-    employees: contacts.filter(c => c.type === 'employee').length,
-    suppliers: contacts.filter(c => c.type === 'supplier').length,
-    customers: contacts.filter(c => c.type === 'customer').length,
+    employees: contacts.filter((c) => c.type === "employee").length,
+    suppliers: contacts.filter((c) => c.type === "supplier").length,
+    customers: contacts.filter((c) => c.type === "customer").length,
   };
 
   // Dynamic button text based on selected tab
-  const addButtonText = selectedTab === 'supplier' ? 'Add Supplier' : 
-                       selectedTab === 'employee' ? 'Add Employee' :
-                       selectedTab === 'customer' ? 'Add Customer' : 'Add Contact';
+  const addButtonText =
+    selectedTab === "supplier"
+      ? "Add Supplier"
+      : selectedTab === "employee"
+      ? "Add Employee"
+      : selectedTab === "customer"
+      ? "Add Customer"
+      : "Add Contact";
 
   // Handle viewing supplier history
   const handleViewHistory = (supplierName) => {
-    showNotification(`Viewing supply history for ${supplierName}`, 'info');
+    setSupplierHistoryModal({ isOpen: true, supplierName });
   };
 
   // Handle contact details
   const handleViewDetails = (contact) => {
-    showNotification(`Viewing details for ${contact.name}`, 'info');
+    setSelectedContact(contact);
+    setIsDetailsModalOpen(true);
   };
 
   // Handle edit contact
   const handleEdit = (contact) => {
-    showNotification(`Edit modal for ${contact.name} coming soon!`, 'info');
+    setSelectedContact(contact);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle create contact
+  const handleCreateContact = () => {
+    setSelectedContact(null);
+    setIsCreateModalOpen(true);
+  };
+
+  // Handle save contact (create or update)
+  const handleSaveContact = async (contactData) => {
+    try {
+      if (selectedContact) {
+        // Update existing contact
+        await updateContact(selectedContact.id, contactData);
+        showNotification("Contact updated successfully", "success");
+      } else {
+        // Create new contact
+        await createContact(contactData);
+        showNotification("Contact created successfully", "success");
+      }
+      refetch(); // Refresh the contacts list
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      throw error; // Let the modal handle the error display
+    }
   };
 
   // Handle delete contact
@@ -249,10 +317,11 @@ export default function Contacts() {
     if (window.confirm(`Are you sure you want to delete ${contact.name}?`)) {
       try {
         await deleteContact(contact.id);
-        showNotification('Contact deleted successfully', 'success');
+        showNotification("Contact deleted successfully", "success");
+        refetch(); // Refresh the contacts list
       } catch (err) {
-        console.error('Error deleting contact:', err);
-        showNotification('Failed to delete contact', 'error');
+        console.error("Error deleting contact:", err);
+        showNotification("Failed to delete contact", "error");
       }
     }
   };
@@ -271,7 +340,9 @@ export default function Contacts() {
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg">
         <div className="flex items-center justify-center py-12">
-          <div className="text-lg text-red-600">Error loading contacts: {error}</div>
+          <div className="text-lg text-red-600">
+            Error loading contacts: {error}
+          </div>
         </div>
       </div>
     );
@@ -365,7 +436,10 @@ export default function Contacts() {
             <Filter size={16} />
             Filters
           </button>
-          <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow">
+          <button
+            onClick={handleCreateContact}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow"
+          >
             <Plus size={18} />
             {addButtonText}
           </button>
@@ -407,9 +481,7 @@ export default function Contacts() {
             </div>
             <div>
               <p className="text-sm text-purple-600">Active Contacts</p>
-              <p className="text-2xl font-bold text-purple-800">
-                {stats.all}
-              </p>
+              <p className="text-2xl font-bold text-purple-800">{stats.all}</p>
             </div>
           </div>
         </div>
@@ -420,8 +492,8 @@ export default function Contacts() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
             {filteredContacts.map((contact) => (
-              <ContactCard 
-                key={contact.id} 
+              <ContactCard
+                key={contact.id}
                 contact={contact}
                 onViewHistory={handleViewHistory}
                 onViewDetails={handleViewDetails}
@@ -445,12 +517,52 @@ export default function Contacts() {
           <p className="text-gray-500 mb-6">
             Try adjusting your search or add a new contact
           </p>
-          <button className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={handleCreateContact}
+            className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Plus size={16} />
             Add Contact
           </button>
         </div>
       )}
+
+      {/* Supplier History Modal */}
+      <SupplierHistoryModal
+        isOpen={supplierHistoryModal.isOpen}
+        onClose={() =>
+          setSupplierHistoryModal({ isOpen: false, supplierName: "" })
+        }
+        supplierName={supplierHistoryModal.supplierName}
+      />
+
+      {/* Contact Details Modal */}
+      <ContactDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        contact={selectedContact}
+        onEdit={(contact) => {
+          setIsDetailsModalOpen(false);
+          handleEdit(contact);
+        }}
+      />
+
+      {/* Contact Form Modals */}
+      <ContactFormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        contact={null}
+        onSave={handleSaveContact}
+        mode="create"
+      />
+
+      <ContactFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        contact={selectedContact}
+        onSave={handleSaveContact}
+        mode="edit"
+      />
     </div>
   );
 }

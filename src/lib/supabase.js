@@ -17,4 +17,6 @@ export const TABLES = {
   STOCK_MOVEMENTS: "stock_movements",
   CATEGORIES: "categories",
   SETTINGS: "settings",
+  NOTIFICATIONS: "notifications",
+  CONTACTS: "contacts",
 };

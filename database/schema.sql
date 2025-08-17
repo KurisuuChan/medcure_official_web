@@ -124,6 +124,38 @@ CREATE TABLE IF NOT EXISTS settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 7. Notifications Table - System notifications and alerts
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    
+    -- Notification content
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(20) DEFAULT 'info', -- 'info', 'success', 'warning', 'error'
+    category VARCHAR(50) DEFAULT 'System', -- 'Inventory', 'Sales', 'System', 'Reports'
+    
+    -- Status
+    is_read BOOLEAN DEFAULT false,
+    is_dismissed BOOLEAN DEFAULT false,
+    
+    -- Reference information (for related entities)
+    reference_type VARCHAR(50), -- 'product', 'transaction', 'stock_movement', 'system'
+    reference_id INTEGER, -- ID of the related entity
+    
+    -- Metadata
+    priority INTEGER DEFAULT 1, -- 1=low, 2=medium, 3=high, 4=critical
+    expires_at TIMESTAMP WITH TIME ZONE, -- For temporary notifications
+    
+    -- Tracking
+    created_by VARCHAR(100) DEFAULT 'system', -- user ID or 'system'
+    read_at TIMESTAMP WITH TIME ZONE,
+    dismissed_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Insert default categories
 INSERT INTO categories (name, description) VALUES 
 ('Pain Relief', 'Analgesics and pain management medications'),
@@ -147,6 +179,11 @@ CREATE INDEX IF NOT EXISTS idx_sales_transactions_date ON sales_transactions(cre
 CREATE INDEX IF NOT EXISTS idx_sales_transactions_number ON sales_transactions(transaction_number);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_date ON stock_movements(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_category ON notifications(category);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_reference ON notifications(reference_type, reference_id);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -165,6 +202,9 @@ CREATE TRIGGER update_sales_transactions_updated_at BEFORE UPDATE ON sales_trans
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_settings_updated_at BEFORE UPDATE ON settings 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_notifications_updated_at BEFORE UPDATE ON notifications 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to automatically update total_pieces_per_box when packaging info changes
@@ -236,3 +276,69 @@ INSERT INTO products (
     '2027-12-31', 'THERM001'
 )
 ON CONFLICT (barcode) DO NOTHING;
+
+-- Insert sample notifications for testing
+INSERT INTO notifications (
+    title, message, type, category, priority,
+    reference_type, reference_id, is_read
+) VALUES 
+(
+    'Low Stock Alert', 
+    'Paracetamol 500mg is running low. Only 8 units remaining.',
+    'warning', 'Inventory', 3,
+    'product', 1, false
+),
+(
+    'Out of Stock',
+    'Vitamin C 1000mg is now out of stock. Please reorder immediately.',
+    'error', 'Inventory', 4,
+    'product', 3, false
+),
+(
+    'New Product Added',
+    'Aspirin 81mg has been successfully added to inventory.',
+    'info', 'System', 1,
+    'product', 5, true
+),
+(
+    'Sale Completed',
+    'Transaction #1248 completed successfully. Total: ₱1,250.00',
+    'success', 'Sales', 2,
+    'transaction', 1, true
+),
+(
+    'Expiry Alert',
+    'Amoxicillin 500mg expires in 30 days. Consider promotional pricing.',
+    'warning', 'Inventory', 3,
+    'product', 2, true
+),
+(
+    'Daily Report',
+    'Your daily sales report is now available for download.',
+    'info', 'Reports', 1,
+    'system', null, true
+),
+(
+    'Payment Failed',
+    'Payment processing failed for transaction #1247. Manual review required.',
+    'error', 'Sales', 4,
+    'transaction', 2, false
+),
+(
+    'Backup Completed',
+    'Daily database backup completed successfully.',
+    'success', 'System', 1,
+    'system', null, true
+),
+(
+    'Critical Stock Level',
+    'Multiple products have reached critical stock levels.',
+    'error', 'Inventory', 4,
+    'system', null, false
+),
+(
+    'Monthly Report Ready',
+    'August 2025 monthly report has been generated and is ready for review.',
+    'success', 'Reports', 2,
+    'system', null, true
+);

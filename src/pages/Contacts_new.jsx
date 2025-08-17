@@ -22,37 +22,52 @@ import { useNotification } from "../hooks/useNotification";
 import SupplierHistoryModal from "../components/modals/SupplierHistoryModal";
 
 // Contact Card Component
-const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }) => {
+const ContactCard = ({
+  contact,
+  onViewHistory,
+  onViewDetails,
+  onEdit,
+  onDelete,
+}) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const isSupplier = contact.type === 'supplier';
+  const isSupplier = contact.type === "supplier";
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg hover:border-blue-500 transition-all duration-300">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
-            {contact.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+            {contact.name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .substring(0, 2)
+              .toUpperCase()}
           </div>
           <div>
             <h3 className="font-bold text-lg text-gray-800">{contact.name}</h3>
-            <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-              isSupplier 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-blue-100 text-blue-700'
-            }`}>
-              {isSupplier ? contact.company || 'Supplier' : contact.position || 'Employee'}
+            <span
+              className={`text-xs font-medium px-3 py-1 rounded-full ${
+                isSupplier
+                  ? "bg-green-100 text-green-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {isSupplier
+                ? contact.company || "Supplier"
+                : contact.position || "Employee"}
             </span>
           </div>
         </div>
         <div className="relative">
-          <button 
+          <button
             onClick={() => setShowDropdown(!showDropdown)}
             className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100"
           >
             <MoreVertical size={20} />
           </button>
-          
+
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
               <div className="py-1">
@@ -144,14 +159,16 @@ const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }
           <div className="flex items-center gap-2">
             <Package size={16} className="text-gray-400" />
             <span className="text-gray-600">Payment Terms:</span>
-            <span className="font-medium text-gray-700">{contact.payment_terms}</span>
+            <span className="font-medium text-gray-700">
+              {contact.payment_terms}
+            </span>
           </div>
         )}
       </div>
 
       <div className="mt-6 pt-4 border-t border-gray-100">
         {isSupplier ? (
-          <button 
+          <button
             onClick={() => onViewHistory(contact.name)}
             className="w-full py-2 px-4 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 font-medium text-sm flex items-center justify-center gap-2"
           >
@@ -159,7 +176,7 @@ const ContactCard = ({ contact, onViewHistory, onViewDetails, onEdit, onDelete }
             View Supply History
           </button>
         ) : (
-          <button 
+          <button
             onClick={() => onViewDetails(contact)}
             className="w-full py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm"
           >
@@ -201,31 +218,33 @@ const Pagination = () => {
 
 // Main Contacts Component
 export default function Contacts() {
-  const { contacts, loading, error, addContact, updateContact, deleteContact } = useContacts();
+  const { contacts, loading, error, addContact, updateContact, deleteContact } =
+    useContacts();
   const { showNotification } = useNotification();
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTab, setSelectedTab] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedContact, setSelectedContact] = useState(null);
   const [showSupplierHistory, setShowSupplierHistory] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
-  
+
   // Filter contacts based on search term and selected tab
-  const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredContacts = contacts.filter((contact) => {
+    const matchesSearch =
+      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.phone.includes(searchTerm) ||
       contact.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesTab = selectedTab === 'all' || contact.type === selectedTab;
-    
+
+    const matchesTab = selectedTab === "all" || contact.type === selectedTab;
+
     return matchesSearch && matchesTab;
   });
 
   // Statistics for tabs
   const stats = {
     all: contacts.length,
-    employees: contacts.filter(c => c.type === 'employee').length,
-    suppliers: contacts.filter(c => c.type === 'supplier').length,
-    customers: contacts.filter(c => c.type === 'customer').length,
+    employees: contacts.filter((c) => c.type === "employee").length,
+    suppliers: contacts.filter((c) => c.type === "supplier").length,
+    customers: contacts.filter((c) => c.type === "customer").length,
   };
 
   // Handle viewing supplier history
@@ -237,13 +256,13 @@ export default function Contacts() {
   // Handle contact details
   const handleViewDetails = (contact) => {
     setSelectedContact(contact);
-    showNotification('Contact details view coming soon!', 'info');
+    showNotification("Contact details view coming soon!", "info");
   };
 
   // Handle edit contact
   const handleEdit = (contact) => {
     setSelectedContact(contact);
-    showNotification('Contact edit modal coming soon!', 'info');
+    showNotification("Contact edit modal coming soon!", "info");
   };
 
   // Handle delete contact
@@ -251,9 +270,9 @@ export default function Contacts() {
     if (window.confirm(`Are you sure you want to delete ${contact.name}?`)) {
       try {
         await deleteContact(contact.id);
-        showNotification('Contact deleted successfully', 'success');
+        showNotification("Contact deleted successfully", "success");
       } catch (error) {
-        showNotification('Failed to delete contact', 'error');
+        showNotification("Failed to delete contact", "error");
       }
     }
   };
@@ -272,7 +291,9 @@ export default function Contacts() {
     return (
       <div className="bg-white p-8 rounded-2xl shadow-lg">
         <div className="flex items-center justify-center py-12">
-          <div className="text-lg text-red-600">Error loading contacts: {error}</div>
+          <div className="text-lg text-red-600">
+            Error loading contacts: {error}
+          </div>
         </div>
       </div>
     );
@@ -408,9 +429,7 @@ export default function Contacts() {
             </div>
             <div>
               <p className="text-sm text-purple-600">Active Contacts</p>
-              <p className="text-2xl font-bold text-purple-800">
-                {stats.all}
-              </p>
+              <p className="text-2xl font-bold text-purple-800">{stats.all}</p>
             </div>
           </div>
         </div>
@@ -421,8 +440,8 @@ export default function Contacts() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
             {filteredContacts.map((contact) => (
-              <ContactCard 
-                key={contact.id} 
+              <ContactCard
+                key={contact.id}
                 contact={contact}
                 onViewHistory={handleViewHistory}
                 onViewDetails={handleViewDetails}

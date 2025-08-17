@@ -20,7 +20,7 @@ const mockSuppliers = [
     payment_terms: "Net 30",
     is_active: true,
     created_at: "2024-01-15T10:00:00Z",
-    updated_at: "2024-01-15T10:00:00Z"
+    updated_at: "2024-01-15T10:00:00Z",
   },
   {
     id: 2,
@@ -34,7 +34,7 @@ const mockSuppliers = [
     payment_terms: "Net 15",
     is_active: true,
     created_at: "2024-01-20T14:30:00Z",
-    updated_at: "2024-01-20T14:30:00Z"
+    updated_at: "2024-01-20T14:30:00Z",
   },
   {
     id: 3,
@@ -48,7 +48,7 @@ const mockSuppliers = [
     payment_terms: "Net 30",
     is_active: true,
     created_at: "2024-02-01T09:15:00Z",
-    updated_at: "2024-02-01T09:15:00Z"
+    updated_at: "2024-02-01T09:15:00Z",
   },
   {
     id: 4,
@@ -62,8 +62,8 @@ const mockSuppliers = [
     payment_terms: "Net 45",
     is_active: true,
     created_at: "2024-02-10T16:45:00Z",
-    updated_at: "2024-02-10T16:45:00Z"
-  }
+    updated_at: "2024-02-10T16:45:00Z",
+  },
 ];
 
 // Mock data for employees
@@ -80,7 +80,7 @@ const mockEmployees = [
     hire_date: "2023-01-15",
     is_active: true,
     created_at: "2023-01-15T08:00:00Z",
-    updated_at: "2023-01-15T08:00:00Z"
+    updated_at: "2023-01-15T08:00:00Z",
   },
   {
     id: 6,
@@ -94,7 +94,7 @@ const mockEmployees = [
     hire_date: "2023-03-20",
     is_active: true,
     created_at: "2023-03-20T08:00:00Z",
-    updated_at: "2023-03-20T08:00:00Z"
+    updated_at: "2023-03-20T08:00:00Z",
   },
   {
     id: 7,
@@ -108,73 +108,78 @@ const mockEmployees = [
     hire_date: "2023-02-10",
     is_active: true,
     created_at: "2023-02-10T08:00:00Z",
-    updated_at: "2023-02-10T08:00:00Z"
-  }
+    updated_at: "2023-02-10T08:00:00Z",
+  },
 ];
 
 // Get all contacts (suppliers and employees)
 export async function getContacts(filters = {}) {
   if (await isMockMode()) {
     console.log("🔧 getContacts called - using mock mode");
-    
+
     let contacts = [];
-    
+
     if (!filters.type || filters.type === "supplier") {
       contacts = [...contacts, ...mockSuppliers];
     }
-    
+
     if (!filters.type || filters.type === "employee") {
       contacts = [...contacts, ...mockEmployees];
     }
-    
+
     // Apply search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      contacts = contacts.filter(contact => 
-        contact.name.toLowerCase().includes(searchTerm) ||
-        contact.email.toLowerCase().includes(searchTerm) ||
-        (contact.position && contact.position.toLowerCase().includes(searchTerm)) ||
-        (contact.company && contact.company.toLowerCase().includes(searchTerm))
+      contacts = contacts.filter(
+        (contact) =>
+          contact.name.toLowerCase().includes(searchTerm) ||
+          contact.email.toLowerCase().includes(searchTerm) ||
+          (contact.position &&
+            contact.position.toLowerCase().includes(searchTerm)) ||
+          (contact.company &&
+            contact.company.toLowerCase().includes(searchTerm))
       );
     }
-    
+
     return {
       success: true,
       data: contacts,
-      total: contacts.length
+      total: contacts.length,
     };
   }
 
   console.log("🔄 getContacts called - using backend mode");
-  
+
   try {
     // For now, we'll create a virtual contacts table by querying unique suppliers from products
     // In a real implementation, you would have a dedicated contacts table
-    
+
     let contacts = [];
-    
+
     if (!filters.type || filters.type === "supplier") {
       // Get unique suppliers from products table
       const { data: suppliers, error: suppliersError } = await supabase
         .from(TABLES.PRODUCTS)
-        .select('supplier')
-        .not('supplier', 'is', null)
-        .not('supplier', 'eq', '');
-      
+        .select("supplier")
+        .not("supplier", "is", null)
+        .not("supplier", "eq", "");
+
       if (suppliersError) throw suppliersError;
-      
+
       // Create unique supplier list
-      const uniqueSuppliers = [...new Set(suppliers.map(p => p.supplier))];
-      
+      const uniqueSuppliers = [...new Set(suppliers.map((p) => p.supplier))];
+
       for (const supplierName of uniqueSuppliers) {
         // Find a mock supplier with matching name or create a basic one
-        const mockSupplier = mockSuppliers.find(s => s.name === supplierName);
-        
+        const mockSupplier = mockSuppliers.find((s) => s.name === supplierName);
+
         contacts.push({
-          id: `supplier_${supplierName.replace(/\s+/g, '_')}`,
+          id: `supplier_${supplierName.replace(/\s+/g, "_")}`,
           name: supplierName,
           type: "supplier",
-          email: mockSupplier?.email || `contact@${supplierName.toLowerCase().replace(/\s+/g, '')}.com`,
+          email:
+            mockSupplier?.email ||
+            `contact@${supplierName.toLowerCase().replace(/\s+/g, "")}.com`,
           phone: mockSupplier?.phone || "(555) 000-0000",
           address: mockSupplier?.address || "Address not available",
           company: supplierName,
@@ -182,39 +187,41 @@ export async function getContacts(filters = {}) {
           payment_terms: mockSupplier?.payment_terms || "Net 30",
           is_active: true,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
       }
     }
-    
+
     if (!filters.type || filters.type === "employee") {
       // For employees, use mock data for now
       contacts = [...contacts, ...mockEmployees];
     }
-    
+
     // Apply search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      contacts = contacts.filter(contact => 
-        contact.name.toLowerCase().includes(searchTerm) ||
-        contact.email.toLowerCase().includes(searchTerm) ||
-        (contact.position && contact.position.toLowerCase().includes(searchTerm)) ||
-        (contact.company && contact.company.toLowerCase().includes(searchTerm))
+      contacts = contacts.filter(
+        (contact) =>
+          contact.name.toLowerCase().includes(searchTerm) ||
+          contact.email.toLowerCase().includes(searchTerm) ||
+          (contact.position &&
+            contact.position.toLowerCase().includes(searchTerm)) ||
+          (contact.company &&
+            contact.company.toLowerCase().includes(searchTerm))
       );
     }
-    
+
     return {
       success: true,
       data: contacts,
-      total: contacts.length
+      total: contacts.length,
     };
-    
   } catch (error) {
     console.error("Error fetching contacts:", error);
     return {
       success: false,
       error: error.message,
-      data: []
+      data: [],
     };
   }
 }
@@ -223,7 +230,7 @@ export async function getContacts(filters = {}) {
 export async function getSupplierHistory(supplierName) {
   if (await isMockMode()) {
     console.log("🔧 getSupplierHistory called - using mock mode");
-    
+
     // Mock supplier history data
     const mockHistory = {
       "PharmaCorp Inc.": [
@@ -234,10 +241,10 @@ export async function getSupplierHistory(supplierName) {
           total_supplied: 2000,
           current_stock: 1500,
           last_supply_date: "2024-08-10",
-          cost_price: 12.50,
-          selling_price: 15.50,
-          total_value: 25000.00
-        }
+          cost_price: 12.5,
+          selling_price: 15.5,
+          total_value: 25000.0,
+        },
       ],
       "MediSupply Co.": [
         {
@@ -248,9 +255,9 @@ export async function getSupplierHistory(supplierName) {
           current_stock: 800,
           last_supply_date: "2024-08-05",
           cost_price: 18.75,
-          selling_price: 25.00,
-          total_value: 18750.00
-        }
+          selling_price: 25.0,
+          total_value: 18750.0,
+        },
       ],
       "HealthMax Ltd.": [
         {
@@ -260,9 +267,9 @@ export async function getSupplierHistory(supplierName) {
           total_supplied: 500,
           current_stock: 432,
           last_supply_date: "2024-07-20",
-          cost_price: 120.00,
-          selling_price: 180.00,
-          total_value: 60000.00
+          cost_price: 120.0,
+          selling_price: 180.0,
+          total_value: 60000.0,
         },
         {
           id: 6,
@@ -271,10 +278,10 @@ export async function getSupplierHistory(supplierName) {
           total_supplied: 300,
           current_stock: 240,
           last_supply_date: "2024-07-25",
-          cost_price: 250.00,
-          selling_price: 350.00,
-          total_value: 75000.00
-        }
+          cost_price: 250.0,
+          selling_price: 350.0,
+          total_value: 75000.0,
+        },
       ],
       "CardioMed Supply": [
         {
@@ -286,13 +293,13 @@ export async function getSupplierHistory(supplierName) {
           last_supply_date: "2024-08-01",
           cost_price: 6.25,
           selling_price: 8.75,
-          total_value: 15625.00
-        }
-      ]
+          total_value: 15625.0,
+        },
+      ],
     };
-    
+
     const history = mockHistory[supplierName] || [];
-    
+
     return {
       success: true,
       data: {
@@ -300,20 +307,27 @@ export async function getSupplierHistory(supplierName) {
         products: history,
         summary: {
           total_products: history.length,
-          total_value: history.reduce((sum, product) => sum + product.total_value, 0),
-          total_current_stock: history.reduce((sum, product) => sum + product.current_stock, 0)
-        }
-      }
+          total_value: history.reduce(
+            (sum, product) => sum + product.total_value,
+            0
+          ),
+          total_current_stock: history.reduce(
+            (sum, product) => sum + product.current_stock,
+            0
+          ),
+        },
+      },
     };
   }
 
   console.log("🔄 getSupplierHistory called - using backend mode");
-  
+
   try {
     // Get all products from this supplier
     const { data: products, error } = await supabase
       .from(TABLES.PRODUCTS)
-      .select(`
+      .select(
+        `
         id,
         name,
         category,
@@ -322,48 +336,54 @@ export async function getSupplierHistory(supplierName) {
         selling_price,
         created_at,
         updated_at
-      `)
-      .eq('supplier', supplierName)
-      .eq('is_active', true)
-      .order('name');
-    
+      `
+      )
+      .eq("supplier", supplierName)
+      .eq("is_active", true)
+      .order("name");
+
     if (error) throw error;
-    
+
     // Calculate summary statistics
     const summary = {
       total_products: products.length,
-      total_value: products.reduce((sum, product) => sum + (product.cost_price * product.total_stock), 0),
-      total_current_stock: products.reduce((sum, product) => sum + product.total_stock, 0)
+      total_value: products.reduce(
+        (sum, product) => sum + product.cost_price * product.total_stock,
+        0
+      ),
+      total_current_stock: products.reduce(
+        (sum, product) => sum + product.total_stock,
+        0
+      ),
     };
-    
+
     // Transform data for frontend
-    const transformedProducts = products.map(product => ({
+    const transformedProducts = products.map((product) => ({
       id: product.id,
       name: product.name,
       category: product.category,
       total_supplied: product.total_stock, // In real scenario, this would come from stock movements
       current_stock: product.total_stock,
-      last_supply_date: product.updated_at.split('T')[0],
+      last_supply_date: product.updated_at.split("T")[0],
       cost_price: product.cost_price,
       selling_price: product.selling_price,
-      total_value: product.cost_price * product.total_stock
+      total_value: product.cost_price * product.total_stock,
     }));
-    
+
     return {
       success: true,
       data: {
         supplier: supplierName,
         products: transformedProducts,
-        summary
-      }
+        summary,
+      },
     };
-    
   } catch (error) {
     console.error("Error fetching supplier history:", error);
     return {
       success: false,
       error: error.message,
-      data: null
+      data: null,
     };
   }
 }
@@ -372,67 +392,70 @@ export async function getSupplierHistory(supplierName) {
 export async function getContact(contactId) {
   if (await isMockMode()) {
     console.log("🔧 getContact called - using mock mode");
-    
+
     const allContacts = [...mockSuppliers, ...mockEmployees];
-    const contact = allContacts.find(c => c.id === parseInt(contactId) || c.id === contactId);
-    
+    const contact = allContacts.find(
+      (c) => c.id === parseInt(contactId) || c.id === contactId
+    );
+
     if (!contact) {
       return {
         success: false,
         error: "Contact not found",
-        data: null
+        data: null,
       };
     }
-    
+
     return {
       success: true,
-      data: contact
+      data: contact,
     };
   }
 
   console.log("🔄 getContact called - using backend mode");
-  
+
   try {
     // In a real implementation, you would query a contacts table
     // For now, we'll simulate by checking if it's a supplier or employee
-    
-    if (contactId.toString().startsWith('supplier_')) {
-      const supplierName = contactId.replace('supplier_', '').replace(/_/g, ' ');
-      const mockSupplier = mockSuppliers.find(s => s.name === supplierName);
-      
+
+    if (contactId.toString().startsWith("supplier_")) {
+      const supplierName = contactId
+        .replace("supplier_", "")
+        .replace(/_/g, " ");
+      const mockSupplier = mockSuppliers.find((s) => s.name === supplierName);
+
       if (mockSupplier) {
         return {
           success: true,
           data: {
             ...mockSupplier,
             id: contactId,
-            name: supplierName
-          }
+            name: supplierName,
+          },
         };
       }
     } else {
       // Check employees
-      const employee = mockEmployees.find(e => e.id === parseInt(contactId));
+      const employee = mockEmployees.find((e) => e.id === parseInt(contactId));
       if (employee) {
         return {
           success: true,
-          data: employee
+          data: employee,
         };
       }
     }
-    
+
     return {
       success: false,
       error: "Contact not found",
-      data: null
+      data: null,
     };
-    
   } catch (error) {
     console.error("Error fetching contact:", error);
     return {
       success: false,
       error: error.message,
-      data: null
+      data: null,
     };
   }
 }
@@ -441,46 +464,45 @@ export async function getContact(contactId) {
 export async function createContact(contactData) {
   if (await isMockMode()) {
     console.log("🔧 createContact called - using mock mode");
-    
+
     const newContact = {
       id: Date.now(),
       ...contactData,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
-    
+
     return {
       success: true,
       data: newContact,
-      message: "Contact created successfully"
+      message: "Contact created successfully",
     };
   }
 
   console.log("🔄 createContact called - using backend mode");
-  
+
   try {
     // In a real implementation, you would insert into a contacts table
     // For now, we'll simulate success
-    
+
     const newContact = {
       id: `${contactData.type}_${Date.now()}`,
       ...contactData,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
-    
+
     return {
       success: true,
       data: newContact,
-      message: "Contact created successfully"
+      message: "Contact created successfully",
     };
-    
   } catch (error) {
     console.error("Error creating contact:", error);
     return {
       success: false,
       error: error.message,
-      data: null
+      data: null,
     };
   }
 }
@@ -489,44 +511,43 @@ export async function createContact(contactData) {
 export async function updateContact(contactId, contactData) {
   if (await isMockMode()) {
     console.log("🔧 updateContact called - using mock mode");
-    
+
     const updatedContact = {
       id: contactId,
       ...contactData,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
-    
+
     return {
       success: true,
       data: updatedContact,
-      message: "Contact updated successfully"
+      message: "Contact updated successfully",
     };
   }
 
   console.log("🔄 updateContact called - using backend mode");
-  
+
   try {
     // In a real implementation, you would update the contacts table
     // For now, we'll simulate success
-    
+
     const updatedContact = {
       id: contactId,
       ...contactData,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
-    
+
     return {
       success: true,
       data: updatedContact,
-      message: "Contact updated successfully"
+      message: "Contact updated successfully",
     };
-    
   } catch (error) {
     console.error("Error updating contact:", error);
     return {
       success: false,
       error: error.message,
-      data: null
+      data: null,
     };
   }
 }
@@ -534,30 +555,35 @@ export async function updateContact(contactId, contactData) {
 // Delete contact
 export async function deleteContact(contactId) {
   if (await isMockMode()) {
-    console.log("🔧 deleteContact called - using mock mode, contactId:", contactId);
-    
+    console.log(
+      "🔧 deleteContact called - using mock mode, contactId:",
+      contactId
+    );
+
     return {
       success: true,
-      message: "Contact deleted successfully"
+      message: "Contact deleted successfully",
     };
   }
 
-  console.log("🔄 deleteContact called - using backend mode, contactId:", contactId);
-  
+  console.log(
+    "🔄 deleteContact called - using backend mode, contactId:",
+    contactId
+  );
+
   try {
     // In a real implementation, you would delete from contacts table
     // For now, we'll simulate success
-    
+
     return {
       success: true,
-      message: "Contact deleted successfully"
+      message: "Contact deleted successfully",
     };
-    
   } catch (error) {
     console.error("Error deleting contact:", error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 }
@@ -566,44 +592,43 @@ export async function deleteContact(contactId) {
 export async function getContactStatistics() {
   if (await isMockMode()) {
     console.log("🔧 getContactStatistics called - using mock mode");
-    
+
     return {
       success: true,
       data: {
         total_suppliers: mockSuppliers.length,
         total_employees: mockEmployees.length,
-        active_suppliers: mockSuppliers.filter(s => s.is_active).length,
-        active_employees: mockEmployees.filter(e => e.is_active).length,
-        total_contacts: mockSuppliers.length + mockEmployees.length
-      }
+        active_suppliers: mockSuppliers.filter((s) => s.is_active).length,
+        active_employees: mockEmployees.filter((e) => e.is_active).length,
+        total_contacts: mockSuppliers.length + mockEmployees.length,
+      },
     };
   }
 
   console.log("🔄 getContactStatistics called - using backend mode");
-  
+
   try {
     // Get unique suppliers count
     const { data: suppliers, error: suppliersError } = await supabase
       .from(TABLES.PRODUCTS)
-      .select('supplier')
-      .not('supplier', 'is', null)
-      .not('supplier', 'eq', '');
-    
+      .select("supplier")
+      .not("supplier", "is", null)
+      .not("supplier", "eq", "");
+
     if (suppliersError) throw suppliersError;
-    
-    const uniqueSuppliers = new Set(suppliers.map(p => p.supplier));
-    
+
+    const uniqueSuppliers = new Set(suppliers.map((p) => p.supplier));
+
     return {
       success: true,
       data: {
         total_suppliers: uniqueSuppliers.size,
         total_employees: mockEmployees.length, // Using mock data for employees
         active_suppliers: uniqueSuppliers.size,
-        active_employees: mockEmployees.filter(e => e.is_active).length,
-        total_contacts: uniqueSuppliers.size + mockEmployees.length
-      }
+        active_employees: mockEmployees.filter((e) => e.is_active).length,
+        total_contacts: uniqueSuppliers.size + mockEmployees.length,
+      },
     };
-    
   } catch (error) {
     console.error("Error fetching contact statistics:", error);
     return {
@@ -614,8 +639,8 @@ export async function getContactStatistics() {
         total_employees: 0,
         active_suppliers: 0,
         active_employees: 0,
-        total_contacts: 0
-      }
+        total_contacts: 0,
+      },
     };
   }
 }
