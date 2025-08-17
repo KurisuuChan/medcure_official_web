@@ -18,6 +18,9 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// Load console reset commands for development
+import "./utils/consoleReset.js";
+
 export default function App() {
   return (
     <ThemeProvider>

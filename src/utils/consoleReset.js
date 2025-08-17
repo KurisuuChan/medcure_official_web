@@ -23,13 +23,32 @@ if (typeof window !== "undefined") {
       console.log("✅ Storage cleared! Refresh the page.");
     },
 
-    // Full reset (requires confirmation)
+    // Full reset (requires confirmation) - COMPREHENSIVE VERSION
     fullReset: async () => {
       const confirm = window.confirm(
-        "⚠️ This will delete ALL data permanently!\n\nAre you sure you want to continue?"
+        "⚠️ COMPREHENSIVE RESET WARNING!\n\nThis will delete ALL data permanently including:\n" +
+        "• All product data and inventory\n" +
+        "• Contacts, customers, and suppliers\n" +
+        "• Sales transactions and reports\n" +
+        "• Notifications and message history\n" +
+        "• All settings and preferences\n" +
+        "• Branding, logos, and theme customization\n" +
+        "• Profile pictures and user data\n" +
+        "• All cached and stored data\n\n" +
+        "This action CANNOT be undone!\n\nAre you absolutely sure?"
       );
 
       if (confirm) {
+        console.log("🚨 Starting COMPREHENSIVE SYSTEM RESET...");
+        console.log("📋 This will clear:");
+        console.log("   • All mock data (products, sales, contacts)");
+        console.log("   • All localStorage keys (47+ keys)");
+        console.log("   • All sessionStorage data");
+        console.log("   • All browser caches");
+        console.log("   • Notifications and reports");
+        console.log("   • Branding and customization");
+        console.log("   • Profile and user data");
+        
         const result = await performCompleteReset({
           clearStorage: true,
           resetDatabase: true,
@@ -41,12 +60,66 @@ if (typeof window !== "undefined") {
 
         console.log(result);
         if (result.success) {
-          console.log(
-            "✅ Full reset complete! Page will reload automatically."
-          );
+          console.log("✅ COMPREHENSIVE RESET COMPLETE!");
+          console.log("🔄 Page will reload automatically for fresh start...");
+        } else {
+          console.error("❌ Reset failed:", result.error);
         }
       } else {
-        console.log("❌ Reset cancelled.");
+        console.log("❌ Comprehensive reset cancelled.");
+      }
+    },
+
+    // Super comprehensive reset with extra verification
+    nukeEverything: async () => {
+      const confirm1 = window.confirm(
+        "🚨 NUCLEAR OPTION ACTIVATED!\n\nThis is the most comprehensive reset possible.\n\nContinue?"
+      );
+      
+      if (!confirm1) {
+        console.log("❌ Nuclear reset cancelled at step 1.");
+        return;
+      }
+
+      const confirm2 = window.confirm(
+        "⚠️ FINAL WARNING!\n\nThis will:\n" +
+        "• Clear ALL 47+ storage keys\n" +
+        "• Reset ALL settings to factory defaults\n" +
+        "• Clear ALL caches and browser data\n" +
+        "• Remove ALL customization\n" +
+        "• Delete ALL business data\n\n" +
+        "Type 'YES DELETE EVERYTHING' in the next prompt to proceed."
+      );
+
+      if (!confirm2) {
+        console.log("❌ Nuclear reset cancelled at step 2.");
+        return;
+      }
+
+      const finalConfirm = window.prompt(
+        "Type 'YES DELETE EVERYTHING' exactly to proceed with nuclear reset:"
+      );
+
+      if (finalConfirm === "YES DELETE EVERYTHING") {
+        console.log("💥 NUCLEAR RESET INITIATED!");
+        console.log("🧹 Clearing everything in existence...");
+        
+        // Use the most comprehensive clearing possible
+        const result = await performCompleteReset({
+          clearStorage: true,
+          resetDatabase: true,
+          resetSettings: true,
+          createDemo: false,
+          confirmReset: true,
+          forceReload: true,
+        });
+
+        if (result.success) {
+          console.log("💥 NUCLEAR RESET SUCCESSFUL!");
+          console.log("🌱 System will restart with completely fresh state...");
+        }
+      } else {
+        console.log("❌ Nuclear reset cancelled - incorrect confirmation.");
       }
     },
 
@@ -86,7 +159,7 @@ if (typeof window !== "undefined") {
     // Help
     help: () => {
       console.log(`
-🔧 MedCure Reset Commands:
+🔧 MedCure Reset Commands - COMPREHENSIVE EDITION:
 
 Quick Reset (Development):
   MedCureReset.quickReset()        - Clear storage + reset settings (keeps DB)
@@ -94,8 +167,9 @@ Quick Reset (Development):
 Storage Only:
   MedCureReset.clearStorage()      - Clear localStorage + sessionStorage only
 
-Complete Reset:
-  MedCureReset.fullReset()         - ⚠️ DELETE EVERYTHING (requires confirmation)
+Complete Reset (⚠️ DESTRUCTIVE):
+  MedCureReset.fullReset()         - 🚨 COMPREHENSIVE RESET - All data, settings, branding, notifications, contacts, reports
+  MedCureReset.nukeEverything()    - 💥 NUCLEAR OPTION - Maximum destruction with triple confirmation
   MedCureReset.resetWithDemo()     - ⚠️ Reset + create demo data (requires confirmation)
 
 Individual Functions:
@@ -104,13 +178,27 @@ Individual Functions:
   MedCureReset.resetDatabase()
   MedCureReset.resetSystemSettings()
 
+What Gets Cleared in Comprehensive Reset:
+  📊 All mock data (products, sales, inventory)
+  👥 Contacts, customers, suppliers
+  📈 Reports, analytics, transaction history  
+  🔔 Notifications and message history
+  🎨 Branding, logos, themes, customization
+  👤 Profile pictures and user data
+  ⚙️ All settings and preferences
+  💾 47+ localStorage keys
+  🗄️ All sessionStorage data
+  🧹 Browser caches
+
 Usage Examples:
   MedCureReset.quickReset()        // Most common for development
-  MedCureReset.clearStorage()      // Just clear cache/preferences
-  MedCureReset.fullReset()         // Nuclear option
+  MedCureReset.clearStorage()      // Just clear cache/preferences  
+  MedCureReset.fullReset()         // Complete fresh start
+  MedCureReset.nukeEverything()    // When you need maximum reset
   MedCureReset.help()              // Show this help
 
-⚠️ Always backup important data before running reset commands!
+⚠️ ALWAYS backup important data before running comprehensive reset commands!
+💡 Comprehensive resets clear ALL data including branding and customization!
       `);
     },
   };
