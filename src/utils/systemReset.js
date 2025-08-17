@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "../lib/supabase.js";
+import { clearMockData, restoreMockData } from "./mockApi.js";
 
 /**
  * Simple mock check for reset operations
@@ -13,15 +14,30 @@ function isUsingMockMode() {
 }
 
 /**
- * Clear all localStorage data
+ * Clear all localStorage data - COMPREHENSIVE VERSION
  */
 export function clearLocalStorage() {
   try {
-    // Clear specific MedCure data
+    console.log("🧹 Starting comprehensive localStorage clear...");
+    
+    // Clear ALL MedCure-related data (comprehensive list)
     const keysToRemove = [
+      // User and session data
       "medcure_user_session",
       "medcure_user_preferences",
+      "medcure_user_profile",
+      "medcure_user_settings",
+      
+      // Branding and customization
       "medcure_branding_settings",
+      "medcure_theme_settings", 
+      "medcure_brand_color",
+      "medcure_company_logo",
+      "medcure_profile_avatar",
+      "medcure_logo_url",
+      "medcure_brand_name",
+      
+      // Application data
       "medcure_recent_searches",
       "medcure_notifications",
       "medcure_draft_transactions",
@@ -29,22 +45,75 @@ export function clearLocalStorage() {
       "medcure_filters",
       "medcure_dashboard_settings",
       "medcure_export_history",
-      "medcure_theme_settings",
+      
+      // Business data
+      "medcure_contacts",
+      "medcure_customers", 
+      "medcure_suppliers",
+      "medcure_products",
+      "medcure_inventory",
+      "medcure_sales",
+      "medcure_transactions",
+      "medcure_reports",
+      "medcure_analytics",
+      
+      // System settings
+      "medcure_system_settings",
+      "medcure_backup_settings",
+      "medcure_security_settings",
+      "medcure_notification_settings",
+      
+      // Mock data keys
+      "medcure_mock_products",
+      "medcure_mock_categories",
+      "medcure_mock_transactions",
+      "medcure_mock_contacts",
+      "medcure_mock_notifications",
+      "medcure_mock_reports",
+      "medcure_mock_archived_items",
+      "medcure_mock_settings",
+      "medcure_mock_branding",
+      "medcure_mock_profile",
+      "medcure_mock_theme",
+      "medcure_mock_is_reset",
+      
+      // Settings variations
+      "medcure-mock-settings",
+      "medcure-settings",
+      "medcure-branding",
+      "medcure-profile",
+      "medcure-theme",
+      "medcure-contacts",
+      "medcure-reports",
     ];
 
+    // Remove specific keys
+    let clearedCount = 0;
     keysToRemove.forEach((key) => {
-      localStorage.removeItem(key);
-    });
-
-    // Clear any remaining MedCure keys
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith("medcure_")) {
+      if (localStorage.getItem(key)) {
         localStorage.removeItem(key);
+        clearedCount++;
+        console.log(`🗑️ Cleared: ${key}`);
       }
     });
 
-    console.log("✅ Local storage cleared");
-    return { success: true, message: "Local storage cleared successfully" };
+    // Clear any remaining MedCure keys (dynamic scan)
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach((key) => {
+      if (key.toLowerCase().includes("medcure") || 
+          key.toLowerCase().includes("pharmacy") ||
+          key.toLowerCase().includes("pos") ||
+          key.toLowerCase().includes("inventory") ||
+          key.startsWith("medcure_") ||
+          key.startsWith("medcure-")) {
+        localStorage.removeItem(key);
+        clearedCount++;
+        console.log(`🗑️ Dynamic clear: ${key}`);
+      }
+    });
+
+    console.log(`✅ Local storage cleared (${clearedCount} items removed)`);
+    return { success: true, message: `Local storage cleared successfully (${clearedCount} items)` };
   } catch (error) {
     console.error("❌ Failed to clear local storage:", error);
     return { success: false, error: "Failed to clear local storage" };
@@ -88,8 +157,22 @@ export function clearSessionStorage() {
  */
 export async function resetDatabase() {
   if (isUsingMockMode()) {
-    console.log("ℹ️ Skipping database reset in mock mode");
-    return { success: true, message: "Database reset skipped (mock mode)" };
+    console.log(
+      "ℹ️ Mock mode detected - clearing mock data instead of database"
+    );
+    try {
+      clearMockData();
+      return {
+        success: true,
+        message: "Mock data cleared successfully (system reset to empty state)",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: "Failed to clear mock data",
+        details: error.message,
+      };
+    }
   }
 
   try {
@@ -216,11 +299,20 @@ export async function createDemoData() {
     console.log("🔄 Creating demo data...");
 
     if (isUsingMockMode()) {
-      console.log("ℹ️ Demo data creation skipped in mock mode");
-      return {
-        success: true,
-        message: "Demo data creation skipped (mock mode)",
-      };
+      console.log("ℹ️ Mock mode detected - restoring mock demo data");
+      try {
+        restoreMockData();
+        return {
+          success: true,
+          message: "Mock demo data restored successfully",
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: "Failed to restore mock demo data",
+          details: error.message,
+        };
+      }
     }
 
     // Create demo products
@@ -304,10 +396,11 @@ export async function createDemoData() {
 export async function performCompleteReset(options = {}) {
   const {
     clearStorage = true,
-    resetDatabase = true,
-    resetSettings = true,
+    resetDatabase: shouldResetDatabase = true,
+    resetSettings: shouldResetSettings = true,
     createDemo = false,
     confirmReset = false,
+    forceReload = false,
   } = options;
 
   if (!confirmReset) {
@@ -336,14 +429,14 @@ export async function performCompleteReset(options = {}) {
       results.sessionStorage = clearSessionStorage();
     }
 
-    // Step 2: Reset database
-    if (resetDatabase) {
-      console.log("\n🗄️ Resetting database...");
+    // Step 2: Reset database/mock data
+    if (shouldResetDatabase) {
+      console.log("\n🗄️ Resetting database/mock data...");
       results.database = await resetDatabase();
     }
 
     // Step 3: Reset settings
-    if (resetSettings) {
+    if (shouldResetSettings) {
       console.log("\n⚙️ Resetting settings...");
       results.settings = await resetSystemSettings();
     }
@@ -355,12 +448,22 @@ export async function performCompleteReset(options = {}) {
     }
 
     console.log("\n✅ SYSTEM RESET COMPLETED!");
-    console.log("🔄 Please refresh the page to see changes.");
+
+    // Force page reload for mock mode to ensure clean state
+    if (isUsingMockMode() && forceReload) {
+      console.log("🔄 Forcing page reload for clean mock state...");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      console.log("🔄 Please refresh the page to see changes.");
+    }
 
     return {
       success: true,
       message: "System reset completed successfully",
       results,
+      shouldReload: isUsingMockMode(),
     };
   } catch (error) {
     console.error("❌ SYSTEM RESET FAILED:", error);

@@ -36,11 +36,14 @@ if (typeof window !== "undefined") {
           resetSettings: true,
           createDemo: false,
           confirmReset: true,
+          forceReload: true,
         });
 
         console.log(result);
         if (result.success) {
-          console.log("✅ Full reset complete! Refresh the page.");
+          console.log(
+            "✅ Full reset complete! Page will reload automatically."
+          );
         }
       } else {
         console.log("❌ Reset cancelled.");
@@ -60,11 +63,14 @@ if (typeof window !== "undefined") {
           resetSettings: true,
           createDemo: true,
           confirmReset: true,
+          forceReload: true,
         });
 
         console.log(result);
         if (result.success) {
-          console.log("✅ Reset with demo data complete! Refresh the page.");
+          console.log(
+            "✅ Reset with demo data complete! Page will reload automatically."
+          );
         }
       } else {
         console.log("❌ Reset cancelled.");

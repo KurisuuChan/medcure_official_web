@@ -12,6 +12,7 @@ import Financials from "./pages/Financials";
 import ReportsFixed from "./pages/ReportsFixed";
 import Settings from "./pages/Settings";
 import SystemReset from "./pages/SystemReset";
+import UserManagement from "./pages/UserManagement";
 import { MockApiStatus } from "./components/MockApiStatus";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="financials" element={<Financials />} />
               <Route path="reports" element={<ReportsFixed />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="user-management" element={<UserManagement />} />
               <Route path="system-reset" element={<SystemReset />} />
               <Route path="*" element={<Dashboard />} />
             </Route>

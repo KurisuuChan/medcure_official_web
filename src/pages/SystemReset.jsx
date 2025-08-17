@@ -41,6 +41,7 @@ export default function SystemReset() {
         resetSettings: true,
         createDemo: false,
         confirmReset: true,
+        forceReload: true,
       });
       setResults(result);
     } catch (error) {
@@ -66,6 +67,7 @@ export default function SystemReset() {
         resetSettings: true,
         createDemo: true,
         confirmReset: true,
+        forceReload: true,
       });
       setResults(result);
     } catch (error) {

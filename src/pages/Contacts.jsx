@@ -257,7 +257,6 @@ export default function Contacts() {
     all: contacts.length,
     employees: contacts.filter((c) => c.type === "employee").length,
     suppliers: contacts.filter((c) => c.type === "supplier").length,
-    customers: contacts.filter((c) => c.type === "customer").length,
   };
 
   // Dynamic button text based on selected tab
@@ -266,8 +265,6 @@ export default function Contacts() {
       ? "Add Supplier"
       : selectedTab === "employee"
       ? "Add Employee"
-      : selectedTab === "customer"
-      ? "Add Customer"
       : "Add Contact";
 
   // Handle viewing supplier history
@@ -403,17 +400,6 @@ export default function Contacts() {
           >
             <Users size={16} className="inline mr-2" />
             Employees ({stats.employees})
-          </button>
-          <button
-            onClick={() => setSelectedTab("customer")}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-              selectedTab === "customer"
-                ? "bg-blue-600 text-white shadow"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            <Phone size={16} className="inline mr-2" />
-            Customers ({stats.customers})
           </button>
         </div>
 

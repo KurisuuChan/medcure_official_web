@@ -5,7 +5,80 @@ function mockDelay(ms = 500) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-let SAMPLE_PRODUCTS = [
+// Mock data persistence using localStorage
+const STORAGE_KEYS = {
+  // Core data
+  PRODUCTS: "medcure_mock_products",
+  CATEGORIES: "medcure_mock_categories",
+  TRANSACTIONS: "medcure_mock_transactions",
+  
+  // Additional data types
+  CONTACTS: "medcure_mock_contacts",
+  NOTIFICATIONS: "medcure_mock_notifications",
+  REPORTS: "medcure_mock_reports",
+  ARCHIVED_ITEMS: "medcure_mock_archived_items",
+  
+  // Settings and customization
+  SETTINGS: "medcure_mock_settings",
+  BRANDING: "medcure_mock_branding",
+  PROFILE: "medcure_mock_profile",
+  THEME: "medcure_mock_theme",
+  
+  // System state
+  IS_RESET: "medcure_mock_is_reset",
+};
+
+// All localStorage keys that should be cleared on complete reset
+const ALL_MEDCURE_STORAGE_KEYS = [
+  // Mock data keys
+  ...Object.values(STORAGE_KEYS),
+  
+  // Application data keys
+  "medcure_user_session",
+  "medcure_user_preferences", 
+  "medcure_branding_settings",
+  "medcure_recent_searches",
+  "medcure_notifications",
+  "medcure_draft_transactions",
+  "medcure_cart_items",
+  "medcure_filters",
+  "medcure_dashboard_settings",
+  "medcure_export_history",
+  "medcure_theme_settings",
+  "medcure_system_settings",
+  "medcure_backup_settings",
+  "medcure_security_settings",
+  
+  // Settings-related keys
+  "medcure-mock-settings",
+  "medcure-settings",
+  "medcure-branding",
+  "medcure-profile",
+  "medcure-theme",
+  
+  // Contact-related keys
+  "medcure-contacts",
+  "medcure-customers",
+  "medcure-suppliers",
+  
+  // Report-related keys
+  "medcure-reports",
+  "medcure-analytics",
+  "medcure-charts",
+  
+  // Archive-related keys
+  "medcure-archived",
+  "medcure-deleted",
+  
+  // Any other keys that might exist
+  "medcure_temp_session",
+  "medcure_current_transaction", 
+  "medcure_search_cache",
+  "medcure_modal_state",
+];
+
+// Default sample products data
+const DEFAULT_SAMPLE_PRODUCTS = [
   {
     id: 1,
     name: "Paracetamol 500mg",
@@ -162,7 +235,7 @@ let SAMPLE_PRODUCTS = [
   },
 ];
 
-const SAMPLE_CATEGORIES = [
+const DEFAULT_SAMPLE_CATEGORIES = [
   { id: 1, name: "Analgesic", is_active: true },
   { id: 2, name: "Supplement", is_active: true },
   { id: 3, name: "Antibiotic", is_active: true },
@@ -170,7 +243,7 @@ const SAMPLE_CATEGORIES = [
   { id: 5, name: "First Aid", is_active: true },
 ];
 
-const SAMPLE_SALES_TRANSACTIONS = [
+const DEFAULT_SAMPLE_SALES_TRANSACTIONS = [
   {
     id: 1,
     transaction_number: "TXN1708156200001",
@@ -242,6 +315,156 @@ const SAMPLE_SALES_TRANSACTIONS = [
     ],
   },
 ];
+
+// Data persistence functions
+function loadMockData() {
+  try {
+    // Check if system has been reset
+    const isReset = localStorage.getItem(STORAGE_KEYS.IS_RESET) === "true";
+
+    if (isReset) {
+      console.log("🔄 System is in reset state - using empty data");
+      return {
+        products: [],
+        categories: DEFAULT_SAMPLE_CATEGORIES,
+        transactions: [],
+      };
+    }
+
+    const products = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.PRODUCTS) || "null"
+    );
+    const categories = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.CATEGORIES) || "null"
+    );
+    const transactions = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || "null"
+    );
+
+    return {
+      products: products || DEFAULT_SAMPLE_PRODUCTS,
+      categories: categories || DEFAULT_SAMPLE_CATEGORIES,
+      transactions: transactions || DEFAULT_SAMPLE_SALES_TRANSACTIONS,
+    };
+  } catch (error) {
+    console.warn("⚠️ Error loading mock data from localStorage:", error);
+    return {
+      products: DEFAULT_SAMPLE_PRODUCTS,
+      categories: DEFAULT_SAMPLE_CATEGORIES,
+      transactions: DEFAULT_SAMPLE_SALES_TRANSACTIONS,
+    };
+  }
+}
+
+function saveMockData() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.PRODUCTS,
+      JSON.stringify(SAMPLE_PRODUCTS)
+    );
+    localStorage.setItem(
+      STORAGE_KEYS.CATEGORIES,
+      JSON.stringify(SAMPLE_CATEGORIES)
+    );
+    localStorage.setItem(
+      STORAGE_KEYS.TRANSACTIONS,
+      JSON.stringify(SAMPLE_SALES_TRANSACTIONS)
+    );
+  } catch (error) {
+    console.warn("⚠️ Error saving mock data to localStorage:", error);
+  }
+}
+
+function clearMockData() {
+  try {
+    console.log("🧹 Starting comprehensive data clear...");
+    
+    // Set reset flag first
+    localStorage.setItem(STORAGE_KEYS.IS_RESET, "true");
+    
+    // Clear all specific MedCure storage keys
+    ALL_MEDCURE_STORAGE_KEYS.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        console.log(`🗑️ Cleared: ${key}`);
+      }
+    });
+    
+    // Clear any remaining MedCure-related keys (dynamic scan)
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach(key => {
+      if (key.toLowerCase().includes('medcure') || 
+          key.toLowerCase().includes('pharmacy') ||
+          key.toLowerCase().includes('pos') ||
+          key.toLowerCase().includes('inventory')) {
+        localStorage.removeItem(key);
+        console.log(`🗑️ Dynamic clear: ${key}`);
+      }
+    });
+    
+    // Clear sessionStorage as well
+    const allSessionKeys = Object.keys(sessionStorage);
+    allSessionKeys.forEach(key => {
+      if (key.toLowerCase().includes('medcure') || 
+          key.toLowerCase().includes('pharmacy') ||
+          key.toLowerCase().includes('pos') ||
+          key.toLowerCase().includes('inventory')) {
+        sessionStorage.removeItem(key);
+        console.log(`🗑️ Session clear: ${key}`);
+      }
+    });
+
+    // Clear in-memory data
+    SAMPLE_PRODUCTS.length = 0;
+    SAMPLE_SALES_TRANSACTIONS.length = 0;
+    
+    // Reset settings to defaults (will be handled by settings service)
+    console.log("⚙️ Settings will be reset to defaults on reload");
+    
+    console.log("✅ Complete data wipe finished - system will be fresh on reload");
+  } catch (error) {
+    console.warn("⚠️ Error during complete data clear:", error);
+  }
+}
+
+function restoreMockData() {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.IS_RESET);
+
+    // Restore to defaults
+    SAMPLE_PRODUCTS.length = 0;
+    SAMPLE_PRODUCTS.push(...DEFAULT_SAMPLE_PRODUCTS);
+
+    SAMPLE_SALES_TRANSACTIONS.length = 0;
+    SAMPLE_SALES_TRANSACTIONS.push(...DEFAULT_SAMPLE_SALES_TRANSACTIONS);
+
+    saveMockData();
+    console.log("✅ Mock data restored to defaults");
+  } catch (error) {
+    console.warn("⚠️ Error restoring mock data:", error);
+  }
+}
+
+// Initialize data
+const initialData = loadMockData();
+let SAMPLE_PRODUCTS = [...initialData.products];
+const SAMPLE_CATEGORIES = [...initialData.categories];
+let SAMPLE_SALES_TRANSACTIONS = [...initialData.transactions];
+
+// Auto-save data when modified
+const originalPush = SAMPLE_PRODUCTS.push;
+SAMPLE_PRODUCTS.push = function (...items) {
+  const result = originalPush.apply(this, items);
+  saveMockData();
+  return result;
+};
+
+const originalSplice = SAMPLE_PRODUCTS.splice;
+SAMPLE_PRODUCTS.splice = function (...args) {
+  const result = originalSplice.apply(this, args);
+  saveMockData();
+  return result;
+};
 
 // Utility function to simulate API delay
 const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -336,7 +559,7 @@ export async function mockGetSalesTransactions(filters = {}) {
   return { data: transactions, error: null };
 }
 
-export async function mockGetSalesSummary(_period = "today") {
+export async function mockGetSalesSummary(_period) {
   await delay();
 
   // Mock sales summary based on sample data
@@ -673,33 +896,24 @@ export async function mockGetHourlySales(_date) {
 export async function mockGetTopSellingProducts(limit = 5) {
   await delay();
 
-  const topProducts = [
-    {
-      product: SAMPLE_PRODUCTS[0],
-      totalQuantity: 45,
-      totalRevenue: 236.25,
-    },
-    {
-      product: SAMPLE_PRODUCTS[3],
-      totalQuantity: 38,
-      totalRevenue: 119.7,
-    },
-    {
-      product: SAMPLE_PRODUCTS[5],
-      totalQuantity: 22,
-      totalRevenue: 138.6,
-    },
-    {
-      product: SAMPLE_PRODUCTS[1],
-      totalQuantity: 15,
-      totalRevenue: 112.5,
-    },
-    {
-      product: SAMPLE_PRODUCTS[4],
-      totalQuantity: 8,
-      totalRevenue: 180.0,
-    },
-  ].slice(0, limit);
+  // If no products available, return empty array
+  if (SAMPLE_PRODUCTS.length === 0) {
+    return { data: [], error: null };
+  }
+
+  // Create top products based on available products
+  const topProducts = [];
+  
+  // Safely get products if they exist
+  for (let i = 0; i < Math.min(limit, SAMPLE_PRODUCTS.length); i++) {
+    if (SAMPLE_PRODUCTS[i]) {
+      topProducts.push({
+        product: SAMPLE_PRODUCTS[i],
+        totalQuantity: Math.floor(Math.random() * 50) + 10, // Random quantity for demo
+        totalRevenue: (Math.floor(Math.random() * 50) + 10) * SAMPLE_PRODUCTS[i].selling_price,
+      });
+    }
+  }
 
   return { data: topProducts, error: null };
 }
@@ -733,7 +947,7 @@ export async function mockGetDashboardData() {
       salesData.reduce((sum, day) => sum + day.sales, 0) /
       salesData.reduce((sum, day) => sum + day.transactions, 0),
     salesTrend: salesData,
-    topProducts: SAMPLE_PRODUCTS.slice(0, 5),
+    topProducts: SAMPLE_PRODUCTS.slice(0, 5), // Only use available products
     lowStockAlerts: SAMPLE_PRODUCTS.filter(
       (p) => p.total_stock <= p.critical_level
     ),
@@ -1629,3 +1843,6 @@ isMockMode()
   .catch((error) => {
     console.warn("⚠️ Mock mode check failed:", error.message);
   });
+
+// Export reset functions for system reset
+export { clearMockData, restoreMockData };

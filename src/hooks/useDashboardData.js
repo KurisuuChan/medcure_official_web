@@ -149,11 +149,17 @@ export function useDashboardData() {
   }, [recentTransactions]);
 
   const bestSellers = useMemo(() => {
-    return topProducts.map((item) => ({
-      name: item.product.name,
-      quantity: item.totalQuantity,
-      revenue: item.totalRevenue,
-    }));
+    if (!topProducts || topProducts.length === 0) {
+      return [];
+    }
+    
+    return topProducts
+      .filter(item => item && item.product && item.product.name) // Safety filter
+      .map((item) => ({
+        name: item.product.name,
+        quantity: item.totalQuantity,
+        revenue: item.totalRevenue,
+      }));
   }, [topProducts]);
 
   const recentSales = useMemo(() => {

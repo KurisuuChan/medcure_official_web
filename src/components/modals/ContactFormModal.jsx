@@ -184,7 +184,6 @@ const ContactFormModal = ({
             >
               <option value="supplier">Supplier</option>
               <option value="employee">Employee</option>
-              <option value="customer">Customer</option>
             </select>
           </div>
 

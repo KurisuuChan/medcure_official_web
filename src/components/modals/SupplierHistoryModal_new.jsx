@@ -14,9 +14,77 @@ import {
 import { useSupplierHistory } from "../../hooks/useContacts";
 
 const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
-  const { history, summary, loading, error } = useSupplierHistory(supplierName);
+  const { history, loading, error } = useSupplierHistory(supplierName);
+
+  // Calculate summary from history data
+  const summary = React.useMemo(() => {
+    if (!history || !Array.isArray(history)) {
+      return {
+        totalProducts: 0,
+        totalValue: 0,
+        averageMonthlyValue: 0,
+        totalDeliveries: 0,
+      };
+    }
+
+    const totalProducts = history.length;
+    const totalValue = history.reduce(
+      (sum, item) => sum + (item.totalValue || 0),
+      0
+    );
+    const totalDeliveries = history.reduce(
+      (sum, item) => sum + (item.deliveries || 0),
+      0
+    );
+    const averageMonthlyValue =
+      totalProducts > 0 ? totalValue / Math.max(1, totalProducts) : 0;
+
+    return {
+      totalProducts,
+      totalValue,
+      averageMonthlyValue,
+      totalDeliveries,
+    };
+  }, [history]);
 
   if (!isOpen) return null;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading supplier history...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+          <div className="text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Error Loading Data
+            </h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-PH", {
@@ -170,87 +238,91 @@ const SupplierHistoryModal = ({ isOpen, onClose, supplierName }) => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {history.map((product, index) => {
-                        const stockStatus = getStockStatus(
-                          product.current_stock,
-                          product.min_stock || 10
-                        );
-                        return (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10">
-                                  <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                                    <Box size={20} className="text-white" />
+                      {history &&
+                      Array.isArray(history) &&
+                      history.length > 0 ? (
+                        history.map((product, index) => {
+                          const stockStatus = getStockStatus(
+                            product.current_stock,
+                            product.min_stock || 10
+                          );
+                          return (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                                      <Box size={20} className="text-white" />
+                                    </div>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {product.name}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {product.generic_name || "N/A"}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {product.name}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {product.generic_name || "N/A"}
-                                  </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {product.category}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <div className="flex items-center">
+                                  <span className="font-medium">
+                                    {product.current_stock}
+                                  </span>
+                                  <span className="text-gray-500 ml-1">
+                                    units
+                                  </span>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {product.category}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div className="flex items-center">
-                                <span className="font-medium">
-                                  {product.current_stock}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {formatCurrency(product.price)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div className="flex items-center">
+                                  <Clock size={16} className="mr-1" />
+                                  {formatDate(product.updated_at)}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stockStatus.bg} ${stockStatus.color}`}
+                                >
+                                  {stockStatus.status === "Critical" && (
+                                    <AlertTriangle size={12} className="mr-1" />
+                                  )}
+                                  {stockStatus.status === "Good" && (
+                                    <CheckCircle size={12} className="mr-1" />
+                                  )}
+                                  {stockStatus.status}
                                 </span>
-                                <span className="text-gray-500 ml-1">
-                                  units
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatCurrency(product.price)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center">
-                                <Clock size={16} className="mr-1" />
-                                {formatDate(product.updated_at)}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stockStatus.bg} ${stockStatus.color}`}
-                              >
-                                {stockStatus.status === "Critical" && (
-                                  <AlertTriangle size={12} className="mr-1" />
-                                )}
-                                {stockStatus.status === "Good" && (
-                                  <CheckCircle size={12} className="mr-1" />
-                                )}
-                                {stockStatus.status}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className="px-6 py-12 text-center">
+                            <Package
+                              size={48}
+                              className="mx-auto mb-4 text-gray-400"
+                            />
+                            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                              No products found
+                            </h3>
+                            <p className="text-gray-500">
+                              This supplier has not provided any products yet.
+                            </p>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
-
-                  {history.length === 0 && (
-                    <div className="text-center py-12">
-                      <Package
-                        size={48}
-                        className="mx-auto mb-4 text-gray-400"
-                      />
-                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                        No products found
-                      </h3>
-                      <p className="text-gray-500">
-                        This supplier has not provided any products yet.
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </>

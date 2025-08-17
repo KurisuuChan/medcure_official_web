@@ -11,9 +11,12 @@ import {
   ChevronRight,
   Menu,
   X,
+  UserCog,
 } from "lucide-react";
 import { useBranding } from "../../hooks/useBranding";
 import { handleImageSrc } from "../../utils/imageUtils";
+import { usePermission } from "../../hooks/usePermissions";
+import { PERMISSIONS } from "../../services/roleService";
 
 // Streamlined menu with primary functions only
 const menu = [
@@ -58,6 +61,15 @@ const menu = [
     badge: null,
   },
   {
+    to: "/user-management",
+    label: "User Management",
+    icon: UserCog,
+    color: "teal",
+    description: "Admin & Staff Accounts",
+    badge: null,
+    requiredPermission: PERMISSIONS.USER_READ,
+  },
+  {
     to: "/settings",
     label: "Settings",
     icon: Settings,
@@ -70,6 +82,14 @@ const menu = [
 export default function Sidebar() {
   const navigate = useNavigate();
   const { branding } = useBranding();
+  const canManageUsers = usePermission(PERMISSIONS.USER_READ);
+
+  // Filter menu items based on permissions
+  const filteredMenu = menu.filter((item) => {
+    if (!item.requiredPermission) return true;
+    return canManageUsers;
+  });
+
   const [expanded, setExpanded] = useState(() => {
     const stored = localStorage.getItem("mc-sidebar-expanded");
     return stored ? JSON.parse(stored) : true;
@@ -254,7 +274,7 @@ export default function Sidebar() {
               expanded || mobileMenuOpen ? "px-3" : "px-2"
             }`}
           >
-            {menu.map((item) => {
+            {filteredMenu.map((item) => {
               const IconComponent = item.icon;
               const colorClasses = {
                 blue: "text-blue-600 bg-blue-50/80 border-blue-100/50 hover:bg-blue-100/60 hover:border-blue-200",
@@ -270,6 +290,7 @@ export default function Sidebar() {
                   "text-green-600 bg-green-50/80 border-green-100/50 hover:bg-green-100/60 hover:border-green-200",
                 indigo:
                   "text-indigo-600 bg-indigo-50/80 border-indigo-100/50 hover:bg-indigo-100/60 hover:border-indigo-200",
+                teal: "text-teal-600 bg-teal-50/80 border-teal-100/50 hover:bg-teal-100/60 hover:border-teal-200",
                 slate:
                   "text-slate-600 bg-slate-50/80 border-slate-100/50 hover:bg-slate-100/60 hover:border-slate-200",
               };
