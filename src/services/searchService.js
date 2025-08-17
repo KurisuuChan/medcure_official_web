@@ -1,12 +1,12 @@
 /**
- * MedCure Search Service
- * Handles global search functionality across products, patients, transactions, etc.
+ * MedCure Global Search Service
+ * Handles comprehensive search functionality across products, patients, transactions, etc. with full backend integration
  */
 
-import { supabase } from "../lib/supabase";
-import { shouldUseMockAPI } from "../utils/backendStatus";
+import { supabase, TABLES } from "../lib/supabase.js";
+import { shouldUseMockAPI } from "./backendService.js";
 
-// Mock search data
+// Mock search data for fallback
 const mockSearchData = {
   products: [
     {
@@ -16,6 +16,9 @@ const mockSearchData = {
       category: "Pain Relief",
       barcode: "8901030825556",
       type: "product",
+      description: "Pain relief medication",
+      manufacturer: "Generic Pharma",
+      price: 15.50
     },
     {
       id: 2,
@@ -24,6 +27,9 @@ const mockSearchData = {
       category: "Antibiotics",
       barcode: "8901030825557",
       type: "product",
+      description: "Antibiotic medication",
+      manufacturer: "MedCorp",
+      price: 45.75
     },
     {
       id: 3,
@@ -32,23 +38,628 @@ const mockSearchData = {
       category: "Vitamins",
       barcode: "8901030825558",
       type: "product",
+      description: "Vitamin C supplement",
+      manufacturer: "HealthPlus",
+      price: 25.00
+    }
+  ],
+  transactions: [
+    {
+      id: 1,
+      transactionNumber: "TXN-001",
+      totalAmount: 125.50,
+      customerName: "Juan Dela Cruz",
+      createdAt: "2024-08-16T10:30:00Z",
+      type: "transaction",
+      status: "completed"
     },
     {
-      id: 4,
-      name: "Aspirin 81mg",
-      genericName: "Acetylsalicylic Acid",
-      category: "Cardiovascular",
-      barcode: "8901030825560",
-      type: "product",
-    },
+      id: 2,
+      transactionNumber: "TXN-002", 
+      totalAmount: 89.25,
+      customerName: "Maria Santos",
+      createdAt: "2024-08-16T11:15:00Z",
+      type: "transaction",
+      status: "completed"
+    }
   ],
-  patients: [
+  customers: [
     {
       id: 1,
       name: "Juan Dela Cruz",
       email: "juan@email.com",
       phone: "+63 912 345 6789",
-      type: "patient",
+      type: "customer",
+      totalPurchases: 1250.00,
+      lastPurchase: "2024-08-16T10:30:00Z"
+    },
+    {
+      id: 2,
+      name: "Maria Santos",
+      email: "maria@email.com", 
+      phone: "+63 912 345 6788",
+      type: "customer",
+      totalPurchases: 890.50,
+      lastPurchase: "2024-08-16T11:15:00Z"
+    }
+  ]
+};
+
+/**
+ * Perform global search across all entities
+ * @param {string} query - Search query
+ * @param {Object} options - Search options
+ * @param {Array} options.types - Entity types to search (products, transactions, customers)
+ * @param {number} options.limit - Maximum results per type
+ * @param {boolean} options.fuzzy - Enable fuzzy search
+ * @returns {Promise<Object>} Search results
+ */
+export async function globalSearch(query, options = {}) {
+  const {
+    types = ['products', 'transactions', 'customers'],
+    limit = 10,
+    fuzzy = true
+  } = options;
+
+  if (!query || query.trim().length < 2) {
+    return {
+      data: {
+        products: [],
+        transactions: [],
+        customers: [],
+        total: 0
+      },
+      error: null
+    };
+  }
+
+  if (await shouldUseMockAPI()) {
+    console.log('🔍 Using mock global search');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const searchTerm = query.toLowerCase().trim();
+    const results = {
+      products: [],
+      transactions: [],
+      customers: [],
+      total: 0
+    };
+
+    // Search products
+    if (types.includes('products')) {
+      results.products = mockSearchData.products.filter(item => 
+        item.name.toLowerCase().includes(searchTerm) ||
+        item.genericName.toLowerCase().includes(searchTerm) ||
+        item.category.toLowerCase().includes(searchTerm) ||
+        item.barcode.includes(searchTerm) ||
+        item.manufacturer.toLowerCase().includes(searchTerm)
+      ).slice(0, limit);
+    }
+
+    // Search transactions
+    if (types.includes('transactions')) {
+      results.transactions = mockSearchData.transactions.filter(item =>
+        item.transactionNumber.toLowerCase().includes(searchTerm) ||
+        item.customerName.toLowerCase().includes(searchTerm)
+      ).slice(0, limit);
+    }
+
+    // Search customers
+    if (types.includes('customers')) {
+      results.customers = mockSearchData.customers.filter(item =>
+        item.name.toLowerCase().includes(searchTerm) ||
+        item.email.toLowerCase().includes(searchTerm) ||
+        item.phone.includes(searchTerm)
+      ).slice(0, limit);
+    }
+
+    results.total = results.products.length + results.transactions.length + results.customers.length;
+
+    return {
+      data: results,
+      error: null
+    };
+  }
+
+  try {
+    console.log('🔍 Performing backend global search for:', query);
+    
+    const searchTerm = `%${query.toLowerCase()}%`;
+    const results = {
+      products: [],
+      transactions: [],
+      customers: [],
+      total: 0
+    };
+
+    // Search products
+    if (types.includes('products')) {
+      const { data: products, error: productsError } = await supabase
+        .from(TABLES.PRODUCTS)
+        .select(`
+          id,
+          name,
+          generic_name,
+          category,
+          barcode,
+          description,
+          manufacturer,
+          selling_price,
+          total_stock,
+          is_active
+        `)
+        .or(`name.ilike.${searchTerm},generic_name.ilike.${searchTerm},category.ilike.${searchTerm},barcode.ilike.${searchTerm},manufacturer.ilike.${searchTerm}`)
+        .eq('is_active', true)
+        .limit(limit);
+
+      if (productsError) {
+        console.error('Products search error:', productsError);
+      } else {
+        results.products = products.map(product => ({
+          ...product,
+          type: 'product',
+          price: product.selling_price
+        }));
+      }
+    }
+
+    // Search transactions
+    if (types.includes('transactions')) {
+      const { data: transactions, error: transactionsError } = await supabase
+        .from(TABLES.SALES_TRANSACTIONS)
+        .select(`
+          id,
+          transaction_number,
+          total_amount,
+          customer_name,
+          created_at,
+          status
+        `)
+        .or(`transaction_number.ilike.${searchTerm},customer_name.ilike.${searchTerm}`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (transactionsError) {
+        console.error('Transactions search error:', transactionsError);
+      } else {
+        results.transactions = transactions.map(transaction => ({
+          ...transaction,
+          type: 'transaction',
+          transactionNumber: transaction.transaction_number,
+          totalAmount: transaction.total_amount,
+          customerName: transaction.customer_name,
+          createdAt: transaction.created_at
+        }));
+      }
+    }
+
+    // Search customers (from transactions)
+    if (types.includes('customers')) {
+      const { data: customerTransactions, error: customersError } = await supabase
+        .from(TABLES.SALES_TRANSACTIONS)
+        .select(`
+          customer_name,
+          customer_email,
+          customer_phone,
+          total_amount,
+          created_at
+        `)
+        .not('customer_name', 'is', null)
+        .ilike('customer_name', searchTerm)
+        .order('created_at', { ascending: false })
+        .limit(limit * 2); // Get more to group by customer
+
+      if (customersError) {
+        console.error('Customers search error:', customersError);
+      } else {
+        // Group by customer and calculate totals
+        const customerMap = new Map();
+        
+        customerTransactions.forEach(transaction => {
+          const name = transaction.customer_name;
+          if (customerMap.has(name)) {
+            const existing = customerMap.get(name);
+            existing.totalPurchases += transaction.total_amount;
+            if (new Date(transaction.created_at) > new Date(existing.lastPurchase)) {
+              existing.lastPurchase = transaction.created_at;
+              existing.email = transaction.customer_email || existing.email;
+              existing.phone = transaction.customer_phone || existing.phone;
+            }
+          } else {
+            customerMap.set(name, {
+              id: `customer_${name.replace(/\s+/g, '_')}`,
+              name,
+              email: transaction.customer_email,
+              phone: transaction.customer_phone,
+              type: 'customer',
+              totalPurchases: transaction.total_amount,
+              lastPurchase: transaction.created_at
+            });
+          }
+        });
+
+        results.customers = Array.from(customerMap.values()).slice(0, limit);
+      }
+    }
+
+    results.total = results.products.length + results.transactions.length + results.customers.length;
+
+    return {
+      data: results,
+      error: null
+    };
+
+  } catch (error) {
+    console.error('❌ Global search error:', error);
+    return {
+      data: {
+        products: [],
+        transactions: [],
+        customers: [],
+        total: 0
+      },
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Search products specifically
+ * @param {string} query - Search query
+ * @param {Object} filters - Additional filters
+ * @returns {Promise<Object>} Product search results
+ */
+export async function searchProducts(query, filters = {}) {
+  const {
+    category,
+    inStock = true,
+    limit = 20
+  } = filters;
+
+  if (await shouldUseMockAPI()) {
+    console.log('🔍 Mock product search');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    let results = mockSearchData.products;
+    
+    if (query) {
+      const searchTerm = query.toLowerCase();
+      results = results.filter(product =>
+        product.name.toLowerCase().includes(searchTerm) ||
+        product.genericName.toLowerCase().includes(searchTerm) ||
+        product.barcode.includes(searchTerm)
+      );
+    }
+    
+    if (category) {
+      results = results.filter(product => product.category === category);
+    }
+    
+    return {
+      data: results.slice(0, limit),
+      error: null
+    };
+  }
+
+  try {
+    let query_builder = supabase
+      .from(TABLES.PRODUCTS)
+      .select(`
+        id,
+        name,
+        generic_name,
+        category,
+        barcode,
+        description,
+        manufacturer,
+        selling_price,
+        cost_price,
+        total_stock,
+        critical_level,
+        is_active
+      `)
+      .eq('is_active', true);
+
+    if (query) {
+      const searchTerm = `%${query.toLowerCase()}%`;
+      query_builder = query_builder.or(`name.ilike.${searchTerm},generic_name.ilike.${searchTerm},barcode.ilike.${searchTerm}`);
+    }
+
+    if (category) {
+      query_builder = query_builder.eq('category', category);
+    }
+
+    if (inStock) {
+      query_builder = query_builder.gt('total_stock', 0);
+    }
+
+    const { data, error } = await query_builder
+      .order('name')
+      .limit(limit);
+
+    if (error) {
+      return {
+        data: [],
+        error: error.message
+      };
+    }
+
+    return {
+      data: data.map(product => ({
+        ...product,
+        type: 'product',
+        price: product.selling_price
+      })),
+      error: null
+    };
+
+  } catch (error) {
+    console.error('❌ Product search error:', error);
+    return {
+      data: [],
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Search transactions
+ * @param {string} query - Search query
+ * @param {Object} filters - Additional filters
+ * @returns {Promise<Object>} Transaction search results
+ */
+export async function searchTransactions(query, filters = {}) {
+  const {
+    status,
+    dateFrom,
+    dateTo,
+    limit = 20
+  } = filters;
+
+  if (await shouldUseMockAPI()) {
+    console.log('🔍 Mock transaction search');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    let results = mockSearchData.transactions;
+    
+    if (query) {
+      const searchTerm = query.toLowerCase();
+      results = results.filter(transaction =>
+        transaction.transactionNumber.toLowerCase().includes(searchTerm) ||
+        transaction.customerName.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    if (status) {
+      results = results.filter(transaction => transaction.status === status);
+    }
+    
+    return {
+      data: results.slice(0, limit),
+      error: null
+    };
+  }
+
+  try {
+    let query_builder = supabase
+      .from(TABLES.SALES_TRANSACTIONS)
+      .select(`
+        id,
+        transaction_number,
+        total_amount,
+        customer_name,
+        customer_email,
+        customer_phone,
+        payment_method,
+        status,
+        created_at
+      `);
+
+    if (query) {
+      const searchTerm = `%${query.toLowerCase()}%`;
+      query_builder = query_builder.or(`transaction_number.ilike.${searchTerm},customer_name.ilike.${searchTerm}`);
+    }
+
+    if (status) {
+      query_builder = query_builder.eq('status', status);
+    }
+
+    if (dateFrom) {
+      query_builder = query_builder.gte('created_at', dateFrom);
+    }
+
+    if (dateTo) {
+      query_builder = query_builder.lte('created_at', dateTo);
+    }
+
+    const { data, error } = await query_builder
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      return {
+        data: [],
+        error: error.message
+      };
+    }
+
+    return {
+      data: data.map(transaction => ({
+        ...transaction,
+        type: 'transaction',
+        transactionNumber: transaction.transaction_number,
+        totalAmount: transaction.total_amount,
+        customerName: transaction.customer_name,
+        createdAt: transaction.created_at
+      })),
+      error: null
+    };
+
+  } catch (error) {
+    console.error('❌ Transaction search error:', error);
+    return {
+      data: [],
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Get search suggestions based on query
+ * @param {string} query - Search query
+ * @param {string} type - Suggestion type (products, customers, etc.)
+ * @returns {Promise<Object>} Search suggestions
+ */
+export async function getSearchSuggestions(query, type = 'all') {
+  if (!query || query.length < 2) {
+    return {
+      data: [],
+      error: null
+    };
+  }
+
+  if (await shouldUseMockAPI()) {
+    console.log('🔍 Mock search suggestions');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const suggestions = [];
+    const searchTerm = query.toLowerCase();
+    
+    if (type === 'all' || type === 'products') {
+      mockSearchData.products.forEach(product => {
+        if (product.name.toLowerCase().includes(searchTerm)) {
+          suggestions.push({
+            text: product.name,
+            type: 'product',
+            id: product.id
+          });
+        }
+      });
+    }
+    
+    return {
+      data: suggestions.slice(0, 8),
+      error: null
+    };
+  }
+
+  try {
+    const suggestions = [];
+    const searchTerm = `%${query.toLowerCase()}%`;
+
+    if (type === 'all' || type === 'products') {
+      const { data: products } = await supabase
+        .from(TABLES.PRODUCTS)
+        .select('id, name, generic_name')
+        .or(`name.ilike.${searchTerm},generic_name.ilike.${searchTerm}`)
+        .eq('is_active', true)
+        .limit(5);
+
+      if (products) {
+        products.forEach(product => {
+          suggestions.push({
+            text: product.name,
+            type: 'product',
+            id: product.id,
+            subtitle: product.generic_name
+          });
+        });
+      }
+    }
+
+    return {
+      data: suggestions,
+      error: null
+    };
+
+  } catch (error) {
+    console.error('❌ Search suggestions error:', error);
+    return {
+      data: [],
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Search by barcode
+ * @param {string} barcode - Product barcode
+ * @returns {Promise<Object>} Barcode search result
+ */
+export async function searchByBarcode(barcode) {
+  if (!barcode) {
+    return {
+      data: null,
+      error: "Barcode is required"
+    };
+  }
+
+  if (await shouldUseMockAPI()) {
+    console.log('🔍 Mock barcode search');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    const product = mockSearchData.products.find(p => p.barcode === barcode);
+    
+    return {
+      data: product || null,
+      error: product ? null : "Product not found"
+    };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(TABLES.PRODUCTS)
+      .select(`
+        id,
+        name,
+        generic_name,
+        category,
+        barcode,
+        description,
+        manufacturer,
+        selling_price,
+        cost_price,
+        total_stock,
+        critical_level,
+        is_active
+      `)
+      .eq('barcode', barcode)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      return {
+        data: null,
+        error: error.message
+      };
+    }
+
+    return {
+      data: {
+        ...data,
+        type: 'product',
+        price: data.selling_price
+      },
+      error: null
+    };
+
+  } catch (error) {
+    console.error('❌ Barcode search error:', error);
+    return {
+      data: null,
+      error: error.message
+    };
+  }
+}
+
+// Export all functions
+export default {
+  globalSearch,
+  searchProducts,
+  searchTransactions,
+  getSearchSuggestions,
+  searchByBarcode
+};
     },
     {
       id: 2,
