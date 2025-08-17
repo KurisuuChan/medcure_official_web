@@ -1,6 +1,17 @@
 import React, { useState } from "react";
-import { FileText, Package, AlertTriangle, Loader2, Download, Eye, BarChart3 } from "lucide-react";
-import { getInventoryReport, getLowStockReport } from "../services/reportService";
+import {
+  FileText,
+  Package,
+  AlertTriangle,
+  Loader2,
+  Download,
+  Eye,
+  BarChart3,
+} from "lucide-react";
+import {
+  getInventoryReport,
+  getLowStockReport,
+} from "../services/reportService";
 import { useNotification } from "../hooks/useNotification";
 
 export default function Reports() {
@@ -24,7 +35,10 @@ export default function Reports() {
       showNotification("Inventory report generated successfully", "success");
     } catch (error) {
       console.error("Inventory report error:", error);
-      showNotification(`Failed to generate inventory report: ${error.message}`, "error");
+      showNotification(
+        `Failed to generate inventory report: ${error.message}`,
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -46,7 +60,10 @@ export default function Reports() {
       showNotification("Low stock report generated successfully", "success");
     } catch (error) {
       console.error("Low stock report error:", error);
-      showNotification(`Failed to generate low stock report: ${error.message}`, "error");
+      showNotification(
+        `Failed to generate low stock report: ${error.message}`,
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -58,18 +75,23 @@ export default function Reports() {
       return;
     }
 
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      Object.keys(reportData.data[0] || {}).join(",") + "\n" +
-      reportData.data.map(row => Object.values(row).join(",")).join("\n");
-    
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      Object.keys(reportData.data[0] || {}).join(",") +
+      "\n" +
+      reportData.data.map((row) => Object.values(row).join(",")).join("\n");
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${reportData.type}_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `${reportData.type}_report_${new Date().toISOString().split("T")[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     showNotification("Report exported to CSV", "success");
   };
 
@@ -77,7 +99,9 @@ export default function Reports() {
     <div className="space-y-6 p-6">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-gray-800">Business Reports</h1>
-        <p className="text-gray-600">Generate comprehensive reports from your pharmacy operations data.</p>
+        <p className="text-gray-600">
+          Generate comprehensive reports from your pharmacy operations data.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -87,8 +111,12 @@ export default function Reports() {
               <Package className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-800">Inventory Report</h3>
-              <p className="text-gray-600 text-sm">Current stock levels and product overview</p>
+              <h3 className="text-xl font-bold text-gray-800">
+                Inventory Report
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Current stock levels and product overview
+              </p>
             </div>
           </div>
           <button
@@ -116,8 +144,12 @@ export default function Reports() {
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-800">Low Stock Alert</h3>
-              <p className="text-gray-600 text-sm">Products below critical levels</p>
+              <h3 className="text-xl font-bold text-gray-800">
+                Low Stock Alert
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Products below critical levels
+              </p>
             </div>
           </div>
           <button
@@ -144,8 +176,12 @@ export default function Reports() {
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">{reportData.title}</h2>
-              <p className="text-gray-600">Generated on {reportData.generatedAt.toLocaleDateString()}</p>
+              <h2 className="text-2xl font-bold text-gray-800">
+                {reportData.title}
+              </h2>
+              <p className="text-gray-600">
+                Generated on {reportData.generatedAt.toLocaleDateString()}
+              </p>
             </div>
             <div className="flex gap-3">
               <button
@@ -172,21 +208,29 @@ export default function Reports() {
                   <thead>
                     <tr className="border-b border-gray-200">
                       {Object.keys(reportData.data[0]).map((key) => (
-                        <th key={key} className="text-left py-2 px-3 font-semibold text-gray-700 capitalize">
-                          {key.replace(/_/g, ' ')}
+                        <th
+                          key={key}
+                          className="text-left py-2 px-3 font-semibold text-gray-700 capitalize"
+                        >
+                          {key.replace(/_/g, " ")}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {reportData.data.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-white/50">
+                      <tr
+                        key={index}
+                        className="border-b border-gray-100 hover:bg-white/50"
+                      >
                         {Object.values(row).map((value, valueIndex) => (
-                          <td key={valueIndex} className="py-2 px-3 text-gray-600">
-                            {typeof value === 'number' && value > 1000 
-                              ? value.toLocaleString() 
-                              : String(value)
-                            }
+                          <td
+                            key={valueIndex}
+                            className="py-2 px-3 text-gray-600"
+                          >
+                            {typeof value === "number" && value > 1000
+                              ? value.toLocaleString()
+                              : String(value)}
                           </td>
                         ))}
                       </tr>
@@ -195,7 +239,8 @@ export default function Reports() {
                 </table>
                 {reportData.data.length > 50 && (
                   <p className="text-center text-gray-500 mt-4">
-                    Showing first 50 of {reportData.data.length} records. Export for complete data.
+                    Showing first 50 of {reportData.data.length} records. Export
+                    for complete data.
                   </p>
                 )}
               </div>

@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { Eye, EyeOff, Shield, Pill, User, Lock, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Shield,
+  Pill,
+  User,
+  Lock,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
 import { useNotification } from "../hooks/useNotification";
 
 export default function Login({ onLogin }) {
@@ -13,9 +22,9 @@ export default function Login({ onLogin }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -27,23 +36,26 @@ export default function Login({ onLogin }) {
       // Simulate authentication
       if (formData.email && formData.password) {
         // Mock authentication - replace with real authentication
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
         const user = {
           name: "Dr. Sarah Wilson",
           role: "Pharmacy Manager",
           initials: "SW",
           email: formData.email,
-          avatar: null
+          avatar: null,
         };
-        
+
         showNotification("Login successful! Welcome to MedCure.", "success");
         onLogin(user);
       } else {
         throw new Error("Please fill in all fields");
       }
     } catch (error) {
-      showNotification(error.message || "Login failed. Please try again.", "error");
+      showNotification(
+        error.message || "Login failed. Please try again.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -52,7 +64,7 @@ export default function Login({ onLogin }) {
   const demoLogin = () => {
     setFormData({
       email: "admin@medcure.com",
-      password: "demo123"
+      password: "demo123",
     });
   };
 
@@ -82,7 +94,10 @@ export default function Login({ onLogin }) {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <label
+                htmlFor="email"
+                className="text-sm font-semibold text-gray-700 flex items-center gap-2"
+              >
                 <User className="w-4 h-4" />
                 Email Address
               </label>
@@ -102,7 +117,10 @@ export default function Login({ onLogin }) {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <label
+                htmlFor="password"
+                className="text-sm font-semibold text-gray-700 flex items-center gap-2"
+              >
                 <Lock className="w-4 h-4" />
                 Password
               </label>
@@ -122,7 +140,11 @@ export default function Login({ onLogin }) {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -170,7 +192,9 @@ export default function Login({ onLogin }) {
         <div className="mt-6 text-center">
           <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-white/50 shadow-sm">
             <Shield className="w-4 h-4 text-green-500" />
-            <span className="text-sm text-gray-600 font-medium">256-bit SSL Encrypted</span>
+            <span className="text-sm text-gray-600 font-medium">
+              256-bit SSL Encrypted
+            </span>
           </div>
         </div>
       </div>
