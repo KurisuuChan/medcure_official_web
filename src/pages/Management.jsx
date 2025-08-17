@@ -38,7 +38,7 @@ import {
 import { useNotification } from "../hooks/useNotification.js";
 
 export default function Management() {
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
