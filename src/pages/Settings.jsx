@@ -1686,6 +1686,37 @@ export default function Settings() {
                 </div>
               </div>
 
+              {/* System Reset Section */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                  <AlertTriangle size={20} />
+                  System Reset
+                </h3>
+                <p className="text-red-700 mb-4 text-sm">
+                  Reset your system to a fresh state. This is useful for development, 
+                  testing, or when you need to start over with clean data.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => window.open('/system-reset', '_blank')}
+                    className="flex items-center gap-2 p-4 bg-white border border-red-300 rounded-lg hover:bg-red-50 text-left w-full transition-colors"
+                  >
+                    <RefreshCw size={20} className="text-red-500" />
+                    <div>
+                      <p className="font-medium text-red-800">
+                        Open System Reset Tool
+                      </p>
+                      <p className="text-sm text-red-600">
+                        Access comprehensive reset options and tools
+                      </p>
+                    </div>
+                  </button>
+                  <div className="text-xs text-red-600 bg-red-100 p-3 rounded">
+                    <strong>Console Commands Available:</strong> Type <code>MedCureReset.help()</code> in browser console for quick reset commands.
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={() => handleSave("backup")}
                 disabled={isSaving || isLoading}

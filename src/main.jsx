@@ -16,6 +16,9 @@ console.log(
 );
 console.log("🔧 All environment variables:", import.meta.env);
 
+// Load console reset commands (for development)
+import "./utils/consoleReset.js";
+
 // Create a client
 const queryClient = new QueryClient();
 

@@ -33,7 +33,7 @@ export const NotificationProvider = ({ children }) => {
   return (
     <NotificationContext.Provider value={contextValue}>
       {children}
-      <div className="fixed inset-0 pointer-events-none flex flex-col items-end gap-2 p-4 z-[9999]">
+      <div className="fixed bottom-0 right-0 pointer-events-none flex flex-col-reverse items-end gap-2 p-4 z-[9999]">
         {notifications.map((n) => (
           <Toast
             key={n.id}
