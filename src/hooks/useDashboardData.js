@@ -1,115 +1,125 @@
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { subHours, format } from "date-fns";
+import {
+  getSalesSummary,
+  getSalesByCategory,
+  getSalesByHour,
+} from "../services/salesService.js";
+import { getLowStockProducts } from "../services/productService.js";
 
-// Mock dashboard data. Replace with real API or Supabase queries later.
+/**
+ * Hook for fetching all dashboard data
+ * Combines multiple data sources for the dashboard view
+ */
 export function useDashboardData() {
-  // Compute sales by hour based on current time when hook first runs
-  const salesByHourData = useMemo(() => {
-    const now = new Date();
-    return Array.from({ length: 12 }).map((_, idx) => {
-      const date = subHours(now, 11 - idx);
-      return {
-        hour: format(date, "HH:00"),
-        sales: Math.round(Math.random() * 1200 + 100),
-      };
-    });
-  }, []);
+  // Get today's date for hourly sales
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  const salesByCategory = useMemo(
-    () => [
-      { category: "Antibiotics", value: 4200 },
-      { category: "Vitamins", value: 3100 },
-      { category: "Pain Relief", value: 2800 },
-      { category: "OTC", value: 1900 },
-    ],
-    []
-  );
+  return useQuery({
+    queryKey: ["dashboard", today],
+    queryFn: async () => {
+      try {
+        // Fetch all dashboard data in parallel
+        const [
+          todaySummary,
+          weekSummary,
+          monthSummary,
+          salesByCategory,
+          lowStockProducts,
+          salesByHour,
+        ] = await Promise.all([
+          getSalesSummary("today"),
+          getSalesSummary("week"),
+          getSalesSummary("month"),
+          getSalesByCategory(),
+          getLowStockProducts(10),
+          getSalesByHour(today),
+        ]);
 
-  const bestSellers = useMemo(
-    () => [
-      { name: "Amoxicillin 500mg", quantity: 134 },
-      { name: "Vitamin C 1000mg", quantity: 118 },
-      { name: "Paracetamol 500mg", quantity: 102 },
-      { name: "Ibuprofen 200mg", quantity: 87 },
-    ],
-    []
-  );
+        // Calculate additional metrics
+        const criticalStockItems = lowStockProducts.filter((p) => p.stock <= 5);
+        const expiringSoon = []; // TODO: Add expiration date logic when product schema is updated
 
-  const expiringSoon = useMemo(
-    () => [
-      { name: "Cough Syrup 60ml", days: 18 },
-      { name: "Antacid Tabs", days: 25 },
-      { name: "Vitamin D3", days: 33 },
-    ],
-    []
-  );
+        // Format data for dashboard cards with safe fallbacks
+        const summaryCards = [
+          {
+            title: "Today's Revenue",
+            value: "₱" + (todaySummary?.totalRevenue || 0).toLocaleString(),
+            iconBg: "bg-emerald-50 text-emerald-600",
+          },
+          {
+            title: "Today's Sales",
+            value: todaySummary?.totalTransactions || 0,
+            iconBg: "bg-blue-50 text-blue-600",
+          },
+          {
+            title: "Low Stock",
+            value: lowStockProducts?.length || 0,
+            iconBg: "bg-amber-50 text-amber-600",
+          },
+          {
+            title: "Critical Stock",
+            value: criticalStockItems?.length || 0,
+            iconBg: "bg-red-50 text-red-600",
+          },
+          {
+            title: "Week Revenue",
+            value: "₱" + (weekSummary?.totalRevenue || 0).toLocaleString(),
+            iconBg: "bg-indigo-50 text-indigo-600",
+          },
+          {
+            title: "Avg Transaction",
+            value: "₱" + (todaySummary?.averageTransaction || 0).toFixed(2),
+            iconBg: "bg-fuchsia-50 text-fuchsia-600",
+          },
+        ];
 
-  const lowStockItems = useMemo(
-    () => [
-      { name: "Bandage Roll", quantity: 6 },
-      { name: "Zinc Supplement", quantity: 4 },
-      { name: "Allergy Relief", quantity: 2 },
-    ],
-    []
-  );
-
-  const recentSales = useMemo(
-    () => [
-      { id: 1, product: "Vitamin C 1000mg", qty: 3, price: 399, time: "Just now" },
-      { id: 2, product: "Paracetamol 500mg", qty: 2, price: 120, time: "5m ago" },
-      { id: 3, product: "Amoxicillin 500mg", qty: 1, price: 560, time: "12m ago" },
-      { id: 4, product: "Ibuprofen 200mg", qty: 4, price: 320, time: "25m ago" },
-    ],
-    []
-  );
-
-  const summaryCards = useMemo(
-    () => [
-      {
-        title: "Total Products",
-        value: 148,
-        iconBg: "bg-blue-50 text-blue-600",
-      },
-      {
-        title: "Low Stock",
-        value: lowStockItems.length,
-        iconBg: "bg-amber-50 text-amber-600",
-      },
-      {
-        title: "Expiring Soon",
-        value: expiringSoon.length,
-        iconBg: "bg-red-50 text-red-600",
-      },
-      {
-        title: "Today Sales",
-        value: "₱" + salesByHourData.reduce((a, b) => a + b.sales, 0).toLocaleString(),
-        iconBg: "bg-emerald-50 text-emerald-600",
-      },
-      {
-        title: "Avg / Hour",
-        value: "₱" + Math.round(salesByHourData.reduce((a, b) => a + b.sales, 0) / salesByHourData.length).toLocaleString(),
-        iconBg: "bg-indigo-50 text-indigo-600",
-      },
-      {
-        title: "Best Seller Qty",
-        value: bestSellers[0].quantity,
-        iconBg: "bg-fuchsia-50 text-fuchsia-600",
-      },
-    ],
-    [lowStockItems.length, expiringSoon.length, salesByHourData, bestSellers]
-  );
-
-  return {
-    loading: false,
-    error: null,
-    summaryCards,
-    salesByHourData,
-    salesByCategory,
-    bestSellers,
-    expiringSoon,
-    lowStockItems,
-    recentSales,
-  };
+        return {
+          loading: false,
+          error: null,
+          summaryCards,
+          salesByHourData: salesByHour || [],
+          salesByCategory: salesByCategory || [],
+          bestSellers: [], // TODO: Calculate from sales data
+          expiringSoon: expiringSoon || [],
+          lowStockItems: lowStockProducts || [],
+          recentSales: [], // TODO: Get recent sales from sales service
+          sales: {
+            today: todaySummary || {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+            week: weekSummary || {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+            month: monthSummary || {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+          },
+          inventory: {
+            lowStockCount: lowStockProducts?.length || 0,
+            criticalStockCount: criticalStockItems?.length || 0,
+            lowStockProducts: lowStockProducts || [],
+            criticalStockItems: criticalStockItems || [],
+          },
+          analytics: {
+            salesByCategory: salesByCategory || [],
+            salesByHour: salesByHour || [],
+          },
+        };
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        throw new Error("Failed to load dashboard data");
+      }
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+  });
 }
 
 export default useDashboardData;

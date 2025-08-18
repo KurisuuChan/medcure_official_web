@@ -17,6 +17,14 @@ import {
   Settings,
 } from "lucide-react";
 
+// Import real backend hooks
+import { useProducts, useSearchProducts } from "../hooks/useProducts.js";
+import { useCreateSale } from "../hooks/useSales.js";
+import QuantitySelectionModal from "../components/modals/QuantitySelectionModal.jsx";
+import PaymentModal from "../components/modals/PaymentModal.jsx";
+import TransactionHistoryModal from "../components/modals/TransactionHistoryModal.jsx";
+import { formatCurrency } from "../utils/formatters.js";
+
 export default function POS() {
   const { addNotification } = useNotification();
   const [cart, setCart] = useState([]);
@@ -25,140 +33,36 @@ export default function POS() {
   const [discount, setDiscount] = useState(0);
   const [isPwdSenior, setIsPwdSenior] = useState(false);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Real backend hooks
+  const {
+    data: allProducts = [],
+    isLoading: productsLoading,
+    error: productsError,
+  } = useProducts();
+  const { data: searchResults = [] } = useSearchProducts(searchTerm);
+  const createSale = useCreateSale();
+
+  // Use search results if searching, otherwise use all products
+  const displayProducts = searchTerm.length >= 2 ? searchResults : allProducts;
+
+  // Add missing quantity state for modal
   const [quantityMode, setQuantityMode] = useState({
     boxes: 0,
     sheets: 0,
     pieces: 0,
   });
 
-  // Mock product data
-  const products = [
-    {
-      id: 1,
-      name: "Paracetamol 500mg",
-      price: 15.5,
-      stock: 150,
-      category: "Pain Relief",
-      barcode: "8901030825556",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 10,
-        sheetsPerBox: 10,
-        totalPieces: 100,
-      },
-    },
-    {
-      id: 2,
-      name: "Amoxicillin 500mg",
-      price: 25.0,
-      stock: 80,
-      category: "Antibiotics",
-      barcode: "8901030825557",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 8,
-        sheetsPerBox: 5,
-        totalPieces: 40,
-      },
-    },
-    {
-      id: 3,
-      name: "Vitamin C 1000mg",
-      price: 180.0,
-      stock: 45,
-      category: "Supplements",
-      barcode: "8901030825558",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 12,
-        sheetsPerBox: 6,
-        totalPieces: 72,
-      },
-    },
-    {
-      id: 4,
-      name: "Cough Syrup 100ml",
-      price: 120.0,
-      stock: 25,
-      category: "Cough & Cold",
-      barcode: "8901030825559",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 1,
-        sheetsPerBox: 12,
-        totalPieces: 12,
-      },
-    },
-    {
-      id: 5,
-      name: "Aspirin 81mg",
-      price: 8.75,
-      stock: 200,
-      category: "Pain Relief",
-      barcode: "8901030825560",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 20,
-        sheetsPerBox: 5,
-        totalPieces: 100,
-      },
-    },
-    {
-      id: 6,
-      name: "Multivitamins",
-      price: 350.0,
-      stock: 60,
-      category: "Supplements",
-      barcode: "8901030825561",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 15,
-        sheetsPerBox: 4,
-        totalPieces: 60,
-      },
-    },
-    {
-      id: 7,
-      name: "Bandages (Pack of 10)",
-      price: 45.0,
-      stock: 100,
-      category: "First Aid",
-      barcode: "8901030825562",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 10,
-        sheetsPerBox: 1,
-        totalPieces: 10,
-      },
-    },
-    {
-      id: 8,
-      name: "Thermometer Digital",
-      price: 250.0,
-      stock: 15,
-      category: "Medical Devices",
-      barcode: "8901030825563",
-      image: "/api/placeholder/80/80",
-      packaging: {
-        piecesPerSheet: 1,
-        sheetsPerBox: 1,
-        totalPieces: 1,
-      },
-    },
-  ];
-
+  // Dynamic categories based on actual products
   const categories = [
     "all",
-    "Pain Relief",
-    "Antibiotics",
-    "Supplements",
-    "Cough & Cold",
-    "First Aid",
-    "Medical Devices",
+    ...new Set(allProducts.map((product) => product.category).filter(Boolean)),
   ];
 
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = displayProducts.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -188,8 +92,15 @@ export default function POS() {
   };
 
   const calculateTotalPieces = (boxes, sheets, pieces, packaging) => {
-    const piecesFromBoxes = boxes * packaging.totalPieces;
-    const piecesFromSheets = sheets * packaging.piecesPerSheet;
+    // Provide default packaging values if not available
+    const defaultPackaging = {
+      totalPieces: 1,
+      piecesPerSheet: 1,
+      ...packaging,
+    };
+
+    const piecesFromBoxes = boxes * defaultPackaging.totalPieces;
+    const piecesFromSheets = sheets * defaultPackaging.piecesPerSheet;
     return piecesFromBoxes + piecesFromSheets + pieces;
   };
 
@@ -200,41 +111,45 @@ export default function POS() {
       quantityMode.boxes,
       quantityMode.sheets,
       quantityMode.pieces,
-      selectedProduct.packaging
+      selectedProduct.packaging || { piecesPerSheet: 1, totalPieces: 1 }
     );
 
-    if (totalPieces === 0) {
-      addNotification("Please specify quantity", "warning");
-      return;
-    }
+    if (totalPieces <= 0) return;
 
-    if (totalPieces > selectedProduct.stock) {
-      addNotification("Insufficient stock", "error");
-      return;
-    }
+    // Check if product already exists in cart
+    const existingItemIndex = cart.findIndex(
+      (item) => item.id === selectedProduct.id
+    );
 
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === selectedProduct.id);
-      if (existing) {
-        const newQuantity = Math.min(
-          existing.quantity + totalPieces,
-          selectedProduct.stock
-        );
-        return prev.map((item) =>
-          item.id === selectedProduct.id
-            ? { ...item, quantity: newQuantity }
+    if (existingItemIndex >= 0) {
+      // Update existing item quantity
+      setCart((prev) =>
+        prev.map((item, index) =>
+          index === existingItemIndex
+            ? { ...item, quantity: item.quantity + totalPieces }
             : item
-        );
-      }
-      return [...prev, { ...selectedProduct, quantity: totalPieces }];
-    });
+        )
+      );
+    } else {
+      // Add new item to cart
+      const cartItem = {
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        price: selectedProduct.price || selectedProduct.selling_price || 0,
+        quantity: totalPieces,
+        stock: selectedProduct.stock || selectedProduct.total_stock || 0,
+        variant_info: {
+          boxes: quantityMode.boxes,
+          sheets: quantityMode.sheets,
+          pieces: quantityMode.pieces,
+          totalPieces,
+        },
+      };
+      setCart((prev) => [...prev, cartItem]);
+    }
 
-    addNotification(`Added ${totalPieces} pieces to cart`, "success");
+    addNotification(`Added ${selectedProduct.name} to cart`, "success");
     closeQuantityModal();
-  };
-
-  const addToCart = (product) => {
-    openQuantityModal(product);
   };
 
   const updateQuantity = (id, newQuantity) => {
@@ -256,7 +171,7 @@ export default function POS() {
   };
 
   const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
     0
   );
   const pwdSeniorDiscount = isPwdSenior ? subtotal * 0.2 : 0;
@@ -265,20 +180,47 @@ export default function POS() {
   const total = subtotal - totalDiscount;
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) {
       addNotification("Cart is empty", "error");
       return;
     }
 
-    // Simulate sale completion
-    const transactionId = Math.floor(Math.random() * 10000);
-    addNotification(`Sale completed! Transaction #${transactionId}`, "success");
+    // Open payment modal instead of directly processing sale
+    setShowPaymentModal(true);
+  };
 
-    // Clear cart and reset form
-    setCart([]);
-    setDiscount(0);
-    setIsPwdSenior(false);
+  const handlePaymentConfirm = async (paymentData) => {
+    try {
+      // Prepare sale data for backend
+      const saleData = {
+        items: cart.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          unit_price: item.price,
+          subtotal: item.price * item.quantity,
+          variant_info: item.variant_info || null, // Include packaging details if available
+        })),
+        total: total, // Changed from total_amount to total
+        payment_method: paymentData.paymentMethod || "cash",
+        amount_paid: paymentData.amountPaid || total,
+        change_amount: paymentData.changeAmount || 0,
+      };
+
+      // Create sale using backend
+      const result = await createSale.mutateAsync(saleData);
+
+      addNotification(`Sale completed! Transaction #${result.id}`, "success");
+
+      // Clear cart and reset form
+      setCart([]);
+      setDiscount(0);
+      setIsPwdSenior(false);
+      setShowPaymentModal(false);
+    } catch (error) {
+      console.error("Sale creation failed:", error);
+      addNotification("Failed to complete sale. Please try again.", "error");
+    }
   };
 
   const getStockStatus = (stock) => {
@@ -298,14 +240,19 @@ export default function POS() {
             <ShoppingCart size={32} className="text-blue-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Point of Sale</h1>
+            <h1 className="text-3xl font-bold text-gray-800">
+              Admin Point of Sale
+            </h1>
             <p className="text-gray-500 mt-1">
-              Process sales and manage transactions
+              Process sales and manage transactions - Admin Interface
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={() => setShowTransactionHistory(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <Clock size={16} />
             Transaction History
           </button>
@@ -324,7 +271,7 @@ export default function POS() {
               />
               <input
                 type="text"
-                placeholder="Search products by name or barcode..."
+                placeholder="Search products by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -343,74 +290,96 @@ export default function POS() {
             </select>
           </div>
 
+          {/* Loading and Error States */}
+          {productsLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">Loading products...</div>
+            </div>
+          )}
+
+          {productsError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+              Error loading products: {productsError.message}
+            </div>
+          )}
+
           {/* Product Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-            {filteredProducts.map((product) => {
-              const stockStatus = getStockStatus(product.stock);
-              const inCart = cart.find((item) => item.id === product.id);
+          {!productsLoading && !productsError && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+              {filteredProducts.map((product) => {
+                const stockValue = product.stock || product.total_stock || 0;
+                const stockStatus = getStockStatus(stockValue);
+                const inCart = cart.find((item) => item.id === product.id);
 
-              return (
-                <div
-                  key={product.id}
-                  className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Package size={24} className="text-gray-400" />
-                    </div>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${stockStatus.bg} ${stockStatus.color}`}
-                    >
-                      {stockStatus.text}
-                    </span>
-                  </div>
-
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    {product.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-2">
-                    Stock: {product.stock} pieces
-                  </p>
-
-                  {/* Packaging Info */}
-                  <div className="text-xs text-gray-400 mb-3 space-y-1">
-                    <p>📦 {product.packaging.totalPieces} pcs/box</p>
-                    <p>📄 {product.packaging.piecesPerSheet} pcs/sheet</p>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-lg font-bold text-blue-600">
-                      ₱{product.price.toFixed(2)}
-                    </span>
-                    {inCart && (
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {inCart.quantity} in cart
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Action Button */}
-                  <button
-                    onClick={() => addToCart(product)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+                return (
+                  <div
+                    key={product.id}
+                    className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
                   >
-                    <Settings size={16} />
-                    Select Quantity
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <Package size={24} className="text-gray-400" />
+                      </div>
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${stockStatus.bg} ${stockStatus.color}`}
+                      >
+                        {stockStatus.text}
+                      </span>
+                    </div>
 
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-8">
-              <Package size={48} className="mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                No products found
-              </h3>
-              <p className="text-gray-500">
-                Try adjusting your search or category filter
-              </p>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Stock: {stockValue} pieces
+                    </p>
+
+                    {/* Packaging Info */}
+                    {product.packaging && (
+                      <div className="text-xs text-gray-400 mb-3 space-y-1">
+                        <p>📦 {product.packaging.totalPieces || 1} pcs/box</p>
+                        <p>
+                          📄 {product.packaging.piecesPerSheet || 1} pcs/sheet
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-lg font-bold text-blue-600">
+                        {formatCurrency(
+                          product.price || product.selling_price || 0
+                        )}
+                      </span>
+                      {inCart && (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {inCart.quantity} in cart
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => openQuantityModal(product)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+                    >
+                      <Settings size={16} />
+                      Select Quantity
+                    </button>
+                  </div>
+                );
+              })}
+
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-8">
+                  <Package size={48} className="mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                    No products found
+                  </h3>
+                  <p className="text-gray-500">
+                    Try adjusting your search or category filter
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -440,7 +409,7 @@ export default function POS() {
                         {item.name}
                       </h4>
                       <p className="text-sm text-gray-500">
-                        ₱{item.price.toFixed(2)} each
+                        ₱{(item.price || 0).toFixed(2)} each
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -518,8 +487,13 @@ export default function POS() {
                     </p>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label
+                  className="relative inline-flex items-center cursor-pointer"
+                  htmlFor="pwd-senior-toggle"
+                >
+                  <span className="sr-only">PWD/Senior Citizen Discount</span>
                   <input
+                    id="pwd-senior-toggle"
                     type="checkbox"
                     checked={isPwdSenior}
                     onChange={(e) => setIsPwdSenior(e.target.checked)}
@@ -566,7 +540,7 @@ export default function POS() {
               )}
               <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
                 <span>Total:</span>
-                <span className="text-blue-600">₱{total.toFixed(2)}</span>
+                <span className="text-blue-600">{formatCurrency(total)}</span>
               </div>
             </div>
           </div>
@@ -582,14 +556,16 @@ export default function POS() {
             }`}
           >
             <CheckCircle size={20} />
-            Complete Sale - ₱{total.toFixed(2)}
+            Complete Sale - {formatCurrency(total)}
           </button>
 
           {cart.length > 0 && (
-            <button className="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-              <Receipt size={18} />
-              Print Receipt
-            </button>
+            <div className="space-y-2">
+              <button className="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                <Receipt size={18} />
+                Print Receipt
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -890,6 +866,120 @@ export default function POS() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Quantity Selection Modal */}
+      {showQuantityModal && selectedProduct && (
+        <QuantitySelectionModal
+          product={selectedProduct}
+          isOpen={showQuantityModal}
+          onClose={closeQuantityModal}
+          onAddToCart={(product, quantityInfo) => {
+            // Add to cart using the calculated total pieces
+            if (!product?.id) {
+              console.error("Invalid product:", product);
+              addNotification("Error adding item to cart", "error");
+              return false;
+            }
+
+            if (!quantityInfo) {
+              console.error("Invalid quantity info:", quantityInfo);
+              addNotification("Error: No quantity specified", "error");
+              return false;
+            }
+
+            // Calculate total pieces from quantity info
+            const totalPieces =
+              (quantityInfo.boxes || 0) *
+                (product.total_pieces_per_box ||
+                  product.pieces_per_sheet * product.sheets_per_box ||
+                  1) +
+              (quantityInfo.sheets || 0) * (product.pieces_per_sheet || 1) +
+              (quantityInfo.pieces || 0);
+
+            const variantInfo = {
+              boxes: quantityInfo.boxes || 0,
+              sheets: quantityInfo.sheets || 0,
+              pieces: quantityInfo.pieces || 0,
+              totalPieces,
+            };
+
+            setCart((prev) => {
+              const existing = prev.find((item) => item.id === product.id);
+              if (existing) {
+                const newQuantity = Math.min(
+                  existing.quantity + totalPieces,
+                  product.stock || product.total_stock || 0
+                );
+                return prev.map((item) =>
+                  item.id === product.id
+                    ? {
+                        ...item,
+                        quantity: newQuantity,
+                        variant_info: variantInfo,
+                      }
+                    : item
+                );
+              }
+              return [
+                ...prev,
+                {
+                  ...product,
+                  quantity: totalPieces,
+                  variant_info: variantInfo,
+                },
+              ];
+            });
+
+            // Create display quantity string
+            const displayParts = [];
+            if (quantityInfo.boxes > 0)
+              displayParts.push(
+                `${quantityInfo.boxes} box${quantityInfo.boxes > 1 ? "es" : ""}`
+              );
+            if (quantityInfo.sheets > 0)
+              displayParts.push(
+                `${quantityInfo.sheets} sheet${
+                  quantityInfo.sheets > 1 ? "s" : ""
+                }`
+              );
+            if (quantityInfo.pieces > 0)
+              displayParts.push(
+                `${quantityInfo.pieces} piece${
+                  quantityInfo.pieces > 1 ? "s" : ""
+                }`
+              );
+            const displayQuantity =
+              displayParts.join(" + ") || `${totalPieces} pieces`;
+
+            addNotification(`Added ${displayQuantity} to cart`, "success");
+
+            return true; // Return success
+          }}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onProcessPayment={handlePaymentConfirm}
+          totals={{
+            subtotal: subtotal,
+            discount: totalDiscount,
+            total: total,
+          }}
+          isProcessing={createSale.isPending}
+        />
+      )}
+
+      {/* Transaction History Modal */}
+      {showTransactionHistory && (
+        <TransactionHistoryModal
+          isOpen={showTransactionHistory}
+          onClose={() => setShowTransactionHistory(false)}
+        />
       )}
     </div>
   );
