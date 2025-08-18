@@ -37,7 +37,6 @@ export default function ImportModal({
       "stock",
       "pieces_per_sheet",
       "sheets_per_box",
-      "barcode",
       "description",
       "manufacturer",
     ],
@@ -49,7 +48,6 @@ export default function ImportModal({
       "120",
       "10",
       "10",
-      "1234567890",
       "Pain reliever",
       "Generic Pharma",
     ],
@@ -73,7 +71,6 @@ export default function ImportModal({
     "cost_price",
     "pieces_per_sheet",
     "sheets_per_box",
-    "barcode",
     "description",
     "manufacturer",
   ];
@@ -230,7 +227,6 @@ export default function ImportModal({
         ? parseInt(row.pieces_per_sheet)
         : 1,
       sheets_per_box: row.sheets_per_box ? parseInt(row.sheets_per_box) : 1,
-      barcode: row.barcode?.trim() || null,
       description: row.description?.trim() || null,
       manufacturer: row.manufacturer?.trim() || null,
     }));

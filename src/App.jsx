@@ -5,8 +5,6 @@ import Dashboard from "@/pages/Dashboard";
 import Management from "@/pages/Management";
 import Archived from "@/pages/Archived";
 import Pos from "@/pages/POS";
-import Scanner from "@/pages/Scanner";
-import Customers from "@/pages/Customers";
 import Contacts from "@/pages/Contacts";
 import NotificationHistory from "@/pages/NotificationHistory";
 import Financials from "@/pages/Financials";
@@ -21,13 +19,14 @@ export default function App() {
     <Routes>
       <Route element={<FullLayout branding={branding} user={user} />}>
         <Route index element={<Dashboard />} />
+        <Route path="inventory" element={<Management />} />
         <Route path="management" element={<Management />} />
         <Route path="archived" element={<Archived />} />
         <Route path="point-of-sales" element={<Pos />} />
-        <Route path="scanner" element={<Scanner />} />
-        <Route path="customers" element={<Customers />} />
+        <Route path="pos" element={<Pos />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="notifications" element={<NotificationHistory />} />
+        <Route path="notification-history" element={<NotificationHistory />} />
         <Route path="financials" element={<Financials />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />

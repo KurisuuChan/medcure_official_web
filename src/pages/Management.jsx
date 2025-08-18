@@ -26,7 +26,7 @@ import {
 } from "../hooks/useProducts.js";
 import ProductModal from "../components/modals/ProductModal.jsx";
 import ImportModal from "../components/modals/ImportModal.jsx";
-import DebugConnection from "../components/DebugConnection.jsx";
+import ExportModal from "../components/ExportModal.jsx";
 import { formatCurrency, formatStockStatus } from "../utils/formatters.js";
 import { useNotification } from "../hooks/useNotification.js";
 
@@ -36,6 +36,7 @@ export default function Management() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
   // Real backend hooks
@@ -147,53 +148,9 @@ export default function Management() {
     }
   };
 
-  // Handle export (simple CSV download)
+  // Handle export - open export modal
   const handleExport = () => {
-    if (products.length === 0) {
-      addNotification("No products to export", "warning");
-      return;
-    }
-
-    const csvContent = [
-      [
-        "name",
-        "category",
-        "price",
-        "cost_price",
-        "stock",
-        "pieces_per_sheet",
-        "sheets_per_box",
-        "barcode",
-        "description",
-        "manufacturer",
-      ],
-      ...products.map((p) => [
-        p.name,
-        p.category,
-        p.price,
-        p.cost_price || "",
-        p.stock,
-        p.pieces_per_sheet || 1,
-        p.sheets_per_box || 1,
-        p.barcode || "",
-        p.description || "",
-        p.manufacturer || "",
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `products_export_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-
-    addNotification("Products exported successfully", "success");
+    setShowExportModal(true);
   };
 
   if (error) {
@@ -234,9 +191,6 @@ export default function Management() {
           </div>
         </div>
       </div>
-
-      {/* Debug Connection Component */}
-      <DebugConnection />
 
       {/* Action Bar */}
       {selectedItems.length > 0 && (
@@ -581,6 +535,12 @@ export default function Management() {
         onClose={() => setShowImportModal(false)}
         onImport={handleImport}
         isLoading={bulkAddProducts.isPending}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        products={displayProducts}
       />
     </div>
   );

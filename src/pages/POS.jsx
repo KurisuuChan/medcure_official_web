@@ -22,6 +22,7 @@ import { useProducts, useSearchProducts } from "../hooks/useProducts.js";
 import { useCreateSale } from "../hooks/useSales.js";
 import QuantitySelectionModal from "../components/modals/QuantitySelectionModal.jsx";
 import PaymentModal from "../components/modals/PaymentModal.jsx";
+import TransactionHistoryModal from "../components/modals/TransactionHistoryModal.jsx";
 import { formatCurrency } from "../utils/formatters.js";
 
 export default function POS() {
@@ -33,6 +34,7 @@ export default function POS() {
   const [isPwdSenior, setIsPwdSenior] = useState(false);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showTransactionHistory, setShowTransactionHistory] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Real backend hooks
@@ -133,9 +135,9 @@ export default function POS() {
       const cartItem = {
         id: selectedProduct.id,
         name: selectedProduct.name,
-        price: selectedProduct.price,
+        price: selectedProduct.price || selectedProduct.selling_price || 0,
         quantity: totalPieces,
-        stock: selectedProduct.stock,
+        stock: selectedProduct.stock || selectedProduct.total_stock || 0,
         variant_info: {
           boxes: quantityMode.boxes,
           sheets: quantityMode.sheets,
@@ -203,7 +205,6 @@ export default function POS() {
         payment_method: paymentData.paymentMethod || "cash",
         amount_paid: paymentData.amountPaid || total,
         change_amount: paymentData.changeAmount || 0,
-        customer_name: paymentData.customerName || null,
       };
 
       // Create sale using backend
@@ -248,7 +249,10 @@ export default function POS() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={() => setShowTransactionHistory(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <Clock size={16} />
             Transaction History
           </button>
@@ -267,7 +271,7 @@ export default function POS() {
               />
               <input
                 type="text"
-                placeholder="Search products by name or barcode..."
+                placeholder="Search products by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -303,7 +307,8 @@ export default function POS() {
           {!productsLoading && !productsError && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
               {filteredProducts.map((product) => {
-                const stockStatus = getStockStatus(product.stock);
+                const stockValue = product.stock || product.total_stock || 0;
+                const stockStatus = getStockStatus(stockValue);
                 const inCart = cart.find((item) => item.id === product.id);
 
                 return (
@@ -326,7 +331,7 @@ export default function POS() {
                       {product.name}
                     </h3>
                     <p className="text-sm text-gray-500 mb-2">
-                      Stock: {product.stock} pieces
+                      Stock: {stockValue} pieces
                     </p>
 
                     {/* Packaging Info */}
@@ -341,7 +346,9 @@ export default function POS() {
 
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-lg font-bold text-blue-600">
-                        {formatCurrency(product.price)}
+                        {formatCurrency(
+                          product.price || product.selling_price || 0
+                        )}
                       </span>
                       {inCart && (
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
@@ -480,8 +487,13 @@ export default function POS() {
                     </p>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label
+                  className="relative inline-flex items-center cursor-pointer"
+                  htmlFor="pwd-senior-toggle"
+                >
+                  <span className="sr-only">PWD/Senior Citizen Discount</span>
                   <input
+                    id="pwd-senior-toggle"
                     type="checkbox"
                     checked={isPwdSenior}
                     onChange={(e) => setIsPwdSenior(e.target.checked)}
@@ -548,10 +560,12 @@ export default function POS() {
           </button>
 
           {cart.length > 0 && (
-            <button className="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-              <Receipt size={18} />
-              Print Receipt
-            </button>
+            <div className="space-y-2">
+              <button className="w-full flex items-center justify-center gap-2 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                <Receipt size={18} />
+                Print Receipt
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -860,22 +874,45 @@ export default function POS() {
           product={selectedProduct}
           isOpen={showQuantityModal}
           onClose={closeQuantityModal}
-          onAddToCart={(cartItem) => {
+          onAddToCart={(product, quantityInfo) => {
             // Add to cart using the calculated total pieces
-            const quantity = cartItem.totalPieces;
-            const variantInfo = cartItem.variant_info || null;
+            if (!product?.id) {
+              console.error("Invalid product:", product);
+              addNotification("Error adding item to cart", "error");
+              return false;
+            }
+
+            if (!quantityInfo) {
+              console.error("Invalid quantity info:", quantityInfo);
+              addNotification("Error: No quantity specified", "error");
+              return false;
+            }
+
+            // Calculate total pieces from quantity info
+            const totalPieces =
+              (quantityInfo.boxes || 0) *
+                (product.total_pieces_per_box ||
+                  product.pieces_per_sheet * product.sheets_per_box ||
+                  1) +
+              (quantityInfo.sheets || 0) * (product.pieces_per_sheet || 1) +
+              (quantityInfo.pieces || 0);
+
+            const variantInfo = {
+              boxes: quantityInfo.boxes || 0,
+              sheets: quantityInfo.sheets || 0,
+              pieces: quantityInfo.pieces || 0,
+              totalPieces,
+            };
 
             setCart((prev) => {
-              const existing = prev.find(
-                (item) => item.id === cartItem.product.id
-              );
+              const existing = prev.find((item) => item.id === product.id);
               if (existing) {
                 const newQuantity = Math.min(
-                  existing.quantity + quantity,
-                  cartItem.product.stock
+                  existing.quantity + totalPieces,
+                  product.stock || product.total_stock || 0
                 );
                 return prev.map((item) =>
-                  item.id === cartItem.product.id
+                  item.id === product.id
                     ? {
                         ...item,
                         quantity: newQuantity,
@@ -887,17 +924,37 @@ export default function POS() {
               return [
                 ...prev,
                 {
-                  ...cartItem.product,
-                  quantity,
+                  ...product,
+                  quantity: totalPieces,
                   variant_info: variantInfo,
                 },
               ];
             });
 
-            addNotification(
-              `Added ${cartItem.displayQuantity} to cart`,
-              "success"
-            );
+            // Create display quantity string
+            const displayParts = [];
+            if (quantityInfo.boxes > 0)
+              displayParts.push(
+                `${quantityInfo.boxes} box${quantityInfo.boxes > 1 ? "es" : ""}`
+              );
+            if (quantityInfo.sheets > 0)
+              displayParts.push(
+                `${quantityInfo.sheets} sheet${
+                  quantityInfo.sheets > 1 ? "s" : ""
+                }`
+              );
+            if (quantityInfo.pieces > 0)
+              displayParts.push(
+                `${quantityInfo.pieces} piece${
+                  quantityInfo.pieces > 1 ? "s" : ""
+                }`
+              );
+            const displayQuantity =
+              displayParts.join(" + ") || `${totalPieces} pieces`;
+
+            addNotification(`Added ${displayQuantity} to cart`, "success");
+
+            return true; // Return success
           }}
         />
       )}
@@ -914,6 +971,14 @@ export default function POS() {
             total: total,
           }}
           isProcessing={createSale.isPending}
+        />
+      )}
+
+      {/* Transaction History Modal */}
+      {showTransactionHistory && (
+        <TransactionHistoryModal
+          isOpen={showTransactionHistory}
+          onClose={() => setShowTransactionHistory(false)}
         />
       )}
     </div>

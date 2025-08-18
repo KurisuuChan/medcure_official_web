@@ -93,7 +93,6 @@ export const NOTIFICATION_DURATION = {
 
 // API endpoints (if using external APIs)
 export const API_ENDPOINTS = {
-  BARCODE_LOOKUP: "https://api.upcitemdb.com/prod/trial/lookup",
   CURRENCY_RATES: "https://api.exchangerate-api.com/v4/latest/PHP",
 };
 
@@ -105,7 +104,6 @@ export const APP_CONFIG = {
   description: "Professional Pharmacy Management System",
   features: {
     multiVariant: true,
-    barcodeScanning: false, // Enable when implemented
     realTimeUpdates: false, // Enable when implemented
     reporting: true,
     csvImport: true,

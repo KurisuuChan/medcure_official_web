@@ -6,7 +6,6 @@ import {
   Calculator,
   CheckCircle,
   AlertTriangle,
-  User,
   Receipt,
 } from "lucide-react";
 
@@ -19,7 +18,6 @@ export function PaymentModal({
 }) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [amountPaid, setAmountPaid] = useState("");
-  const [customerName, setCustomerName] = useState("");
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
 
@@ -28,7 +26,6 @@ export function PaymentModal({
     if (isOpen) {
       setPaymentMethod("cash");
       setAmountPaid(totals?.total?.toString() || "");
-      setCustomerName("");
       setErrors([]);
     }
   }, [isOpen, totals]);
@@ -51,13 +48,9 @@ export function PaymentModal({
       );
     }
 
-    if (paymentMethod === "card" && !customerName.trim()) {
-      newErrors.push("Customer name is required for card payments");
-    }
-
     setErrors(newErrors);
     setIsValid(newErrors.length === 0);
-  }, [amountPaid, paidAmount, totals, paymentMethod, customerName]);
+  }, [amountPaid, paidAmount, totals, paymentMethod]);
 
   const handleQuickAmount = (amount) => {
     setAmountPaid(amount.toString());
@@ -70,7 +63,6 @@ export function PaymentModal({
       paymentMethod,
       amountPaid: paidAmount,
       changeAmount,
-      customerName: customerName.trim() || null,
     };
 
     onProcessPayment(paymentData);
@@ -175,24 +167,6 @@ export function PaymentModal({
               </button>
             </div>
           </div>
-
-          {/* Customer Name (for card payments) */}
-          {paymentMethod === "card" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User size={16} className="inline mr-1" />
-                Customer Name
-              </label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter customer name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={isProcessing}
-              />
-            </div>
-          )}
 
           {/* Payment Amount */}
           <div>

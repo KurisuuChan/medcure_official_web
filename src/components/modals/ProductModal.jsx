@@ -138,7 +138,7 @@ export function ProductModal({
     try {
       // Prepare data for submission
       // Create submit data matching the actual database schema
-      // Based on debug: id, name, category, price, cost_price, stock, pieces_per_sheet, sheets_per_box, barcode, description, manufacturer, expiration_date, created_at, updated_at, batch_number, brand_name, critical_level, generic_name, expiry_date, supplier, selling_price, total_stock
+      // Based on debug: id, name, category, price, cost_price, stock, pieces_per_sheet, sheets_per_box, description, manufacturer, expiration_date, created_at, updated_at, batch_number, brand_name, critical_level, generic_name, expiry_date, supplier, selling_price, total_stock
       const submitData = {
         name: formData.name?.trim() || null,
         category: formData.category?.trim() || null, // Required
