@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { X, Archive, AlertTriangle } from "lucide-react";
 import PropTypes from "prop-types";
 
-const ArchiveReasonModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
+const ArchiveReasonModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
   product,
-  isLoading = false 
+  isLoading = false,
 }) => {
   const [reason, setReason] = useState("");
   const [selectedPreset, setSelectedPreset] = useState("");
@@ -20,7 +20,7 @@ const ArchiveReasonModal = ({
     "Inventory cleanup",
     "Quality control issue",
     "Regulatory compliance",
-    "Other"
+    "Other",
   ];
 
   const handlePresetSelect = (preset) => {
@@ -50,7 +50,7 @@ const ArchiveReasonModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -59,8 +59,12 @@ const ArchiveReasonModal = ({
               <Archive className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Archive Product</h2>
-              <p className="text-sm text-gray-500">Provide a reason for archiving</p>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Archive Product
+              </h2>
+              <p className="text-sm text-gray-500">
+                Provide a reason for archiving
+              </p>
             </div>
           </div>
           <button
@@ -81,7 +85,9 @@ const ArchiveReasonModal = ({
                   {product.name?.charAt(0) || "P"}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    {product.name}
+                  </h3>
                   <p className="text-sm text-gray-500">
                     Stock: {product.total_stock || product.stock || 0} units
                   </p>
@@ -102,8 +108,8 @@ const ArchiveReasonModal = ({
                   Archive Confirmation
                 </p>
                 <p className="text-sm text-yellow-700 mt-1">
-                  This product will be moved to the archive and removed from active inventory. 
-                  You can restore it later if needed.
+                  This product will be moved to the archive and removed from
+                  active inventory. You can restore it later if needed.
                 </p>
               </div>
             </div>
@@ -134,13 +140,15 @@ const ArchiveReasonModal = ({
           {/* Custom Reason Input */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {selectedPreset === "Other" ? "Specify reason:" : "Additional details (optional):"}
+              {selectedPreset === "Other"
+                ? "Specify reason:"
+                : "Additional details (optional):"}
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder={
-                selectedPreset === "Other" 
+                selectedPreset === "Other"
                   ? "Please specify the reason for archiving this product..."
                   : "Add any additional details about why this product is being archived..."
               }

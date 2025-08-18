@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Archive,
   Search,
@@ -11,31 +11,84 @@ import {
   RefreshCw,
   RotateCcw,
   ChevronDown,
+  FileText,
+  Clock,
+  Tag,
+  ExternalLink,
 } from "lucide-react";
-import { 
-  useArchivedItems, 
-  useRestoreArchivedProduct 
+import {
+  useArchivedItems,
+  useRestoreArchivedProduct,
 } from "../hooks/useArchive.js";
 import { useNotification } from "../hooks/useNotification.js";
 import { formatCurrency, formatDate } from "../utils/formatters.js";
 
 export default function Archived() {
   const { addNotification } = useNotification();
-  const { data: archivedItems = [], isLoading, error, refetch } = useArchivedItems();
+  const {
+    data: archivedItems = [],
+    isLoading,
+    error,
+    refetch,
+  } = useArchivedItems();
   const restoreProduct = useRestoreArchivedProduct();
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBy, setFilterBy] = useState("all"); // all, week, month, year
+  const [reasonFilter, setReasonFilter] = useState("all"); // all, expired, damaged, low-demand, recalled, discontinued, bulk, other
   const [sortBy, setSortBy] = useState("newest"); // newest, oldest, name
   const [selectedItems, setSelectedItems] = useState([]);
   const [expandedItems, setExpandedItems] = useState([]);
+
+  // Clean up localStorage corruption on mount
+  useEffect(() => {
+    const cleanupLocalStorage = () => {
+      try {
+        // Check and clean specific keys that might be corrupted
+        const keysToCheck = ["medcure_archived_items", "archived_items"];
+
+        keysToCheck.forEach((key) => {
+          try {
+            const stored = localStorage.getItem(key);
+            if (
+              stored &&
+              (stored === "[object Object]" ||
+                stored.includes("[object Object]") ||
+                stored === "undefined" ||
+                stored === "null")
+            ) {
+              console.warn(`Cleaning corrupted localStorage key: ${key}`);
+              localStorage.removeItem(key);
+            }
+          } catch (error) {
+            console.warn(`Error checking localStorage key ${key}:`, error);
+            try {
+              localStorage.removeItem(key);
+            } catch (removeError) {
+              console.error(
+                `Failed to remove corrupted key ${key}:`,
+                removeError
+              );
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Error during localStorage cleanup:", error);
+      }
+    };
+
+    cleanupLocalStorage();
+  }, []);
 
   // Handle restore functionality
   const handleRestore = async (item) => {
     if (window.confirm(`Are you sure you want to restore "${item.name}"?`)) {
       try {
         await restoreProduct.mutateAsync(item.id);
-        addNotification(`"${item.name}" has been restored successfully`, "success");
+        addNotification(
+          `"${item.name}" has been restored successfully`,
+          "success"
+        );
         setSelectedItems((prev) => prev.filter((id) => id !== item.id));
       } catch (error) {
         addNotification(error.message || "Failed to restore product", "error");
@@ -45,63 +98,142 @@ export default function Archived() {
 
   const handleBulkRestore = async () => {
     if (selectedItems.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to restore ${selectedItems.length} products?`)) {
+
+    if (
+      window.confirm(
+        `Are you sure you want to restore ${selectedItems.length} products?`
+      )
+    ) {
       try {
         await Promise.all(
           selectedItems.map((id) => restoreProduct.mutateAsync(id))
         );
-        addNotification(`${selectedItems.length} products restored successfully`, "success");
+        addNotification(
+          `${selectedItems.length} products restored successfully`,
+          "success"
+        );
         setSelectedItems([]);
       } catch (error) {
-        addNotification(error.message || "Failed to restore some products", "error");
+        addNotification(
+          error.message || "Failed to restore some products",
+          "error"
+        );
       }
     }
   };
 
   // Filter and sort archived items
-  const filteredItems = archivedItems.filter((item) => {
-    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.archived_by?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (!matchesSearch) return false;
+  const filteredItems = archivedItems
+    .filter((item) => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        item.name?.toLowerCase().includes(searchLower) ||
+        item.reason?.toLowerCase().includes(searchLower) ||
+        item.archived_by?.toLowerCase().includes(searchLower) ||
+        item.category?.toLowerCase().includes(searchLower) ||
+        item.original_data?.category?.toLowerCase().includes(searchLower) ||
+        item.original_data?.brand_name?.toLowerCase().includes(searchLower) ||
+        item.original_data?.manufacturer?.toLowerCase().includes(searchLower);
 
-    const archiveDate = new Date(item.archived_date);
-    const now = new Date();
-    
-    switch (filterBy) {
-      case "week":
-        return (now - archiveDate) <= 7 * 24 * 60 * 60 * 1000;
-      case "month":
-        return (now - archiveDate) <= 30 * 24 * 60 * 60 * 1000;
-      case "year":
-        return (now - archiveDate) <= 365 * 24 * 60 * 60 * 1000;
-      default:
-        return true;
-    }
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case "oldest":
-        return new Date(a.archived_date) - new Date(b.archived_date);
-      case "name":
-        return a.name?.localeCompare(b.name) || 0;
-      default: // newest
-        return new Date(b.archived_date) - new Date(a.archived_date);
-    }
-  });
+      if (!matchesSearch) return false;
+
+      // Filter by reason type
+      if (reasonFilter !== "all") {
+        const lowerReason = item.reason?.toLowerCase() || "";
+        switch (reasonFilter) {
+          case "expired":
+            if (
+              !lowerReason.includes("expired") &&
+              !lowerReason.includes("expiry")
+            )
+              return false;
+            break;
+          case "damaged":
+            if (
+              !lowerReason.includes("damaged") &&
+              !lowerReason.includes("defective")
+            )
+              return false;
+            break;
+          case "low-demand":
+            if (
+              !lowerReason.includes("low demand") &&
+              !lowerReason.includes("slow moving")
+            )
+              return false;
+            break;
+          case "recalled":
+            if (
+              !lowerReason.includes("recalled") &&
+              !lowerReason.includes("quality")
+            )
+              return false;
+            break;
+          case "discontinued":
+            if (
+              !lowerReason.includes("discontinued") &&
+              !lowerReason.includes("obsolete")
+            )
+              return false;
+            break;
+          case "bulk":
+            if (!lowerReason.includes("bulk")) return false;
+            break;
+          case "other": {
+            const isKnownReason =
+              lowerReason.includes("expired") ||
+              lowerReason.includes("expiry") ||
+              lowerReason.includes("damaged") ||
+              lowerReason.includes("defective") ||
+              lowerReason.includes("low demand") ||
+              lowerReason.includes("slow moving") ||
+              lowerReason.includes("recalled") ||
+              lowerReason.includes("quality") ||
+              lowerReason.includes("discontinued") ||
+              lowerReason.includes("obsolete") ||
+              lowerReason.includes("bulk");
+            if (isKnownReason) return false;
+            break;
+          }
+        }
+      }
+
+      const archiveDate = new Date(item.archived_date);
+      const now = new Date();
+
+      switch (filterBy) {
+        case "week":
+          return now - archiveDate <= 7 * 24 * 60 * 60 * 1000;
+        case "month":
+          return now - archiveDate <= 30 * 24 * 60 * 60 * 1000;
+        case "year":
+          return now - archiveDate <= 365 * 24 * 60 * 60 * 1000;
+        default:
+          return true;
+      }
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return new Date(a.archived_date) - new Date(b.archived_date);
+        case "name":
+          return a.name?.localeCompare(b.name) || 0;
+        default: // newest
+          return new Date(b.archived_date) - new Date(a.archived_date);
+      }
+    });
 
   const handleSelectItem = (id) => {
-    setSelectedItems(prev => 
-      prev.includes(id) 
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
+    setSelectedItems((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
   const handleSelectAll = () => {
-    setSelectedItems(prev => 
-      prev.length === filteredItems.length ? [] : filteredItems.map(item => item.id)
+    setSelectedItems((prev) =>
+      prev.length === filteredItems.length
+        ? []
+        : filteredItems.map((item) => item.id)
     );
   };
 
@@ -111,24 +243,76 @@ export default function Archived() {
   };
 
   const toggleExpanded = (id) => {
-    setExpandedItems(prev => 
-      prev.includes(id) 
-        ? prev.filter(item => item !== id)
-        : [...prev, id]
+    setExpandedItems((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
   const getArchiveReasonBadge = (reason) => {
-    const lowerReason = reason?.toLowerCase() || "";
-    
-    if (lowerReason.includes("bulk")) {
-      return "bg-blue-50 text-blue-700 border-blue-200";
-    } else if (lowerReason.includes("expired")) {
-      return "bg-red-50 text-red-700 border-red-200";
-    } else if (lowerReason.includes("manual")) {
-      return "bg-green-50 text-green-700 border-green-200";
+    if (!reason) {
+      return {
+        color: "bg-gray-50 text-gray-700 border-gray-200",
+        icon: <Tag size={12} />,
+        label: "No reason specified",
+      };
+    }
+
+    const lowerReason = reason.toLowerCase();
+
+    if (lowerReason.includes("expired") || lowerReason.includes("expiry")) {
+      return {
+        color: "bg-red-50 text-red-700 border-red-200",
+        icon: <Clock size={12} />,
+        label: "Expired",
+      };
+    } else if (
+      lowerReason.includes("damaged") ||
+      lowerReason.includes("defective")
+    ) {
+      return {
+        color: "bg-orange-50 text-orange-700 border-orange-200",
+        icon: <AlertCircle size={12} />,
+        label: "Damaged/Defective",
+      };
+    } else if (
+      lowerReason.includes("low demand") ||
+      lowerReason.includes("slow moving")
+    ) {
+      return {
+        color: "bg-blue-50 text-blue-700 border-blue-200",
+        icon: <Package size={12} />,
+        label: "Low Demand",
+      };
+    } else if (
+      lowerReason.includes("recalled") ||
+      lowerReason.includes("quality")
+    ) {
+      return {
+        color: "bg-purple-50 text-purple-700 border-purple-200",
+        icon: <ExternalLink size={12} />,
+        label: "Quality Issue",
+      };
+    } else if (
+      lowerReason.includes("discontinued") ||
+      lowerReason.includes("obsolete")
+    ) {
+      return {
+        color: "bg-gray-50 text-gray-700 border-gray-200",
+        icon: <Archive size={12} />,
+        label: "Discontinued",
+      };
+    } else if (lowerReason.includes("bulk")) {
+      return {
+        color: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        icon: <Package size={12} />,
+        label: "Bulk Operation",
+      };
     } else {
-      return "bg-gray-50 text-gray-700 border-gray-200";
+      return {
+        color: "bg-green-50 text-green-700 border-green-200",
+        icon: <FileText size={12} />,
+        label: "Other",
+      };
     }
   };
 
@@ -143,9 +327,11 @@ export default function Archived() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center max-w-md">
           <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Archive</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Error Loading Archive
+          </h3>
           <p className="text-gray-600 mb-4">Unable to load archived products</p>
-          <button 
+          <button
             onClick={handleRefresh}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -167,7 +353,9 @@ export default function Archived() {
                 <Archive size={24} className="text-gray-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Archived Products</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Archived Products
+                </h1>
                 <p className="text-gray-600 mt-1">
                   Products that have been archived from inventory management
                 </p>
@@ -179,20 +367,25 @@ export default function Archived() {
                 disabled={isLoading}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
               >
-                <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                <RefreshCw
+                  size={16}
+                  className={isLoading ? "animate-spin" : ""}
+                />
                 Refresh
               </button>
             </div>
           </div>
 
           {/* Stats Bar */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <Package size={20} className="text-gray-600" />
                 <div>
                   <p className="text-sm text-gray-600">Total Archived</p>
-                  <p className="text-xl font-semibold text-gray-900">{filteredItems.length}</p>
+                  <p className="text-xl font-semibold text-gray-900">
+                    {filteredItems.length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -202,11 +395,32 @@ export default function Archived() {
                 <div>
                   <p className="text-sm text-blue-600">This Month</p>
                   <p className="text-xl font-semibold text-blue-900">
-                    {filteredItems.filter(item => {
-                      const archiveDate = new Date(item.archived_date);
-                      const now = new Date();
-                      return (now - archiveDate) <= 30 * 24 * 60 * 60 * 1000;
-                    }).length}
+                    {
+                      filteredItems.filter((item) => {
+                        const archiveDate = new Date(item.archived_date);
+                        const now = new Date();
+                        return now - archiveDate <= 30 * 24 * 60 * 60 * 1000;
+                      }).length
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-red-50 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <Clock size={20} className="text-red-600" />
+                <div>
+                  <p className="text-sm text-red-600">Expired Items</p>
+                  <p className="text-xl font-semibold text-red-900">
+                    {
+                      archivedItems.filter((item) => {
+                        const reason = item.reason?.toLowerCase() || "";
+                        return (
+                          reason.includes("expired") ||
+                          reason.includes("expiry")
+                        );
+                      }).length
+                    }
                   </p>
                 </div>
               </div>
@@ -215,8 +429,10 @@ export default function Archived() {
               <div className="flex items-center gap-3">
                 <CheckCircle size={20} className="text-green-600" />
                 <div>
-                  <p className="text-sm text-green-600">Available for Restore</p>
-                  <p className="text-xl font-semibold text-green-900">{filteredItems.length}</p>
+                  <p className="text-sm text-green-600">Restorable</p>
+                  <p className="text-xl font-semibold text-green-900">
+                    {archivedItems.length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -230,10 +446,13 @@ export default function Archived() {
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             {/* Search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
               <input
                 type="text"
-                placeholder="Search by product name, reason, or user..."
+                placeholder="Search by name, reason, category, brand, or user..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
@@ -254,6 +473,21 @@ export default function Archived() {
               </select>
 
               <select
+                value={reasonFilter}
+                onChange={(e) => setReasonFilter(e.target.value)}
+                className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+              >
+                <option value="all">All Reasons</option>
+                <option value="expired">Expired</option>
+                <option value="damaged">Damaged/Defective</option>
+                <option value="low-demand">Low Demand</option>
+                <option value="recalled">Quality Issues</option>
+                <option value="discontinued">Discontinued</option>
+                <option value="bulk">Bulk Operations</option>
+                <option value="other">Other</option>
+              </select>
+
+              <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
@@ -270,7 +504,7 @@ export default function Archived() {
               <span className="text-sm font-medium text-blue-900">
                 {selectedItems.length} items selected
               </span>
-              <button 
+              <button
                 onClick={handleBulkRestore}
                 disabled={restoreProduct.isPending}
                 className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -288,7 +522,10 @@ export default function Archived() {
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <RefreshCw size={32} className="mx-auto mb-4 text-gray-400 animate-spin" />
+              <RefreshCw
+                size={32}
+                className="mx-auto mb-4 text-gray-400 animate-spin"
+              />
               <p className="text-gray-600">Loading archived products...</p>
             </div>
           </div>
@@ -300,7 +537,10 @@ export default function Archived() {
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    checked={selectedItems.length === filteredItems.length && filteredItems.length > 0}
+                    checked={
+                      selectedItems.length === filteredItems.length &&
+                      filteredItems.length > 0
+                    }
                     onChange={handleSelectAll}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -316,7 +556,10 @@ export default function Archived() {
               {filteredItems.map((item) => {
                 const isExpanded = expandedItems.includes(item.id);
                 return (
-                  <div key={item.id} className="hover:bg-gray-50 transition-colors">
+                  <div
+                    key={item.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <div className="px-6 py-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4 flex-1">
@@ -326,25 +569,38 @@ export default function Archived() {
                             onChange={() => handleSelectItem(item.id)}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
-                          
+
                           <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
                             <Package size={20} className="text-gray-600" />
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-1">
-                              <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
-                              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${getArchiveReasonBadge(item.reason)}`}>
-                                {item.reason?.includes("bulk") ? "Bulk" : 
-                                 item.reason?.includes("expired") ? "Expired" :
-                                 item.reason?.includes("manual") ? "Manual" : "Other"}
-                              </span>
+                              <h3 className="font-semibold text-gray-900 truncate">
+                                {item.name}
+                              </h3>
+                              {(() => {
+                                const reasonBadge = getArchiveReasonBadge(
+                                  item.reason
+                                );
+                                return (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${reasonBadge.color} hover:shadow-sm transition-shadow cursor-default`}
+                                    title={item.reason || "No reason specified"}
+                                  >
+                                    {reasonBadge.icon}
+                                    {reasonBadge.label}
+                                  </span>
+                                );
+                              })()}
                             </div>
-                            
+
                             <div className="flex items-center gap-4 text-sm text-gray-600">
                               <span className="flex items-center gap-1">
                                 <Package size={14} />
-                                {item.category || "Uncategorized"}
+                                {item.category ||
+                                  item.original_data?.category ||
+                                  "Uncategorized"}
                               </span>
                               <span className="flex items-center gap-1">
                                 <Calendar size={14} />
@@ -361,30 +617,51 @@ export default function Archived() {
                         <div className="flex items-center gap-4">
                           <div className="text-right">
                             <div className="text-sm font-medium text-gray-900">
-                              {formatCurrency(item.selling_price || 0)}
+                              {formatCurrency(
+                                item.selling_price ||
+                                  item.original_data?.selling_price ||
+                                  0
+                              )}
                             </div>
-                            <div className={`text-xs font-medium ${getStockStatusColor(item.total_stock)}`}>
-                              Stock: {item.total_stock || 0}
+                            <div
+                              className={`text-xs font-medium ${getStockStatusColor(
+                                item.total_stock ||
+                                  item.original_data?.total_stock ||
+                                  item.original_stock
+                              )}`}
+                            >
+                              Stock:{" "}
+                              {item.total_stock ||
+                                item.original_data?.total_stock ||
+                                item.original_stock ||
+                                0}
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
-                            <button 
+                            <button
                               onClick={() => toggleExpanded(item.id)}
                               className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                             >
-                              <ChevronDown size={16} className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                              <ChevronDown
+                                size={16}
+                                className={`transform transition-transform ${
+                                  isExpanded ? "rotate-180" : ""
+                                }`}
+                              />
                             </button>
                             <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
                               <Eye size={16} />
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleRestore(item)}
                               disabled={restoreProduct.isPending}
                               className="flex items-center gap-1 px-3 py-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm font-medium transition-colors disabled:opacity-50"
                             >
                               <RotateCcw size={14} />
-                              {restoreProduct.isPending ? "Restoring..." : "Restore"}
+                              {restoreProduct.isPending
+                                ? "Restoring..."
+                                : "Restore"}
                             </button>
                           </div>
                         </div>
@@ -393,46 +670,186 @@ export default function Archived() {
                       {/* Expanded Details */}
                       {isExpanded && (
                         <div className="mt-4 ml-16 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Product Details</h4>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Cost Price:</span>
-                                  <span className="font-medium">{formatCurrency(item.cost_price || 0)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Selling Price:</span>
-                                  <span className="font-medium">{formatCurrency(item.selling_price || 0)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Stock Level:</span>
-                                  <span className={`font-medium ${getStockStatusColor(item.total_stock)}`}>
-                                    {item.total_stock || 0} units
-                                  </span>
-                                </div>
-                                {item.expiry_date && (
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Product Details */}
+                            <div className="lg:col-span-2">
+                              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <Package size={16} />
+                                Product Details
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div className="space-y-2">
                                   <div className="flex justify-between">
-                                    <span className="text-gray-600">Expiry Date:</span>
-                                    <span className="font-medium">{formatDate(item.expiry_date)}</span>
+                                    <span className="text-gray-600">
+                                      Cost Price:
+                                    </span>
+                                    <span className="font-medium">
+                                      {formatCurrency(
+                                        item.cost_price ||
+                                          item.original_data?.cost_price ||
+                                          0
+                                      )}
+                                    </span>
                                   </div>
-                                )}
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                      Selling Price:
+                                    </span>
+                                    <span className="font-medium">
+                                      {formatCurrency(
+                                        item.selling_price ||
+                                          item.original_data?.selling_price ||
+                                          0
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                      Stock Level:
+                                    </span>
+                                    <span
+                                      className={`font-medium ${getStockStatusColor(
+                                        item.total_stock ||
+                                          item.original_data?.total_stock ||
+                                          item.original_stock
+                                      )}`}
+                                    >
+                                      {item.total_stock ||
+                                        item.original_data?.total_stock ||
+                                        item.original_stock ||
+                                        0}{" "}
+                                      units
+                                    </span>
+                                  </div>
+                                  {(item.expiry_date ||
+                                    item.original_data?.expiry_date) && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">
+                                        Expiry Date:
+                                      </span>
+                                      <span className="font-medium">
+                                        {formatDate(
+                                          item.expiry_date ||
+                                            item.original_data?.expiry_date
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  {(item.brand_name ||
+                                    item.original_data?.brand_name) && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">
+                                        Brand:
+                                      </span>
+                                      <span className="font-medium">
+                                        {item.brand_name ||
+                                          item.original_data?.brand_name}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {(item.manufacturer ||
+                                    item.original_data?.manufacturer) && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">
+                                        Manufacturer:
+                                      </span>
+                                      <span className="font-medium">
+                                        {item.manufacturer ||
+                                          item.original_data?.manufacturer}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {(item.supplier ||
+                                    item.original_data?.supplier) && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">
+                                        Supplier:
+                                      </span>
+                                      <span className="font-medium">
+                                        {item.supplier ||
+                                          item.original_data?.supplier}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {(item.batch_number ||
+                                    item.original_data?.batch_number) && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-600">
+                                        Batch Number:
+                                      </span>
+                                      <span className="font-medium">
+                                        {item.batch_number ||
+                                          item.original_data?.batch_number}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
+
+                            {/* Archive Information */}
                             <div>
-                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Archive Information</h4>
-                              <div className="space-y-2 text-sm">
+                              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <Archive size={16} />
+                                Archive Information
+                              </h4>
+                              <div className="space-y-3 text-sm">
                                 <div>
-                                  <span className="text-gray-600">Reason:</span>
-                                  <p className="mt-1 p-2 bg-white rounded border text-gray-800">{item.reason}</p>
+                                  <span className="text-gray-600 text-xs uppercase tracking-wide">
+                                    Archive Reason
+                                  </span>
+                                  <div className="mt-1 p-3 bg-white rounded-lg border border-gray-200">
+                                    {(() => {
+                                      const reasonBadge = getArchiveReasonBadge(
+                                        item.reason
+                                      );
+                                      return (
+                                        <div className="space-y-2">
+                                          <span
+                                            className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${reasonBadge.color} hover:shadow-sm transition-shadow cursor-default`}
+                                            title={
+                                              item.reason ||
+                                              "No reason specified"
+                                            }
+                                          >
+                                            {reasonBadge.icon}
+                                            {reasonBadge.label}
+                                          </span>
+                                          {item.reason && (
+                                            <p className="text-gray-700 text-sm leading-relaxed">
+                                              {item.reason}
+                                            </p>
+                                          )}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
                                 </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Archived Date:</span>
-                                  <span className="font-medium">{formatDate(item.archived_date)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">Archived By:</span>
-                                  <span className="font-medium">{item.archived_by || "System"}</span>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                      Archived Date:
+                                    </span>
+                                    <span className="font-medium">
+                                      {formatDate(item.archived_date)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                      Archived By:
+                                    </span>
+                                    <span className="font-medium">
+                                      {item.archived_by || "System"}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-600">Type:</span>
+                                    <span className="font-medium capitalize">
+                                      {item.type || "Product"}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -450,17 +867,20 @@ export default function Archived() {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Archive size={24} className="text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Archived Products</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No Archived Products
+            </h3>
             <p className="text-gray-600 mb-6">
-              {searchTerm || filterBy !== "all" 
-                ? "No archived products match your current filters" 
+              {searchTerm || filterBy !== "all" || reasonFilter !== "all"
+                ? "No archived products match your current filters"
                 : "No products have been archived yet"}
             </p>
-            {(searchTerm || filterBy !== "all") && (
+            {(searchTerm || filterBy !== "all" || reasonFilter !== "all") && (
               <button
                 onClick={() => {
                   setSearchTerm("");
                   setFilterBy("all");
+                  setReasonFilter("all");
                 }}
                 className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
               >

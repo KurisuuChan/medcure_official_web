@@ -11,6 +11,9 @@ import Financials from "@/pages/Financials";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 
+// Import localStorage utilities for development
+import "@/utils/clearLocalStorage.js";
+
 const branding = { name: "MedCure Admin" };
 const user = { name: "Admin User", role: "Administrator", initials: "AU" };
 

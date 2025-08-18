@@ -83,7 +83,7 @@ export function QuantitySelectionModal({
     const maxBoxes = Math.floor(
       availableStock / (product?.total_pieces_per_box || 1)
     );
-    const maxSheets = Math.floor(
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
       availableStock / (product?.pieces_per_sheet || 1)
     );
 

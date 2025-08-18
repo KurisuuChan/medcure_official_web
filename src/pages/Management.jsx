@@ -109,15 +109,20 @@ export default function Management() {
 
   const confirmArchiveProduct = async (reason) => {
     if (!productToArchive) return;
-    
+
     try {
-      await archiveProduct.mutateAsync({ 
-        product: productToArchive, 
-        reason, 
-        archivedBy: "Admin User" 
+      await archiveProduct.mutateAsync({
+        product: productToArchive,
+        reason,
+        archivedBy: "Admin User",
       });
-      addNotification(`"${productToArchive.name}" has been archived successfully`, "success");
-      setSelectedItems((prev) => prev.filter((id) => id !== productToArchive.id));
+      addNotification(
+        `"${productToArchive.name}" has been archived successfully`,
+        "success"
+      );
+      setSelectedItems((prev) =>
+        prev.filter((id) => id !== productToArchive.id)
+      );
     } catch (error) {
       addNotification(error.message || "Failed to archive product", "error");
     }
@@ -133,13 +138,17 @@ export default function Management() {
     if (selectedItems.length === 0) return;
 
     try {
-      const selectedProducts = products.filter(product => selectedItems.includes(product.id));
+      const selectedProducts = products.filter((product) =>
+        selectedItems.includes(product.id)
+      );
       await Promise.all(
-        selectedProducts.map((product) => archiveProduct.mutateAsync({ 
-          product, 
-          reason: `Bulk: ${reason}`,
-          archivedBy: "Admin User"
-        }))
+        selectedProducts.map((product) =>
+          archiveProduct.mutateAsync({
+            product,
+            reason: `Bulk: ${reason}`,
+            archivedBy: "Admin User",
+          })
+        )
       );
       addNotification(
         `${selectedItems.length} products archived successfully`,
@@ -580,7 +589,7 @@ export default function Management() {
         product={{
           name: `${selectedItems.length} Selected Products`,
           total_stock: selectedItems.length,
-          category: "Multiple Categories"
+          category: "Multiple Categories",
         }}
         isLoading={archiveProduct.isPending}
       />

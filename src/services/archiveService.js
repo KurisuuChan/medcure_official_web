@@ -6,11 +6,131 @@ import { supabase } from "../config/supabase.js";
  */
 
 /**
+ * Initialize and clean up localStorage data
+ */
+function initializeLocalStorage() {
+  try {
+    // Check for corrupted data and clean it up
+    const keys = ["medcure_archived_items", "archived_items"];
+    keys.forEach((key) => {
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          // Check for common corruption patterns
+          if (
+            stored === "[object Object]" ||
+            stored === "undefined" ||
+            stored === "null" ||
+            stored === "NaN" ||
+            stored.includes("[object Object]") ||
+            (!stored.startsWith("[") && !stored.startsWith("{"))
+          ) {
+            console.warn(
+              `Cleaning up corrupted localStorage data for key: ${key}`
+            );
+            localStorage.removeItem(key);
+          } else {
+            // Try to parse to check if it's valid JSON
+            JSON.parse(stored);
+          }
+        }
+      } catch (parseError) {
+        console.warn(
+          `Invalid JSON found in localStorage key ${key}, removing:`,
+          parseError.message
+        );
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Clear any other potentially corrupted medcure-related keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("medcure_")) {
+        try {
+          const value = localStorage.getItem(key);
+          if (
+            value &&
+            (value === "[object Object]" || value.includes("[object Object]"))
+          ) {
+            console.warn(
+              `Cleaning up corrupted medcure localStorage key: ${key}`
+            );
+            localStorage.removeItem(key);
+            i--; // Adjust index since we removed an item
+          }
+        } catch (error) {
+          console.warn(
+            `Error checking localStorage key ${key}, removing:`,
+            error.message
+          );
+          localStorage.removeItem(key);
+          i--; // Adjust index since we removed an item
+        }
+      }
+    }
+  } catch (_error) {
+    console.error("Error initializing localStorage:", _error);
+    // If there's a critical error, try to clear all medcure data
+    try {
+      const keys = Object.keys(localStorage).filter((key) =>
+        key.startsWith("medcure_")
+      );
+      keys.forEach((key) => localStorage.removeItem(key));
+    } catch (clearError) {
+      console.error("Failed to clear corrupted localStorage:", clearError);
+    }
+  }
+}
+
+// Initialize localStorage on module load and set up periodic cleanup
+if (typeof window !== "undefined") {
+  initializeLocalStorage();
+
+  // Set up periodic cleanup every 30 seconds to handle dynamic corruption
+  setInterval(() => {
+    try {
+      const stored = localStorage.getItem("medcure_archived_items");
+      if (
+        stored &&
+        (stored === "[object Object]" || stored.includes("[object Object]"))
+      ) {
+        console.warn(
+          "Detected runtime localStorage corruption, cleaning up..."
+        );
+        localStorage.removeItem("medcure_archived_items");
+      }
+    } catch (error) {
+      console.warn("Error during periodic localStorage check:", error.message);
+    }
+  }, 30000);
+}
+
+/**
  * Fetch all archived items from the database
  * @returns {Promise<Array>} Array of archived item objects
  */
 export async function getArchivedItems() {
   try {
+    // First, ensure localStorage is clean
+    try {
+      const stored = localStorage.getItem("medcure_archived_items");
+      if (
+        stored &&
+        (stored === "[object Object]" || stored.includes("[object Object]"))
+      ) {
+        console.warn(
+          "Detected corrupted localStorage during fetch, cleaning..."
+        );
+        localStorage.removeItem("medcure_archived_items");
+      }
+    } catch (storageError) {
+      console.warn(
+        "Error checking localStorage during fetch:",
+        storageError.message
+      );
+    }
+
     const { data, error } = await supabase
       .from("archived_items")
       .select("*")
@@ -18,8 +138,10 @@ export async function getArchivedItems() {
 
     if (error) {
       // If table doesn't exist, fall back to localStorage
-      if (error.code === 'PGRST205' || error.message?.includes('table')) {
-        console.warn("archived_items table not found, using localStorage fallback");
+      if (error.code === "PGRST205" || error.message?.includes("table")) {
+        console.warn(
+          "archived_items table not found, using localStorage fallback"
+        );
         return getArchivedItemsFromStorage();
       }
       throw error;
@@ -38,10 +160,61 @@ export async function getArchivedItems() {
  */
 function getArchivedItemsFromStorage() {
   try {
-    const stored = localStorage.getItem('medcure_archived_items');
-    return stored ? JSON.parse(stored) : [];
+    const stored = localStorage.getItem("medcure_archived_items");
+    if (!stored || stored === "undefined" || stored === "null") {
+      return [];
+    }
+
+    // Handle case where stored data might be corrupted
+    if (
+      stored === "[object Object]" ||
+      stored.includes("[object Object]") ||
+      !stored.startsWith("[")
+    ) {
+      console.warn("Corrupted archived items data found, clearing storage");
+      localStorage.removeItem("medcure_archived_items");
+      return [];
+    }
+
+    const parsed = JSON.parse(stored);
+
+    // Validate that parsed data is an array
+    if (!Array.isArray(parsed)) {
+      console.warn(
+        "Invalid data type in localStorage (expected array), clearing storage"
+      );
+      localStorage.removeItem("medcure_archived_items");
+      return [];
+    }
+
+    // Validate each item in the array
+    const validItems = parsed.filter((item) => {
+      if (!item || typeof item !== "object") {
+        console.warn("Invalid item found in archived items, skipping:", item);
+        return false;
+      }
+      return true;
+    });
+
+    // If we filtered out items, save the cleaned data
+    if (validItems.length !== parsed.length) {
+      console.warn(
+        `Cleaned ${
+          parsed.length - validItems.length
+        } invalid items from archived storage`
+      );
+      saveArchivedItemsToStorage(validItems);
+    }
+
+    return validItems;
   } catch (error) {
-    console.error("Error reading from localStorage:", error);
+    console.error("Error reading archived items from localStorage:", error);
+    // Clear corrupted data
+    try {
+      localStorage.removeItem("medcure_archived_items");
+    } catch (clearError) {
+      console.error("Failed to clear corrupted localStorage:", clearError);
+    }
     return [];
   }
 }
@@ -52,9 +225,106 @@ function getArchivedItemsFromStorage() {
  */
 function saveArchivedItemsToStorage(items) {
   try {
-    localStorage.setItem('medcure_archived_items', JSON.stringify(items));
+    if (!Array.isArray(items)) {
+      console.error("Invalid data type for archived items:", typeof items);
+      return;
+    }
+
+    // Ensure all items have proper structure
+    const sanitizedItems = items.map((item) => {
+      // Ensure item is an object
+      if (!item || typeof item !== "object") {
+        return {
+          id: Date.now(),
+          type: "product",
+          name: "Unknown",
+          description: "",
+          original_data: {},
+          archived_date: new Date().toISOString(),
+          archived_by: "System",
+          reason: "No reason specified",
+          category: "Uncategorized",
+          original_stock: 0,
+        };
+      }
+
+      return {
+        id: item.id || Date.now(),
+        type: item.type || "product",
+        name: item.name || "Unknown",
+        description: item.description || "",
+        original_data: item.original_data || {},
+        archived_date: item.archived_date || new Date().toISOString(),
+        archived_by: item.archived_by || "System",
+        reason: item.reason || "No reason specified",
+        category: item.category || "Uncategorized",
+        original_stock: item.original_stock || 0,
+        // Include additional fields if they exist
+        ...Object.fromEntries(
+          Object.entries(item).filter(
+            ([key]) =>
+              ![
+                "id",
+                "type",
+                "name",
+                "description",
+                "original_data",
+                "archived_date",
+                "archived_by",
+                "reason",
+                "category",
+                "original_stock",
+              ].includes(key)
+          )
+        ),
+      };
+    });
+
+    const jsonString = JSON.stringify(sanitizedItems);
+
+    // Double-check that we're not storing corrupted data
+    if (jsonString.includes("[object Object]")) {
+      console.error(
+        "Attempted to save corrupted data, aborting save operation"
+      );
+      return;
+    }
+
+    localStorage.setItem("medcure_archived_items", jsonString);
+
+    // Verify the save was successful
+    const verification = localStorage.getItem("medcure_archived_items");
+    if (verification && verification.includes("[object Object]")) {
+      console.error("localStorage corruption detected after save, clearing...");
+      localStorage.removeItem("medcure_archived_items");
+    }
   } catch (error) {
-    console.error("Error saving to localStorage:", error);
+    console.error("Error saving archived items to localStorage:", error);
+    // If saving fails, try to clear the corrupted data
+    try {
+      localStorage.removeItem("medcure_archived_items");
+    } catch (clearError) {
+      console.error(
+        "Failed to clear localStorage after save error:",
+        clearError
+      );
+    }
+  }
+}
+
+/**
+ * Utility function to completely reset archived items storage
+ * @returns {boolean} Success status
+ */
+export function resetArchivedItemsStorage() {
+  try {
+    localStorage.removeItem("medcure_archived_items");
+    localStorage.removeItem("archived_items"); // Legacy key
+    console.log("Archived items storage has been reset");
+    return true;
+  } catch (error) {
+    console.error("Failed to reset archived items storage:", error);
+    return false;
   }
 }
 
@@ -72,7 +342,8 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
       id: Date.now(), // Temporary ID for localStorage fallback
       type: "product",
       name: product.name,
-      description: product.description || `${product.name} - ${product.category}`,
+      description:
+        product.description || `${product.name} - ${product.category}`,
       original_data: product, // Store the complete product data
       archived_date: new Date().toISOString(),
       archived_by: archivedBy,
@@ -91,9 +362,14 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
 
       if (archiveError) {
         // If table doesn't exist, fall back to localStorage
-        if (archiveError.code === 'PGRST205' || archiveError.message?.includes('table')) {
-          console.warn("archived_items table not found, using localStorage fallback");
-          return archiveProductToStorage(archivedItem, product);
+        if (
+          archiveError.code === "PGRST205" ||
+          archiveError.message?.includes("table")
+        ) {
+          console.warn(
+            "archived_items table not found, using localStorage fallback"
+          );
+          return archiveProductToStorage(archivedItem);
         }
         throw archiveError;
       }
@@ -109,8 +385,11 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
       return archived;
     } catch (error) {
       // Fallback to localStorage if database operations fail
-      console.warn("Database operations failed, using localStorage fallback");
-      return archiveProductToStorage(archivedItem, product);
+      console.warn(
+        "Database operations failed, using localStorage fallback:",
+        error.message
+      );
+      return archiveProductToStorage(archivedItem);
     }
   } catch (error) {
     console.error("Error archiving product:", error);
@@ -124,16 +403,18 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
  * @param {Object} product - Original product object
  * @returns {Object} Archived item object
  */
-function archiveProductToStorage(archivedItem, product) {
+function archiveProductToStorage(archivedItem) {
   try {
     const existingItems = getArchivedItemsFromStorage();
     existingItems.unshift(archivedItem);
     saveArchivedItemsToStorage(existingItems);
-    
+
     // Note: We can't actually delete from the products table in localStorage fallback
     // This would require product management to also use localStorage
-    console.warn("Product archived to localStorage. Note: Product still exists in database.");
-    
+    console.warn(
+      "Product archived to localStorage. Note: Product still exists in database."
+    );
+
     return archivedItem;
   } catch (error) {
     console.error("Error archiving to localStorage:", error);
@@ -150,15 +431,17 @@ export async function restoreArchivedProduct(archivedId) {
   try {
     // First check if we're using localStorage fallback
     if (typeof window !== "undefined") {
-      const localArchived = JSON.parse(localStorage.getItem("archived_items") || "[]");
-      const archivedItem = localArchived.find(item => item.id === archivedId);
-      
+      const localArchived = getArchivedItemsFromStorage();
+      const archivedItem = localArchived.find((item) => item.id === archivedId);
+
       if (archivedItem) {
         // For localStorage, just remove from archived list
         // In a real implementation, you'd restore to the products table
-        const updatedArchived = localArchived.filter(item => item.id !== archivedId);
-        localStorage.setItem("archived_items", JSON.stringify(updatedArchived));
-        
+        const updatedArchived = localArchived.filter(
+          (item) => item.id !== archivedId
+        );
+        saveArchivedItemsToStorage(updatedArchived);
+
         console.log("Product restored from local storage:", archivedItem.name);
         return archivedItem;
       }
@@ -182,14 +465,14 @@ export async function restoreArchivedProduct(archivedId) {
 
     // Prepare product data for restoration
     const productData = archivedItem.original_data || {};
-    
+
     // Remove id and timestamps to let Supabase handle them
     delete productData.id;
     delete productData.created_at;
     delete productData.updated_at;
 
-    // Ensure required fields are present
-    const requiredProductData = {
+    // Define the base required fields that should exist in the products table
+    const baseProductData = {
       name: productData.name || archivedItem.item_name,
       category: productData.category || "Other",
       total_stock: productData.total_stock || productData.stock || 0,
@@ -202,24 +485,82 @@ export async function restoreArchivedProduct(archivedId) {
       brand_name: productData.brand_name || "",
       generic_name: productData.generic_name || "",
       manufacturer: productData.manufacturer || "",
-      packaging: productData.packaging || "",
-      expiry_date: productData.expiry_date || productData.expiration_date || null,
+      expiry_date:
+        productData.expiry_date || productData.expiration_date || null,
       batch_number: productData.batch_number || "",
-      sheets_per_box: productData.sheets_per_box || null,
-      pieces_per_sheet: productData.pieces_per_sheet || null,
-      total_pieces_per_box: productData.total_pieces_per_box || null,
-      ...productData // Spread any other fields
     };
+
+    // Add optional fields only if they exist in the original data
+    const optionalFields = [
+      "sheets_per_box",
+      "pieces_per_sheet",
+      "total_pieces_per_box",
+      "packaging",
+      "dosage_form",
+      "strength",
+      "unit_of_measure",
+    ];
+
+    optionalFields.forEach((field) => {
+      if (productData[field] !== undefined && productData[field] !== null) {
+        baseProductData[field] = productData[field];
+      }
+    });
 
     // Insert back into products table
     const { data: restoredProduct, error: restoreError } = await supabase
       .from("products")
-      .insert([requiredProductData])
+      .insert([baseProductData])
       .select()
       .single();
 
     if (restoreError) {
       console.error("Error restoring product:", restoreError);
+
+      // If it's a column not found error, try with just the base fields
+      if (
+        restoreError.message?.includes("column") &&
+        restoreError.message?.includes("schema")
+      ) {
+        console.warn("Column schema mismatch, retrying with minimal fields...");
+
+        const minimalProductData = {
+          name: productData.name || archivedItem.item_name,
+          category: productData.category || "Other",
+          total_stock: productData.total_stock || productData.stock || 0,
+          cost_price: productData.cost_price || productData.price || 0,
+          selling_price: productData.selling_price || productData.price || 0,
+          critical_level: productData.critical_level || 10,
+          description: productData.description || "",
+        };
+
+        const { data: minimalRestored, error: minimalError } = await supabase
+          .from("products")
+          .insert([minimalProductData])
+          .select()
+          .single();
+
+        if (minimalError) {
+          throw new Error(
+            `Failed to restore product with minimal data: ${minimalError.message}`
+          );
+        }
+
+        console.log("Product restored with minimal data:", minimalRestored);
+
+        // Delete from archived_items table
+        const { error: deleteError } = await supabase
+          .from("archived_items")
+          .delete()
+          .eq("id", archivedId);
+
+        if (deleteError) {
+          console.error("Error deleting archived item:", deleteError);
+        }
+
+        return minimalRestored;
+      }
+
       throw new Error(`Failed to restore product: ${restoreError.message}`);
     }
 
@@ -268,12 +609,17 @@ export async function permanentlyDeleteArchivedItem(archivedId) {
  * @param {string} archivedBy - Name/ID of user archiving the items
  * @returns {Promise<Array>} Array of archived item objects
  */
-export async function bulkArchiveProducts(products, reason, archivedBy = "System") {
+export async function bulkArchiveProducts(
+  products,
+  reason,
+  archivedBy = "System"
+) {
   try {
-    const archivedItems = products.map(product => ({
+    const archivedItems = products.map((product) => ({
       type: "product",
       name: product.name,
-      description: product.description || `${product.name} - ${product.category}`,
+      description:
+        product.description || `${product.name} - ${product.category}`,
       original_data: product,
       archived_date: new Date().toISOString(),
       archived_by: archivedBy,
@@ -291,7 +637,7 @@ export async function bulkArchiveProducts(products, reason, archivedBy = "System
     if (archiveError) throw archiveError;
 
     // Delete from products table
-    const productIds = products.map(p => p.id);
+    const productIds = products.map((p) => p.id);
     const { error: deleteError } = await supabase
       .from("products")
       .delete()
@@ -337,7 +683,9 @@ export async function searchArchivedItems(searchTerm) {
     const { data, error } = await supabase
       .from("archived_items")
       .select("*")
-      .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,reason.ilike.%${searchTerm}%`)
+      .or(
+        `name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,reason.ilike.%${searchTerm}%`
+      )
       .order("archived_date", { ascending: false });
 
     if (error) throw error;
