@@ -6,7 +6,7 @@ import {
   Search,
   Package,
   Edit,
-  Trash2,
+  Archive,
   Grid3X3,
   List,
   MoreVertical,
@@ -20,10 +20,10 @@ import {
   useProducts,
   useAddProduct,
   useUpdateProduct,
-  useDeleteProduct,
   useBulkAddProducts,
   useSearchProducts,
 } from "../hooks/useProducts.js";
+import { useArchiveProduct } from "../hooks/useArchive.js";
 import ProductModal from "../components/modals/ProductModal.jsx";
 import ImportModal from "../components/modals/ImportModal.jsx";
 import ExportModal from "../components/ExportModal.jsx";
@@ -44,7 +44,7 @@ export default function Management() {
   const { data: searchResults = [] } = useSearchProducts(searchTerm);
   const addProduct = useAddProduct();
   const updateProduct = useUpdateProduct();
-  const deleteProduct = useDeleteProduct();
+  const archiveProduct = useArchiveProduct();
   const bulkAddProducts = useBulkAddProducts();
   const { addNotification } = useNotification();
 
@@ -97,39 +97,48 @@ export default function Management() {
     }
   };
 
-  // Handle product deletion
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+  // Handle product archiving
+  const handleArchiveProduct = async (product, reason = "Manually archived") => {
+    if (window.confirm(`Are you sure you want to archive "${product.name}"?`)) {
       try {
-        await deleteProduct.mutateAsync(productId);
-        addNotification("Product deleted successfully", "success");
-        setSelectedItems((prev) => prev.filter((id) => id !== productId));
+        await archiveProduct.mutateAsync({ 
+          product, 
+          reason, 
+          archivedBy: "Admin User" 
+        });
+        addNotification(`"${product.name}" has been archived successfully`, "success");
+        setSelectedItems((prev) => prev.filter((id) => id !== product.id));
       } catch (error) {
-        addNotification(error.message || "Failed to delete product", "error");
+        addNotification(error.message || "Failed to archive product", "error");
       }
     }
   };
 
   // Handle bulk operations
-  const handleBulkDelete = async () => {
+  const handleBulkArchive = async () => {
     if (selectedItems.length === 0) return;
 
     if (
       window.confirm(
-        `Are you sure you want to delete ${selectedItems.length} products?`
+        `Are you sure you want to archive ${selectedItems.length} products?`
       )
     ) {
       try {
+        const selectedProducts = products.filter(product => selectedItems.includes(product.id));
         await Promise.all(
-          selectedItems.map((id) => deleteProduct.mutateAsync(id))
+          selectedProducts.map((product) => archiveProduct.mutateAsync({ 
+            product, 
+            reason: "Bulk archived from management",
+            archivedBy: "Admin User"
+          }))
         );
         addNotification(
-          `${selectedItems.length} products deleted successfully`,
+          `${selectedItems.length} products archived successfully`,
           "success"
         );
         setSelectedItems([]);
       } catch {
-        addNotification("Failed to delete some products", "error");
+        addNotification("Failed to archive some products", "error");
       }
     }
   };
@@ -199,12 +208,12 @@ export default function Management() {
             {selectedItems.length} selected
           </p>
           <button
-            onClick={handleBulkDelete}
-            disabled={deleteProduct.isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200 disabled:opacity-50"
+            onClick={handleBulkArchive}
+            disabled={archiveProduct.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200 disabled:opacity-50"
           >
-            <Trash2 size={16} />
-            {deleteProduct.isPending ? "Deleting..." : "Delete Selected"}
+            <Archive size={16} />
+            {archiveProduct.isPending ? "Archiving..." : "Archive Selected"}
           </button>
         </div>
       )}
@@ -364,10 +373,10 @@ export default function Management() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50"
+                        onClick={() => handleArchiveProduct(product)}
+                        className="flex items-center justify-center gap-2 px-3 py-2 border border-orange-300 text-orange-600 rounded-lg text-sm hover:bg-orange-50"
                       >
-                        <Trash2 size={14} />
+                        <Archive size={14} />
                       </button>
                     </div>
                   </div>
@@ -474,10 +483,10 @@ export default function Management() {
                             <Edit size={16} />
                           </button>
                           <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                            onClick={() => handleArchiveProduct(product)}
+                            className="p-2 text-gray-400 hover:text-orange-600 rounded-lg hover:bg-orange-50"
                           >
-                            <Trash2 size={16} />
+                            <Archive size={16} />
                           </button>
                         </div>
                       </td>

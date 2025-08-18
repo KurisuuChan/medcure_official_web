@@ -356,7 +356,7 @@ export default function Sidebar({ branding }) {
                 >
                   <div className="w-2 h-2 bg-gray-500 rounded-full transition-all duration-300"></div>
                   <span className="font-medium transition-all duration-300">
-                    Archived Items
+                    Archived
                   </span>
                 </button>
 

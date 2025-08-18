@@ -12,112 +12,38 @@ import {
   MoreVertical,
   Eye,
   ExternalLink,
+  AlertCircle,
+  Loader,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
+import {
+  useArchivedItems,
+  useRestoreArchivedProduct,
+  usePermanentlyDeleteArchivedItem,
+  useSearchArchivedItems,
+} from "../hooks/useArchive.js";
+import { useNotification } from "../hooks/useNotification.js";
+import { formatCurrency } from "../utils/formatters.js";
 
 export default function Archived() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [selectedItems, setSelectedItems] = useState([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [actionType, setActionType] = useState(null); // 'restore' or 'delete'
+  const [selectedItem, setSelectedItem] = useState(null);
 
-  // Mock archived data
-  const archivedItems = [
-    {
-      id: 1,
-      type: "product",
-      name: "Discontinued Aspirin 100mg",
-      description: "Aspirin tablets 100mg - Discontinued product",
-      archivedDate: "2024-08-10",
-      archivedBy: "John Doe",
-      reason: "Product discontinued by manufacturer",
-      category: "Pain Relief",
-      originalStock: 150,
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 2,
-      type: "transaction",
-      name: "Sale Transaction #1205",
-      description: "Voided sale transaction - Customer return",
-      archivedDate: "2024-08-09",
-      archivedBy: "Jane Smith",
-      reason: "Customer return - refund processed",
-      category: "Sales",
-      amount: "₱2,450.00",
-      image: null,
-    },
-    {
-      id: 3,
-      type: "product",
-      name: "Old Brand Vitamins",
-      description: "Multivitamin tablets - Brand changed",
-      archivedDate: "2024-08-05",
-      archivedBy: "Mike Johnson",
-      reason: "Brand replacement available",
-      category: "Supplements",
-      originalStock: 75,
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 4,
-      type: "supplier",
-      name: "MedSupply Co.",
-      description: "Former pharmaceutical supplier",
-      archivedDate: "2024-08-01",
-      archivedBy: "Sarah Wilson",
-      reason: "Contract terminated",
-      category: "Suppliers",
-      contactInfo: "medsupply@example.com",
-      image: null,
-    },
-    {
-      id: 5,
-      type: "product",
-      name: "Expired Antibiotics",
-      description: "Amoxicillin 500mg - Expired batch",
-      archivedDate: "2024-07-28",
-      archivedBy: "Tom Brown",
-      reason: "Product expired",
-      category: "Antibiotics",
-      originalStock: 30,
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 6,
-      type: "transaction",
-      name: "Sale Transaction #1198",
-      description: "Cancelled bulk order",
-      archivedDate: "2024-07-25",
-      archivedBy: "Lisa Davis",
-      reason: "Order cancelled by customer",
-      category: "Sales",
-      amount: "₱15,200.00",
-      image: null,
-    },
-    {
-      id: 7,
-      type: "employee",
-      name: "Robert Martinez",
-      description: "Former pharmacy assistant",
-      archivedDate: "2024-07-20",
-      archivedBy: "Admin",
-      reason: "Employment terminated",
-      category: "Staff",
-      position: "Pharmacy Assistant",
-      image: "/api/placeholder/60/60",
-    },
-    {
-      id: 8,
-      type: "product",
-      name: "Recalled Medicine Batch",
-      description: "Blood pressure medication - Recall notice",
-      archivedDate: "2024-07-15",
-      archivedBy: "Quality Control",
-      reason: "Manufacturer recall",
-      category: "Cardiovascular",
-      originalStock: 200,
-      image: "/api/placeholder/60/60",
-    },
-  ];
+  const { addNotification } = useNotification();
+  
+  // Use real data hooks
+  const { data: allArchivedItems = [], isLoading, error, refetch } = useArchivedItems();
+  const { data: searchResults = [] } = useSearchArchivedItems(searchTerm);
+  const restoreProduct = useRestoreArchivedProduct();
+  const permanentlyDelete = usePermanentlyDeleteArchivedItem();
+
+  // Use search results if searching, otherwise use all archived items
+  const archivedItems = searchTerm ? searchResults : allArchivedItems;
 
   const getTypeIcon = (type) => {
     switch (type) {
@@ -137,24 +63,21 @@ export default function Archived() {
   const getTypeBadgeColor = (type) => {
     switch (type) {
       case "product":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-50 text-blue-700 border border-blue-200";
       case "transaction":
-        return "bg-green-100 text-green-800";
+        return "bg-green-50 text-green-700 border border-green-200";
       case "supplier":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-50 text-purple-700 border border-purple-200";
       case "employee":
-        return "bg-orange-100 text-orange-800";
+        return "bg-orange-50 text-orange-700 border border-orange-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-50 text-gray-700 border border-gray-200";
     }
   };
 
   const filteredItems = archivedItems.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === "all" || item.type === filterType;
-    return matchesSearch && matchesFilter;
+    return matchesFilter;
   });
 
   const handleSelectItem = (id) => {
@@ -163,13 +86,106 @@ export default function Archived() {
     );
   };
 
+  const handleSelectAll = () => {
+    if (selectedItems.length === filteredItems.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(filteredItems.map(item => item.id));
+    }
+  };
+
+  const handleSingleAction = (item, action) => {
+    setSelectedItem(item);
+    setActionType(action);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!selectedItem || !actionType) return;
+
+    try {
+      if (actionType === 'restore') {
+        await restoreProduct.mutateAsync(selectedItem.id);
+        addNotification(`"${selectedItem.name}" has been restored successfully`, "success");
+      } else if (actionType === 'delete') {
+        await permanentlyDelete.mutateAsync(selectedItem.id);
+        addNotification(`"${selectedItem.name}" has been permanently deleted`, "success");
+      }
+    } catch (error) {
+      addNotification(`Failed to ${actionType} item: ${error.message}`, "error");
+    } finally {
+      setShowConfirmModal(false);
+      setSelectedItem(null);
+      setActionType(null);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    try {
+      for (const itemId of selectedItems) {
+        await restoreProduct.mutateAsync(itemId);
+      }
+      addNotification(`${selectedItems.length} items restored successfully`, "success");
+      setSelectedItems([]);
+    } catch (error) {
+      addNotification(`Failed to restore items: ${error.message}`, "error");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      for (const itemId of selectedItems) {
+        await permanentlyDelete.mutateAsync(itemId);
+      }
+      addNotification(`${selectedItems.length} items permanently deleted`, "success");
+      setSelectedItems([]);
+    } catch (error) {
+      addNotification(`Failed to delete items: ${error.message}`, "error");
+    }
+  };
+
   const typeStats = {
     products: archivedItems.filter((item) => item.type === "product").length,
-    transactions: archivedItems.filter((item) => item.type === "transaction")
-      .length,
+    transactions: archivedItems.filter((item) => item.type === "transaction").length,
     suppliers: archivedItems.filter((item) => item.type === "supplier").length,
     employees: archivedItems.filter((item) => item.type === "employee").length,
   };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-center py-12">
+          <Loader className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="ml-3 text-gray-600">Loading archived items...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white p-8 rounded-2xl shadow-lg">
+        <div className="flex items-center justify-center py-12">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+          <span className="ml-3 text-red-600">Error loading archived items: {error.message}</span>
+          <button 
+            onClick={() => refetch()} 
+            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
