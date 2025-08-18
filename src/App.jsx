@@ -5,13 +5,15 @@ import Dashboard from "@/pages/Dashboard";
 import Management from "@/pages/Management";
 import Archived from "@/pages/Archived";
 import Pos from "@/pages/POS";
+import Scanner from "@/pages/Scanner";
+import Customers from "@/pages/Customers";
 import Contacts from "@/pages/Contacts";
 import NotificationHistory from "@/pages/NotificationHistory";
 import Financials from "@/pages/Financials";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 
-const branding = { name: "MedCure" };
+const branding = { name: "MedCure Admin" };
 const user = { name: "Admin User", role: "Administrator", initials: "AU" };
 
 export default function App() {
@@ -22,6 +24,8 @@ export default function App() {
         <Route path="management" element={<Management />} />
         <Route path="archived" element={<Archived />} />
         <Route path="point-of-sales" element={<Pos />} />
+        <Route path="scanner" element={<Scanner />} />
+        <Route path="customers" element={<Customers />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="notifications" element={<NotificationHistory />} />
         <Route path="financials" element={<Financials />} />

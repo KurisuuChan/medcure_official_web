@@ -11,6 +11,8 @@ import {
   Settings,
   ChevronLeft,
   Menu,
+  ScanLine,
+  Users,
 } from "lucide-react";
 import PropTypes from "prop-types";
 
@@ -19,6 +21,8 @@ const menu = [
   { to: "/management", label: "Management", icon: Pill },
   { to: "/archived", label: "Archived", icon: Archive },
   { to: "/point-of-sales", label: "POS", icon: ShoppingCart },
+  { to: "/scanner", label: "Scanner", icon: ScanLine, comingSoon: true },
+  { to: "/customers", label: "Customers", icon: Users, comingSoon: true },
   { to: "/contacts", label: "Contacts", icon: Contact },
   { to: "/notifications", label: "Notifications", icon: Bell },
   { to: "/financials", label: "Financials", icon: Banknote },
@@ -65,6 +69,30 @@ export default function Sidebar({ branding }) {
           {menu.map((item) => {
             const ActiveIcon = item.icon;
             const active = location.pathname === item.to;
+
+            if (item.comingSoon) {
+              return (
+                <li key={item.to} className="group relative">
+                  <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 cursor-not-allowed opacity-60">
+                    <ActiveIcon size={18} className="opacity-60" />
+                    {expanded && (
+                      <div className="flex items-center gap-2 truncate">
+                        <span>{item.label}</span>
+                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                          Coming Soon
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {!expanded && (
+                    <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 text-xs font-medium bg-gray-900 text-white px-2 py-1 rounded opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition">
+                      {item.label} - Coming Soon
+                    </span>
+                  )}
+                </li>
+              );
+            }
+
             return (
               <li key={item.to} className="group relative">
                 <NavLink

@@ -1,56 +1,38 @@
-import { useEffect, useState } from "react";
-import { mockFetchProducts } from "@/utils/mockApi";
+import { useQuery } from "@tanstack/react-query";
+import { getProducts } from "../services/productService.js";
 
 export const useInventorySummary = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [summary, setSummary] = useState({
-    products: 0,
-    lowStock: 0,
-    outOfStock: 0,
-    totalUnits: 0,
-    totalValue: 0,
-    avgCost: 0,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  return useQuery({
+    queryKey: ["inventory-summary"],
+    queryFn: async () => {
       try {
-        setLoading(true);
-        const data = await mockFetchProducts();
-        if (cancelled) return;
-        const products = data.length;
-        const lowStock = data.filter(
-          (p) => p.quantity > 0 && p.quantity <= 10
-        ).length;
-        const outOfStock = data.filter((p) => p.quantity === 0).length;
-        const totalUnits = data.reduce((acc, p) => acc + p.quantity, 0);
-        const totalValue = data.reduce(
-          (acc, p) => acc + p.quantity * p.cost_price,
-          0
-        );
-        const avgCost = products
-          ? (totalValue / totalUnits || 0).toFixed(2)
-          : 0;
-        setSummary({
-          products,
-          lowStock,
-          outOfStock,
-          totalUnits,
-          totalValue,
-          avgCost,
-        });
-      } catch {
-        setError("Failed to load summary");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+        const products = await getProducts();
 
-  return { loading, error, summary };
+        const summary = {
+          products: products.length,
+          lowStock: products.filter(
+            (p) => p.stock > 0 && p.stock <= (p.minimum_stock || 10)
+          ).length,
+          outOfStock: products.filter((p) => p.stock === 0).length,
+          totalUnits: products.reduce((acc, p) => acc + (p.stock || 0), 0),
+          totalValue: products.reduce(
+            (acc, p) => acc + (p.stock || 0) * (p.price || 0),
+            0
+          ),
+          avgCost: products.length
+            ? (
+                products.reduce((acc, p) => acc + (p.price || 0), 0) /
+                products.length
+              ).toFixed(2)
+            : 0,
+        };
+
+        return summary;
+      } catch (error) {
+        console.error("Error fetching inventory summary:", error);
+        throw new Error("Failed to load inventory summary");
+      }
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 };
