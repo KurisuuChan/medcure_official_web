@@ -85,9 +85,21 @@ export function useDashboardData() {
           lowStockItems: lowStockProducts || [],
           recentSales: [], // TODO: Get recent sales from sales service
           sales: {
-            today: todaySummary || { totalRevenue: 0, totalTransactions: 0, averageTransaction: 0 },
-            week: weekSummary || { totalRevenue: 0, totalTransactions: 0, averageTransaction: 0 },
-            month: monthSummary || { totalRevenue: 0, totalTransactions: 0, averageTransaction: 0 },
+            today: todaySummary || {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+            week: weekSummary || {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+            month: monthSummary || {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
           },
           inventory: {
             lowStockCount: lowStockProducts?.length || 0,

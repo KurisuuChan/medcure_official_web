@@ -21,6 +21,7 @@ import {
 import { useProducts, useSearchProducts } from "../hooks/useProducts.js";
 import { useCreateSale } from "../hooks/useSales.js";
 import QuantitySelectionModal from "../components/modals/QuantitySelectionModal.jsx";
+import PaymentModal from "../components/modals/PaymentModal.jsx";
 import { formatCurrency } from "../utils/formatters.js";
 
 export default function POS() {
@@ -31,7 +32,7 @@ export default function POS() {
   const [discount, setDiscount] = useState(0);
   const [isPwdSenior, setIsPwdSenior] = useState(false);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
-  // const [showPaymentModal, setShowPaymentModal] = useState(false); // TODO: Implement payment modal
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Real backend hooks
@@ -114,13 +115,15 @@ export default function POS() {
     if (totalPieces <= 0) return;
 
     // Check if product already exists in cart
-    const existingItemIndex = cart.findIndex(item => item.id === selectedProduct.id);
-    
+    const existingItemIndex = cart.findIndex(
+      (item) => item.id === selectedProduct.id
+    );
+
     if (existingItemIndex >= 0) {
       // Update existing item quantity
-      setCart(prev => 
-        prev.map((item, index) => 
-          index === existingItemIndex 
+      setCart((prev) =>
+        prev.map((item, index) =>
+          index === existingItemIndex
             ? { ...item, quantity: item.quantity + totalPieces }
             : item
         )
@@ -138,9 +141,9 @@ export default function POS() {
           sheets: quantityMode.sheets,
           pieces: quantityMode.pieces,
           totalPieces,
-        }
+        },
       };
-      setCart(prev => [...prev, cartItem]);
+      setCart((prev) => [...prev, cartItem]);
     }
 
     addNotification(`Added ${selectedProduct.name} to cart`, "success");
@@ -166,7 +169,7 @@ export default function POS() {
   };
 
   const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
     0
   );
   const pwdSeniorDiscount = isPwdSenior ? subtotal * 0.2 : 0;
@@ -181,6 +184,11 @@ export default function POS() {
       return;
     }
 
+    // Open payment modal instead of directly processing sale
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentConfirm = async (paymentData) => {
     try {
       // Prepare sale data for backend
       const saleData = {
@@ -192,7 +200,10 @@ export default function POS() {
           variant_info: item.variant_info || null, // Include packaging details if available
         })),
         total: total, // Changed from total_amount to total
-        payment_method: "cash", // Default to cash, could be made dynamic
+        payment_method: paymentData.paymentMethod || "cash",
+        amount_paid: paymentData.amountPaid || total,
+        change_amount: paymentData.changeAmount || 0,
+        customer_name: paymentData.customerName || null,
       };
 
       // Create sale using backend
@@ -204,6 +215,7 @@ export default function POS() {
       setCart([]);
       setDiscount(0);
       setIsPwdSenior(false);
+      setShowPaymentModal(false);
     } catch (error) {
       console.error("Sale creation failed:", error);
       addNotification("Failed to complete sale. Please try again.", "error");
@@ -390,7 +402,7 @@ export default function POS() {
                         {item.name}
                       </h4>
                       <p className="text-sm text-gray-500">
-                        ₱{item.price.toFixed(2)} each
+                        ₱{(item.price || 0).toFixed(2)} each
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -864,15 +876,22 @@ export default function POS() {
                 );
                 return prev.map((item) =>
                   item.id === cartItem.product.id
-                    ? { ...item, quantity: newQuantity, variant_info: variantInfo }
+                    ? {
+                        ...item,
+                        quantity: newQuantity,
+                        variant_info: variantInfo,
+                      }
                     : item
                 );
               }
-              return [...prev, { 
-                ...cartItem.product, 
-                quantity,
-                variant_info: variantInfo
-              }];
+              return [
+                ...prev,
+                {
+                  ...cartItem.product,
+                  quantity,
+                  variant_info: variantInfo,
+                },
+              ];
             });
 
             addNotification(
@@ -880,6 +899,21 @@ export default function POS() {
               "success"
             );
           }}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onProcessPayment={handlePaymentConfirm}
+          totals={{
+            subtotal: subtotal,
+            discount: totalDiscount,
+            total: total,
+          }}
+          isProcessing={createSale.isPending}
         />
       )}
     </div>

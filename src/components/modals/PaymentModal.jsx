@@ -1,299 +1,327 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   CreditCard,
   DollarSign,
-  Smartphone,
-  FileText,
+  Calculator,
   CheckCircle,
+  AlertTriangle,
+  User,
+  Receipt,
 } from "lucide-react";
-import { PAYMENT_METHODS } from "../../utils/constants.js";
-import { formatCurrency } from "../../utils/formatters.js";
 
-/**
- * Modal for processing payments in POS system
- * Handles payment method selection and transaction completion
- */
-export default function PaymentModal({
+export function PaymentModal({
   isOpen,
   onClose,
-  onConfirmPayment,
-  cartSummary,
+  onProcessPayment,
+  totals,
   isProcessing = false,
 }) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [amountReceived, setAmountReceived] = useState("");
-  const [error, setError] = useState("");
+  const [amountPaid, setAmountPaid] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [errors, setErrors] = useState([]);
+  const [isValid, setIsValid] = useState(false);
 
-  const total = cartSummary?.summary?.total || 0;
-  const receivedAmount = parseFloat(amountReceived) || 0;
-  const change = receivedAmount - total;
-
-  // Quick amount buttons for cash payments
-  const quickAmounts = [
-    Math.ceil(total / 100) * 100, // Round up to nearest 100
-    Math.ceil(total / 500) * 500, // Round up to nearest 500
-    Math.ceil(total / 1000) * 1000, // Round up to nearest 1000
-  ].filter(
-    (amount, index, arr) => arr.indexOf(amount) === index && amount > total
-  );
-
-  // Handle payment method change
-  const handlePaymentMethodChange = (method) => {
-    setPaymentMethod(method);
-    setError("");
-
-    // For non-cash payments, set received amount to exact total
-    if (method !== "cash") {
-      setAmountReceived(total.toString());
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPaymentMethod("cash");
+      setAmountPaid(totals?.total?.toString() || "");
+      setCustomerName("");
+      setErrors([]);
     }
-  };
+  }, [isOpen, totals]);
 
-  // Handle amount received change
-  const handleAmountReceivedChange = (value) => {
-    setAmountReceived(value);
-    setError("");
-  };
+  // Calculate change
+  const paidAmount = parseFloat(amountPaid) || 0;
+  const changeAmount = Math.max(0, paidAmount - (totals?.total || 0));
 
-  // Handle quick amount selection
+  // Validation
+  useEffect(() => {
+    const newErrors = [];
+
+    if (!amountPaid || paidAmount <= 0) {
+      newErrors.push("Please enter a valid payment amount");
+    }
+
+    if (paidAmount < (totals?.total || 0)) {
+      newErrors.push(
+        "Payment amount must be at least ₱" + (totals?.total || 0).toFixed(2)
+      );
+    }
+
+    if (paymentMethod === "card" && !customerName.trim()) {
+      newErrors.push("Customer name is required for card payments");
+    }
+
+    setErrors(newErrors);
+    setIsValid(newErrors.length === 0);
+  }, [amountPaid, paidAmount, totals, paymentMethod, customerName]);
+
   const handleQuickAmount = (amount) => {
-    setAmountReceived(amount.toString());
-    setError("");
+    setAmountPaid(amount.toString());
   };
 
-  // Validate payment
-  const validatePayment = () => {
-    if (!paymentMethod) {
-      return "Please select a payment method";
-    }
-
-    if (paymentMethod === "cash") {
-      if (!amountReceived || receivedAmount <= 0) {
-        return "Please enter the amount received";
-      }
-
-      if (receivedAmount < total) {
-        return "Amount received is less than the total";
-      }
-    }
-
-    return null;
-  };
-
-  // Handle payment confirmation
-  const handleConfirmPayment = () => {
-    const validationError = validatePayment();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+  const handleProcessPayment = () => {
+    if (!isValid || isProcessing) return;
 
     const paymentData = {
-      method: paymentMethod,
-      amountReceived: paymentMethod === "cash" ? receivedAmount : total,
-      change: paymentMethod === "cash" ? change : 0,
-      total,
+      paymentMethod,
+      amountPaid: paidAmount,
+      changeAmount,
+      customerName: customerName.trim() || null,
     };
 
-    onConfirmPayment(paymentData);
+    onProcessPayment(paymentData);
   };
 
-  // Reset modal state when closed
-  const handleClose = () => {
-    if (!isProcessing) {
-      setPaymentMethod("cash");
-      setAmountReceived("");
-      setError("");
-      onClose();
-    }
-  };
+  const quickAmounts = [
+    totals?.total || 0,
+    Math.ceil((totals?.total || 0) / 100) * 100, // Round up to nearest 100
+    Math.ceil((totals?.total || 0) / 500) * 500, // Round up to nearest 500
+    Math.ceil((totals?.total || 0) / 1000) * 1000, // Round up to nearest 1000
+  ].filter((amount, index, arr) => arr.indexOf(amount) === index && amount > 0);
 
   if (!isOpen) return null;
 
-  const getPaymentMethodIcon = (method) => {
-    switch (method) {
-      case "cash":
-        return <DollarSign size={20} />;
-      case "card":
-        return <CreditCard size={20} />;
-      case "digital":
-        return <Smartphone size={20} />;
-      case "check":
-        return <FileText size={20} />;
-      default:
-        return <DollarSign size={20} />;
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Complete Payment
-          </h2>
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CreditCard size={24} className="text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">
+                Process Payment
+              </h3>
+              <p className="text-sm text-gray-500">Complete the transaction</p>
+            </div>
+          </div>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             disabled={isProcessing}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Order Summary */}
-        <div className="p-6 border-b bg-gray-50">
-          <h3 className="font-medium text-gray-900 mb-3">Order Summary</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Items ({cartSummary?.summary?.totalItems || 0}):</span>
-              <span>{formatCurrency(cartSummary?.summary?.subtotal || 0)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Tax:</span>
-              <span>{formatCurrency(cartSummary?.summary?.tax || 0)}</span>
-            </div>
-            <div className="flex justify-between text-lg font-semibold border-t pt-2">
-              <span>Total:</span>
-              <span className="text-blue-600">{formatCurrency(total)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Payment Method Selection */}
-        <div className="p-6">
-          <h3 className="font-medium text-gray-900 mb-4">Payment Method</h3>
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {PAYMENT_METHODS.map((method) => (
-              <button
-                key={method.value}
-                onClick={() => handlePaymentMethodChange(method.value)}
-                disabled={isProcessing}
-                className={`p-3 border rounded-lg flex items-center justify-center space-x-2 transition-colors ${
-                  paymentMethod === method.value
-                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                    : "border-gray-300 hover:border-gray-400"
-                } disabled:opacity-50`}
-              >
-                {getPaymentMethodIcon(method.value)}
-                <span className="font-medium">{method.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Cash Payment Details */}
-          {paymentMethod === "cash" && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount Received (₱)
-                </label>
-                <input
-                  type="number"
-                  value={amountReceived}
-                  onChange={(e) => handleAmountReceivedChange(e.target.value)}
-                  step="0.01"
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0.00"
-                  disabled={isProcessing}
-                />
+        {/* Modal Content */}
+        <div className="p-6 space-y-6">
+          {/* Order Summary */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-semibold text-gray-800 mb-3">Order Summary</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal:</span>
+                <span>₱{(totals?.subtotal || 0).toFixed(2)}</span>
               </div>
-
-              {/* Quick Amount Buttons */}
-              {quickAmounts.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quick Select
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {quickAmounts.slice(0, 4).map((amount) => (
-                      <button
-                        key={amount}
-                        onClick={() => handleQuickAmount(amount)}
-                        disabled={isProcessing}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {formatCurrency(amount)}
-                      </button>
-                    ))}
-                  </div>
+              {(totals?.regularDiscountAmount || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Discount:</span>
+                  <span className="text-red-600">
+                    -₱{(totals?.regularDiscountAmount || 0).toFixed(2)}
+                  </span>
                 </div>
               )}
-
-              {/* Change Calculation */}
-              {receivedAmount > 0 && (
-                <div className="bg-green-50 p-3 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Change:</span>
-                    <span
-                      className={`font-bold text-lg ${
-                        change >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {formatCurrency(Math.max(0, change))}
-                    </span>
-                  </div>
-                  {change < 0 && (
-                    <p className="text-sm text-red-600 mt-1">
-                      Insufficient amount: {formatCurrency(Math.abs(change))}{" "}
-                      short
-                    </p>
-                  )}
+              {(totals?.pwdSeniorDiscount || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">PWD/Senior Discount:</span>
+                  <span className="text-purple-600">
+                    -₱{(totals?.pwdSeniorDiscount || 0).toFixed(2)}
+                  </span>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Non-cash Payment Info */}
-          {paymentMethod !== "cash" && (
-            <div className="bg-blue-50 p-3 rounded-md">
-              <div className="flex items-center">
-                <CheckCircle size={16} className="text-blue-600 mr-2" />
-                <span className="text-sm text-blue-700">
-                  Payment amount: {formatCurrency(total)}
+              <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
+                <span>Total:</span>
+                <span className="text-green-600">
+                  ₱{(totals?.total || 0).toFixed(2)}
                 </span>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
+          {/* Payment Method */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Payment Method
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setPaymentMethod("cash")}
+                className={`p-3 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  paymentMethod === "cash"
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <DollarSign size={20} />
+                <span className="font-medium">Cash</span>
+              </button>
+              <button
+                onClick={() => setPaymentMethod("card")}
+                className={`p-3 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  paymentMethod === "card"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <CreditCard size={20} />
+                <span className="font-medium">Card</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Customer Name (for card payments) */}
+          {paymentMethod === "card" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User size={16} className="inline mr-1" />
+                Customer Name
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter customer name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={isProcessing}
+              />
             </div>
           )}
-        </div>
 
-        {/* Footer */}
-        <div className="flex space-x-3 p-6 border-t">
-          <button
-            onClick={handleClose}
-            disabled={isProcessing}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirmPayment}
-            disabled={isProcessing || !!validatePayment()}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isProcessing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Processing...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={16} className="mr-2" />
-                Complete Payment
-              </>
+          {/* Payment Amount */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Calculator size={16} className="inline mr-1" />
+              Amount Paid
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+              placeholder="Enter amount paid"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
+              disabled={isProcessing}
+            />
+
+            {/* Quick Amount Buttons */}
+            {paymentMethod === "cash" && quickAmounts.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-2">Quick amounts:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {quickAmounts.slice(0, 4).map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => handleQuickAmount(amount)}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                      disabled={isProcessing}
+                    >
+                      ₱{amount.toFixed(2)}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-          </button>
+          </div>
+
+          {/* Change Calculation */}
+          {paymentMethod === "cash" && paidAmount > 0 && (
+            <div
+              className={`rounded-lg p-4 ${
+                changeAmount >= 0
+                  ? "bg-green-50 border border-green-200"
+                  : "bg-red-50 border border-red-200"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-700">Change:</span>
+                <span
+                  className={`text-xl font-bold ${
+                    changeAmount >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  ₱{changeAmount.toFixed(2)}
+                </span>
+              </div>
+              {changeAmount < 0 && (
+                <p className="text-sm text-red-600 mt-1">
+                  Insufficient payment amount
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Errors */}
+          {errors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={16} className="text-red-600" />
+                <span className="text-sm font-medium text-red-800">
+                  Please fix the following issues:
+                </span>
+              </div>
+              <ul className="text-sm text-red-700 space-y-1">
+                {errors.map((error, index) => (
+                  <li key={index} className="flex items-center gap-1">
+                    <span>•</span>
+                    <span>{error}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={onClose}
+              disabled={isProcessing}
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleProcessPayment}
+              disabled={!isValid || isProcessing}
+              className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                isValid && !isProcessing
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={16} />
+                  Complete Sale
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Payment Info */}
+          <div className="text-xs text-gray-500 text-center border-t border-gray-200 pt-4">
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Receipt size={12} />
+              <span>Receipt will be generated after payment</span>
+            </div>
+            <p>Transaction will be saved to history</p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+export default PaymentModal;

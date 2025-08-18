@@ -26,6 +26,7 @@ import {
 } from "../hooks/useProducts.js";
 import ProductModal from "../components/modals/ProductModal.jsx";
 import ImportModal from "../components/modals/ImportModal.jsx";
+import DebugConnection from "../components/DebugConnection.jsx";
 import { formatCurrency, formatStockStatus } from "../utils/formatters.js";
 import { useNotification } from "../hooks/useNotification.js";
 
@@ -44,7 +45,7 @@ export default function Management() {
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const bulkAddProducts = useBulkAddProducts();
-  const { showNotification } = useNotification();
+  const { addNotification } = useNotification();
 
   // Use search results if searching, otherwise use all products
   const displayProducts = searchTerm.length >= 2 ? searchResults : products;
@@ -83,15 +84,15 @@ export default function Management() {
           id: editingProduct.id,
           updates: productData,
         });
-        showNotification("Product updated successfully", "success");
+        addNotification("Product updated successfully", "success");
       } else {
         await addProduct.mutateAsync(productData);
-        showNotification("Product added successfully", "success");
+        addNotification("Product added successfully", "success");
       }
       setShowProductModal(false);
       setEditingProduct(null);
     } catch (error) {
-      showNotification(error.message || "Failed to save product", "error");
+      addNotification(error.message || "Failed to save product", "error");
     }
   };
 
@@ -100,10 +101,10 @@ export default function Management() {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
         await deleteProduct.mutateAsync(productId);
-        showNotification("Product deleted successfully", "success");
+        addNotification("Product deleted successfully", "success");
         setSelectedItems((prev) => prev.filter((id) => id !== productId));
       } catch (error) {
-        showNotification(error.message || "Failed to delete product", "error");
+        addNotification(error.message || "Failed to delete product", "error");
       }
     }
   };
@@ -121,13 +122,13 @@ export default function Management() {
         await Promise.all(
           selectedItems.map((id) => deleteProduct.mutateAsync(id))
         );
-        showNotification(
+        addNotification(
           `${selectedItems.length} products deleted successfully`,
           "success"
         );
         setSelectedItems([]);
       } catch {
-        showNotification("Failed to delete some products", "error");
+        addNotification("Failed to delete some products", "error");
       }
     }
   };
@@ -136,20 +137,20 @@ export default function Management() {
   const handleImport = async (productsData) => {
     try {
       await bulkAddProducts.mutateAsync(productsData);
-      showNotification(
+      addNotification(
         `${productsData.length} products imported successfully`,
         "success"
       );
       setShowImportModal(false);
     } catch (error) {
-      showNotification(error.message || "Failed to import products", "error");
+      addNotification(error.message || "Failed to import products", "error");
     }
   };
 
   // Handle export (simple CSV download)
   const handleExport = () => {
     if (products.length === 0) {
-      showNotification("No products to export", "warning");
+      addNotification("No products to export", "warning");
       return;
     }
 
@@ -192,7 +193,7 @@ export default function Management() {
     link.click();
     URL.revokeObjectURL(url);
 
-    showNotification("Products exported successfully", "success");
+    addNotification("Products exported successfully", "success");
   };
 
   if (error) {
@@ -233,6 +234,9 @@ export default function Management() {
           </div>
         </div>
       </div>
+
+      {/* Debug Connection Component */}
+      <DebugConnection />
 
       {/* Action Bar */}
       {selectedItems.length > 0 && (
@@ -558,9 +562,18 @@ export default function Management() {
           setShowProductModal(false);
           setEditingProduct(null);
         }}
-        onSave={handleSaveProduct}
+        onSubmit={handleSaveProduct}
         product={editingProduct}
-        isLoading={addProduct.isPending || updateProduct.isPending}
+        categories={[
+          "Prescription Drugs",
+          "Over-the-Counter",
+          "Vitamins & Supplements",
+          "Personal Care",
+          "Medical Devices",
+          "First Aid",
+          "Baby Care",
+          "Other",
+        ]}
       />
 
       <ImportModal

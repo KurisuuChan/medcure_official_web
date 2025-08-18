@@ -16,6 +16,8 @@ import { supabase } from "../config/supabase.js";
  */
 export async function createSale(saleData) {
   try {
+    console.log("Creating sale with data:", saleData);
+
     // Start a transaction by creating the sale record first
     const { data: sale, error: saleError } = await supabase
       .from("sales")
@@ -29,7 +31,10 @@ export async function createSale(saleData) {
       .select()
       .single();
 
-    if (saleError) throw saleError;
+    if (saleError) {
+      console.error("Sale creation error:", saleError);
+      throw saleError;
+    }
 
     // Prepare sale items for insertion
     const saleItems = saleData.items.map((item) => ({
@@ -41,13 +46,18 @@ export async function createSale(saleData) {
       variant_info: item.variant_info, // Store box/sheet/piece breakdown
     }));
 
+    console.log("Inserting sale items:", saleItems);
+
     // Insert all sale items
     const { data: items, error: itemsError } = await supabase
       .from("sale_items")
       .insert(saleItems)
       .select();
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error("Sale items creation error:", itemsError);
+      throw itemsError;
+    }
 
     // Update inventory for each item sold
     for (const item of saleData.items) {

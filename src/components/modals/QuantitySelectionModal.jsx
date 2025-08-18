@@ -1,334 +1,641 @@
-import { useState, useEffect } from "react";
-import { X, ShoppingCart, Package, FileText, Circle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import {
-  calculateTotalPieces,
-  calculateTotalPrice,
-  validateStockAvailability,
-  formatQuantityDisplay,
-} from "../../utils/calculations.js";
-import { formatCurrency } from "../../utils/formatters.js";
+  X,
+  Package,
+  Plus,
+  Minus,
+  Box,
+  Layers,
+  Hash,
+  AlertTriangle,
+  CheckCircle,
+  ShoppingCart,
+} from "lucide-react";
 
-/**
- * Modal for selecting quantity with box/sheet/piece breakdown
- * Used in POS system when adding products to cart
- */
-export default function QuantitySelectionModal({
+export function QuantitySelectionModal({
   isOpen,
   onClose,
-  onAddToCart,
   product,
+  onAddToCart,
+  existingQuantity = 0,
 }) {
-  const [quantities, setQuantities] = useState({
+  const [quantityMode, setQuantityMode] = useState({
     boxes: 0,
     sheets: 0,
     pieces: 0,
   });
 
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState([]);
+  const [isValid, setIsValid] = useState(false);
 
-  // Reset quantities when modal opens with new product
+  // Reset when product changes or modal opens
   useEffect(() => {
     if (isOpen && product) {
-      setQuantities({ boxes: 0, sheets: 0, pieces: 0 });
-      setError("");
+      setQuantityMode({
+        boxes: 0,
+        sheets: 0,
+        pieces: 0,
+      });
+      setErrors([]);
     }
   }, [isOpen, product]);
 
-  // Calculate totals
-  const totalPieces = product ? calculateTotalPieces(quantities, product) : 0;
-  const totalPrice = product ? calculateTotalPrice(quantities, product) : 0;
+  // Calculate total pieces
+  const calculateTotalPieces = (boxes, sheets, pieces) => {
+    if (!product) return 0;
 
-  // Handle quantity changes
-  const handleQuantityChange = (type, value) => {
-    const numValue = Math.max(0, parseInt(value) || 0);
-    setQuantities((prev) => ({
-      ...prev,
-      [type]: numValue,
-    }));
-    setError("");
+    const piecesFromBoxes = boxes * (product.total_pieces_per_box || 0);
+    const piecesFromSheets = sheets * (product.pieces_per_sheet || 0);
+    return piecesFromBoxes + piecesFromSheets + pieces;
   };
 
-  // Handle quick select buttons
-  const handleQuickSelect = (type, amount) => {
-    if (!product) return;
+  const totalPieces = calculateTotalPieces(
+    quantityMode.boxes,
+    quantityMode.sheets,
+    quantityMode.pieces
+  );
 
-    setQuantities((prev) => {
-      const newQuantities = { ...prev };
+  const totalAmount = totalPieces * (product?.selling_price || 0);
+  const availableStock = (product?.total_stock || 0) - existingQuantity;
 
-      switch (type) {
-        case "box":
-          newQuantities.boxes = amount;
-          newQuantities.sheets = 0;
-          newQuantities.pieces = 0;
-          break;
-        case "sheet":
-          newQuantities.boxes = 0;
-          newQuantities.sheets = amount;
-          newQuantities.pieces = 0;
-          break;
-        case "piece":
-          newQuantities.boxes = 0;
-          newQuantities.sheets = 0;
-          newQuantities.pieces = amount;
-          break;
-      }
-
-      return newQuantities;
-    });
-    setError("");
-  };
-
-  // Handle add to cart
-  const handleAddToCart = () => {
-    if (!product) return;
-
-    // Validate stock availability
-    const validation = validateStockAvailability(quantities, product);
-    if (!validation.success) {
-      setError(validation.message);
-      return;
-    }
+  // Enhanced validation with detailed stock checking
+  useEffect(() => {
+    const newErrors = [];
 
     if (totalPieces <= 0) {
-      setError("Please select a quantity greater than zero");
-      return;
+      newErrors.push("Please specify a quantity greater than 0");
     }
 
-    // Create cart item
-    const cartItem = {
-      id: product.id,
-      product,
-      quantities,
-      totalPieces,
-      totalPrice,
-      displayQuantity: formatQuantityDisplay(quantities),
-    };
+    if (totalPieces > availableStock) {
+      newErrors.push(`Insufficient stock. Available: ${availableStock} pieces`);
+    }
 
-    onAddToCart(cartItem);
-    onClose();
+    if (
+      quantityMode.boxes < 0 ||
+      quantityMode.sheets < 0 ||
+      quantityMode.pieces < 0
+    ) {
+      newErrors.push("Quantities cannot be negative");
+    }
+
+    // Check individual packaging limits
+    const maxBoxes = Math.floor(
+      availableStock / (product?.total_pieces_per_box || 1)
+    );
+    const maxSheets = Math.floor(
+      availableStock / (product?.pieces_per_sheet || 1)
+    );
+
+    if (quantityMode.boxes > maxBoxes && maxBoxes > 0) {
+      newErrors.push(
+        `Maximum ${maxBoxes} boxes available (${
+          maxBoxes * (product?.total_pieces_per_box || 0)
+        } pieces)`
+      );
+    }
+
+    if (quantityMode.sheets > maxSheets && maxSheets > 0) {
+      newErrors.push(
+        `Maximum ${maxSheets} sheets available (${
+          maxSheets * (product?.pieces_per_sheet || 0)
+        } pieces)`
+      );
+    }
+
+    if (quantityMode.pieces > availableStock) {
+      newErrors.push(`Maximum ${availableStock} individual pieces available`);
+    }
+
+    setErrors(newErrors);
+    setIsValid(
+      newErrors.length === 0 && totalPieces > 0 && totalPieces <= availableStock
+    );
+  }, [quantityMode, totalPieces, availableStock, product]);
+
+  const handleQuantityChange = (type, value) => {
+    const numValue = Math.max(0, parseInt(value) || 0);
+
+    // Apply smart limiters based on stock and packaging
+    let limitedValue = numValue;
+
+    if (type === "boxes") {
+      const maxBoxes = Math.floor(
+        availableStock / (product?.total_pieces_per_box || 1)
+      );
+      limitedValue = Math.min(numValue, maxBoxes);
+    } else if (type === "sheets") {
+      const maxSheets = Math.floor(
+        availableStock / (product?.pieces_per_sheet || 1)
+      );
+      limitedValue = Math.min(numValue, maxSheets);
+    } else if (type === "pieces") {
+      limitedValue = Math.min(numValue, availableStock);
+    }
+
+    setQuantityMode((prev) => ({
+      ...prev,
+      [type]: limitedValue,
+    }));
+  };
+
+  const handleIncrement = (type) => {
+    setQuantityMode((prev) => {
+      let newValue = prev[type] + 1;
+
+      // Apply limiters for increment
+      if (type === "boxes") {
+        const maxBoxes = Math.floor(
+          availableStock / (product?.total_pieces_per_box || 1)
+        );
+        newValue = Math.min(newValue, maxBoxes);
+      } else if (type === "sheets") {
+        const maxSheets = Math.floor(
+          availableStock / (product?.pieces_per_sheet || 1)
+        );
+        newValue = Math.min(newValue, maxSheets);
+      } else if (type === "pieces") {
+        newValue = Math.min(newValue, availableStock);
+      }
+
+      // Check if total would exceed stock
+      const testQuantity = { ...prev, [type]: newValue };
+      const testTotal = calculateTotalPieces(
+        testQuantity.boxes,
+        testQuantity.sheets,
+        testQuantity.pieces
+      );
+
+      if (testTotal > availableStock) {
+        return prev; // Don't increment if it would exceed stock
+      }
+
+      return {
+        ...prev,
+        [type]: newValue,
+      };
+    });
+  };
+
+  const handleDecrement = (type) => {
+    setQuantityMode((prev) => ({
+      ...prev,
+      [type]: Math.max(0, prev[type] - 1),
+    }));
+  };
+
+  const handleAddToCart = () => {
+    if (!isValid || !product) return;
+
+    const success = onAddToCart(product, {
+      boxes: quantityMode.boxes,
+      sheets: quantityMode.sheets,
+      pieces: quantityMode.pieces,
+    });
+
+    if (success) {
+      onClose();
+    }
+  };
+
+  const handleQuickAdd = (type) => {
+    const maxBoxes = Math.floor(
+      availableStock / (product?.total_pieces_per_box || 1)
+    );
+    const maxSheets = Math.floor(
+      availableStock / (product?.pieces_per_sheet || 1)
+    );
+
+    switch (type) {
+      case "box":
+        if (maxBoxes >= 1) {
+          setQuantityMode({ boxes: 1, sheets: 0, pieces: 0 });
+        }
+        break;
+      case "sheet":
+        if (maxSheets >= 1) {
+          setQuantityMode({ boxes: 0, sheets: 1, pieces: 0 });
+        }
+        break;
+      case "piece":
+        if (availableStock >= 1) {
+          setQuantityMode({ boxes: 0, sheets: 0, pieces: 1 });
+        }
+        break;
+      default:
+        break;
+    }
   };
 
   if (!isOpen || !product) return null;
 
-  const hasVariants =
-    product.pieces_per_sheet > 1 || product.sheets_per_box > 1;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Select Quantity
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">{product.name}</p>
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Package size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">
+                Select Quantity
+              </h3>
+              <p className="text-sm text-gray-500 truncate max-w-48">
+                {product.name}
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Product Info */}
-        <div className="p-6 border-b bg-gray-50">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-medium text-gray-700">
-              Price per piece:
-            </span>
-            <span className="text-lg font-semibold text-blue-600">
-              {formatCurrency(product.price)}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-medium text-gray-700">
-              Available stock:
-            </span>
-            <span
-              className={`text-sm font-medium ${
-                product.stock <= 5
-                  ? "text-red-600"
-                  : product.stock <= 10
-                  ? "text-amber-600"
-                  : "text-green-600"
-              }`}
-            >
-              {product.stock} pieces
-            </span>
-          </div>
-
-          {hasVariants && (
-            <div className="text-xs text-gray-500 space-y-1">
-              <div>• {product.pieces_per_sheet} pieces per sheet</div>
-              <div>• {product.sheets_per_box} sheets per box</div>
-              <div>
-                • {product.pieces_per_sheet * product.sheets_per_box} pieces per
-                box
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Quantity Selection */}
+        {/* Modal Content */}
         <div className="p-6 space-y-6">
-          {/* Box Selection */}
-          {hasVariants && product.sheets_per_box > 1 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <Package size={18} className="text-blue-600 mr-2" />
-                  <span className="font-medium text-gray-700">Boxes</span>
-                </div>
-                <div className="flex space-x-2">
-                  {[1, 2, 3, 5].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => handleQuickSelect("box", num)}
-                      className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <input
-                type="number"
-                min="0"
-                value={quantities.boxes}
-                onChange={(e) => handleQuantityChange("boxes", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                ={" "}
-                {quantities.boxes *
-                  product.sheets_per_box *
-                  product.pieces_per_sheet}{" "}
-                pieces
-              </p>
-            </div>
-          )}
-
-          {/* Sheet Selection */}
-          {hasVariants && product.pieces_per_sheet > 1 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <FileText size={18} className="text-green-600 mr-2" />
-                  <span className="font-medium text-gray-700">Sheets</span>
-                </div>
-                <div className="flex space-x-2">
-                  {[1, 2, 5, 10].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => handleQuickSelect("sheet", num)}
-                      className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <input
-                type="number"
-                min="0"
-                value={quantities.sheets}
-                onChange={(e) => handleQuantityChange("sheets", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                = {quantities.sheets * product.pieces_per_sheet} pieces
-              </p>
-            </div>
-          )}
-
-          {/* Piece Selection */}
-          <div>
+          {/* Product Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center">
-                <Circle size={18} className="text-purple-600 mr-2" />
-                <span className="font-medium text-gray-700">
-                  Individual Pieces
+              <span className="text-sm font-medium text-gray-700">
+                Available Stock:
+              </span>
+              <div className="text-right">
+                <span className="text-lg font-bold text-green-600">
+                  {availableStock} pieces
+                </span>
+                {existingQuantity > 0 && (
+                  <p className="text-xs text-gray-500">
+                    ({existingQuantity} already in cart)
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+              <div>
+                <p>• {product.pieces_per_sheet || 0} pieces per sheet</p>
+                <p>• {product.sheets_per_box || 0} sheets per box</p>
+              </div>
+              <div>
+                <p>• {product.total_pieces_per_box || 0} pieces per box</p>
+                <p>• ₱{(product.selling_price || 0).toFixed(2)} per piece</p>
+              </div>
+            </div>
+            {product.brand_name && (
+              <div className="mt-2 text-xs text-blue-600">
+                <p>Brand: {product.brand_name}</p>
+              </div>
+            )}
+            {product.expiry_date && (
+              <div className="mt-1 text-xs text-orange-600">
+                <p>
+                  Expires: {new Date(product.expiry_date).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Add Buttons */}
+          <div className="grid grid-cols-3 gap-2">
+            {(() => {
+              const maxBoxes = Math.floor(
+                availableStock / (product?.total_pieces_per_box || 1)
+              );
+              const maxSheets = Math.floor(
+                availableStock / (product?.pieces_per_sheet || 1)
+              );
+
+              return (
+                <>
+                  <button
+                    onClick={() => handleQuickAdd("box")}
+                    disabled={maxBoxes < 1}
+                    className={`p-3 border rounded-lg transition-colors text-center ${
+                      maxBoxes >= 1
+                        ? "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        : "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Box
+                      size={20}
+                      className={`mx-auto mb-1 ${
+                        maxBoxes >= 1 ? "text-blue-600" : "text-gray-400"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium ${
+                        maxBoxes >= 1 ? "text-blue-700" : "text-gray-500"
+                      }`}
+                    >
+                      1 Box
+                    </p>
+                    <p className="text-xs text-gray-500">Max: {maxBoxes}</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickAdd("sheet")}
+                    disabled={maxSheets < 1}
+                    className={`p-3 border rounded-lg transition-colors text-center ${
+                      maxSheets >= 1
+                        ? "bg-green-50 border-green-200 hover:bg-green-100"
+                        : "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Layers
+                      size={20}
+                      className={`mx-auto mb-1 ${
+                        maxSheets >= 1 ? "text-green-600" : "text-gray-400"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium ${
+                        maxSheets >= 1 ? "text-green-700" : "text-gray-500"
+                      }`}
+                    >
+                      1 Sheet
+                    </p>
+                    <p className="text-xs text-gray-500">Max: {maxSheets}</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleQuickAdd("piece")}
+                    disabled={availableStock < 1}
+                    className={`p-3 border rounded-lg transition-colors text-center ${
+                      availableStock >= 1
+                        ? "bg-orange-50 border-orange-200 hover:bg-orange-100"
+                        : "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Hash
+                      size={20}
+                      className={`mx-auto mb-1 ${
+                        availableStock >= 1
+                          ? "text-orange-600"
+                          : "text-gray-400"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium ${
+                        availableStock >= 1
+                          ? "text-orange-700"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      1 Piece
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Max: {availableStock}
+                    </p>
+                  </button>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Quantity Selectors */}
+          <div className="space-y-4">
+            {/* Boxes */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Box size={20} className="text-blue-600" />
+                  <span className="font-semibold text-blue-800">Boxes</span>
+                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                    {product.total_pieces_per_box || 0} pcs/box
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-blue-700">
+                  {quantityMode.boxes * (product.total_pieces_per_box || 0)}{" "}
+                  pieces
                 </span>
               </div>
-              <div className="flex space-x-2">
-                {[1, 2, 5, 10].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => handleQuickSelect("piece", num)}
-                    className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    {num}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleDecrement("boxes")}
+                  className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <Minus size={16} />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={quantityMode.boxes}
+                  onChange={(e) =>
+                    handleQuantityChange("boxes", e.target.value)
+                  }
+                  className="w-20 text-center border border-blue-300 rounded-lg py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <button
+                  onClick={() => handleIncrement("boxes")}
+                  className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
               </div>
             </div>
-            <input
-              type="number"
-              min="0"
-              value={quantities.pieces}
-              onChange={(e) => handleQuantityChange("pieces", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="0"
-            />
+
+            {/* Sheets */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Layers size={20} className="text-green-600" />
+                  <span className="font-semibold text-green-800">Sheets</span>
+                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                    {product.pieces_per_sheet || 0} pcs/sheet
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-green-700">
+                  {quantityMode.sheets * (product.pieces_per_sheet || 0)} pieces
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleDecrement("sheets")}
+                  className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                >
+                  <Minus size={16} />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={quantityMode.sheets}
+                  onChange={(e) =>
+                    handleQuantityChange("sheets", e.target.value)
+                  }
+                  className="w-20 text-center border border-green-300 rounded-lg py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+                <button
+                  onClick={() => handleIncrement("sheets")}
+                  className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Pieces */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Hash size={20} className="text-orange-600" />
+                  <span className="font-semibold text-orange-800">
+                    Individual Pieces
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-orange-700">
+                  {quantityMode.pieces} pieces
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleDecrement("pieces")}
+                  className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
+                >
+                  <Minus size={16} />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={quantityMode.pieces}
+                  onChange={(e) =>
+                    handleQuantityChange("pieces", e.target.value)
+                  }
+                  className="w-20 text-center border border-orange-300 rounded-lg py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <button
+                  onClick={() => handleIncrement("pieces")}
+                  className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
+          {/* Errors */}
+          {errors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={16} className="text-red-600" />
+                <span className="text-sm font-medium text-red-800">
+                  Please fix the following issues:
+                </span>
+              </div>
+              <ul className="text-sm text-red-700 space-y-1">
+                {errors.map((error, index) => (
+                  <li
+                    key={`summary-${index}`}
+                    className="flex items-center gap-1"
+                  >
+                    <span>•</span>
+                    <span>{error}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
           {/* Total Summary */}
-          {totalPieces > 0 && (
-            <div className="bg-blue-50 p-4 rounded-md">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-gray-700">
-                  Total Quantity:
-                </span>
-                <span className="font-semibold text-blue-600">
-                  {formatQuantityDisplay(quantities)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-gray-700">Total Pieces:</span>
-                <span className="font-semibold text-blue-600">
-                  {totalPieces}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium text-gray-700">Total Price:</span>
-                <span className="font-bold text-blue-600">
-                  {formatCurrency(totalPrice)}
+          <div
+            className={`rounded-lg p-4 ${
+              isValid ? "bg-green-50 border border-green-200" : "bg-gray-100"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-semibold text-gray-700">
+                Total Quantity:
+              </span>
+              <div className="flex items-center gap-2">
+                {isValid && (
+                  <CheckCircle size={16} className="text-green-600" />
+                )}
+                <span
+                  className={`text-xl font-bold ${
+                    isValid ? "text-green-600" : "text-gray-600"
+                  }`}
+                >
+                  {totalPieces} pieces
                 </span>
               </div>
             </div>
-          )}
-        </div>
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Total Amount:</span>
+              <span className="font-semibold">₱{totalAmount.toFixed(2)}</span>
+            </div>
+            {totalPieces > 0 && (
+              <div className="mt-2 text-xs text-gray-500">
+                <p>
+                  {quantityMode.boxes > 0 &&
+                    `${quantityMode.boxes} box${
+                      quantityMode.boxes > 1 ? "es" : ""
+                    }`}
+                  {quantityMode.boxes > 0 &&
+                    (quantityMode.sheets > 0 || quantityMode.pieces > 0) &&
+                    " + "}
+                  {quantityMode.sheets > 0 &&
+                    `${quantityMode.sheets} sheet${
+                      quantityMode.sheets > 1 ? "s" : ""
+                    }`}
+                  {quantityMode.sheets > 0 && quantityMode.pieces > 0 && " + "}
+                  {quantityMode.pieces > 0 &&
+                    `${quantityMode.pieces} piece${
+                      quantityMode.pieces > 1 ? "s" : ""
+                    }`}
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Footer */}
-        <div className="flex space-x-3 p-6 border-t">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleAddToCart}
-            disabled={totalPieces <= 0}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            <ShoppingCart size={16} className="mr-2" />
-            Add to Cart
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddToCart}
+              disabled={!isValid}
+              className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                isValid
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              <ShoppingCart size={16} />
+              Add to Cart
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+QuantitySelectionModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  product: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    selling_price: PropTypes.number,
+    total_stock: PropTypes.number,
+    pieces_per_sheet: PropTypes.number,
+    sheets_per_box: PropTypes.number,
+    total_pieces_per_box: PropTypes.number,
+    brand_name: PropTypes.string,
+    expiry_date: PropTypes.string,
+  }).isRequired,
+  onAddToCart: PropTypes.func.isRequired,
+  existingQuantity: PropTypes.number,
+};
+
+QuantitySelectionModal.defaultProps = {
+  existingQuantity: 0,
+};
+
+export default QuantitySelectionModal;

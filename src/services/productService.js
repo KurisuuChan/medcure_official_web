@@ -23,13 +23,24 @@ export async function getProducts() {
       ...product,
       // Ensure packaging object exists
       packaging: product.packaging || {
-        piecesPerSheet: 10,
-        sheetsPerBox: 10,
-        totalPieces: 100,
+        piecesPerSheet: product.pieces_per_sheet || 10,
+        sheetsPerBox: product.sheets_per_box || 10,
+        totalPieces:
+          (product.pieces_per_sheet || 10) * (product.sheets_per_box || 10),
       },
       // Map packaging properties for QuantitySelectionModal compatibility
-      pieces_per_sheet: product.packaging?.piecesPerSheet || 10,
-      sheets_per_box: product.packaging?.sheetsPerBox || 10,
+      pieces_per_sheet:
+        product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10,
+      sheets_per_box:
+        product.sheets_per_box || product.packaging?.sheetsPerBox || 10,
+      total_pieces_per_box:
+        (product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10) *
+        (product.sheets_per_box || product.packaging?.sheetsPerBox || 10),
+      // Map price properties for compatibility
+      selling_price: product.selling_price || product.price || 0,
+      cost_price: product.cost_price || 0,
+      // Map stock properties
+      total_stock: product.total_stock || product.stock || 0,
     }));
 
     return productsWithPackaging;
@@ -176,7 +187,33 @@ export async function searchProducts(searchTerm) {
       .order("name", { ascending: true });
 
     if (error) throw error;
-    return data || [];
+
+    // Apply the same mapping as getProducts for consistency
+    const productsWithPackaging = (data || []).map((product) => ({
+      ...product,
+      // Ensure packaging object exists
+      packaging: product.packaging || {
+        piecesPerSheet: product.pieces_per_sheet || 10,
+        sheetsPerBox: product.sheets_per_box || 10,
+        totalPieces:
+          (product.pieces_per_sheet || 10) * (product.sheets_per_box || 10),
+      },
+      // Map packaging properties for QuantitySelectionModal compatibility
+      pieces_per_sheet:
+        product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10,
+      sheets_per_box:
+        product.sheets_per_box || product.packaging?.sheetsPerBox || 10,
+      total_pieces_per_box:
+        (product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10) *
+        (product.sheets_per_box || product.packaging?.sheetsPerBox || 10),
+      // Map price properties for compatibility
+      selling_price: product.selling_price || product.price || 0,
+      cost_price: product.cost_price || 0,
+      // Map stock properties
+      total_stock: product.total_stock || product.stock || 0,
+    }));
+
+    return productsWithPackaging;
   } catch (error) {
     console.error("Error searching products:", error);
     throw new Error("Failed to search products");
