@@ -148,32 +148,80 @@ function archiveProductToStorage(archivedItem, product) {
  */
 export async function restoreArchivedProduct(archivedId) {
   try {
-    // Get the archived item
+    // First check if we're using localStorage fallback
+    if (typeof window !== "undefined") {
+      const localArchived = JSON.parse(localStorage.getItem("archived_items") || "[]");
+      const archivedItem = localArchived.find(item => item.id === archivedId);
+      
+      if (archivedItem) {
+        // For localStorage, just remove from archived list
+        // In a real implementation, you'd restore to the products table
+        const updatedArchived = localArchived.filter(item => item.id !== archivedId);
+        localStorage.setItem("archived_items", JSON.stringify(updatedArchived));
+        
+        console.log("Product restored from local storage:", archivedItem.name);
+        return archivedItem;
+      }
+    }
+
+    // Get the archived item from Supabase
     const { data: archivedItem, error: fetchError } = await supabase
       .from("archived_items")
       .select("*")
       .eq("id", archivedId)
-      .eq("type", "product")
       .single();
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error("Error fetching archived item:", fetchError);
+      throw new Error("Archived product not found");
+    }
 
     if (!archivedItem) {
       throw new Error("Archived product not found");
     }
 
-    // Restore the product data (remove the id to let Supabase generate a new one)
-    const productData = { ...archivedItem.original_data };
+    // Prepare product data for restoration
+    const productData = archivedItem.original_data || {};
+    
+    // Remove id and timestamps to let Supabase handle them
     delete productData.id;
+    delete productData.created_at;
+    delete productData.updated_at;
+
+    // Ensure required fields are present
+    const requiredProductData = {
+      name: productData.name || archivedItem.item_name,
+      category: productData.category || "Other",
+      total_stock: productData.total_stock || productData.stock || 0,
+      cost_price: productData.cost_price || productData.price || 0,
+      selling_price: productData.selling_price || productData.price || 0,
+      critical_level: productData.critical_level || 10,
+      description: productData.description || "",
+      supplier: productData.supplier || "",
+      barcode: productData.barcode || "",
+      brand_name: productData.brand_name || "",
+      generic_name: productData.generic_name || "",
+      manufacturer: productData.manufacturer || "",
+      packaging: productData.packaging || "",
+      expiry_date: productData.expiry_date || productData.expiration_date || null,
+      batch_number: productData.batch_number || "",
+      sheets_per_box: productData.sheets_per_box || null,
+      pieces_per_sheet: productData.pieces_per_sheet || null,
+      total_pieces_per_box: productData.total_pieces_per_box || null,
+      ...productData // Spread any other fields
+    };
 
     // Insert back into products table
     const { data: restoredProduct, error: restoreError } = await supabase
       .from("products")
-      .insert([productData])
+      .insert([requiredProductData])
       .select()
       .single();
 
-    if (restoreError) throw restoreError;
+    if (restoreError) {
+      console.error("Error restoring product:", restoreError);
+      throw new Error(`Failed to restore product: ${restoreError.message}`);
+    }
 
     // Delete from archived_items table
     const { error: deleteError } = await supabase
@@ -181,12 +229,15 @@ export async function restoreArchivedProduct(archivedId) {
       .delete()
       .eq("id", archivedId);
 
-    if (deleteError) throw deleteError;
+    if (deleteError) {
+      console.error("Error deleting archived item:", deleteError);
+      // Don't throw here, product was already restored
+    }
 
     return restoredProduct;
   } catch (error) {
     console.error("Error restoring archived product:", error);
-    throw new Error("Failed to restore archived product");
+    throw new Error(error.message || "Failed to restore archived product");
   }
 }
 

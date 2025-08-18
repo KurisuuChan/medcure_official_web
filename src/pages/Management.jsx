@@ -27,6 +27,7 @@ import { useArchiveProduct } from "../hooks/useArchive.js";
 import ProductModal from "../components/modals/ProductModal.jsx";
 import ImportModal from "../components/modals/ImportModal.jsx";
 import ExportModal from "../components/ExportModal.jsx";
+import ArchiveReasonModal from "../components/modals/ArchiveReasonModal.jsx";
 import { formatCurrency, formatStockStatus } from "../utils/formatters.js";
 import { useNotification } from "../hooks/useNotification.js";
 
@@ -37,6 +38,9 @@ export default function Management() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showBulkArchiveModal, setShowBulkArchiveModal] = useState(false);
+  const [productToArchive, setProductToArchive] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
 
   // Real backend hooks
@@ -98,48 +102,52 @@ export default function Management() {
   };
 
   // Handle product archiving
-  const handleArchiveProduct = async (product, reason = "Manually archived") => {
-    if (window.confirm(`Are you sure you want to archive "${product.name}"?`)) {
-      try {
-        await archiveProduct.mutateAsync({ 
-          product, 
-          reason, 
-          archivedBy: "Admin User" 
-        });
-        addNotification(`"${product.name}" has been archived successfully`, "success");
-        setSelectedItems((prev) => prev.filter((id) => id !== product.id));
-      } catch (error) {
-        addNotification(error.message || "Failed to archive product", "error");
-      }
+  const handleArchiveProduct = (product) => {
+    setProductToArchive(product);
+    setShowArchiveModal(true);
+  };
+
+  const confirmArchiveProduct = async (reason) => {
+    if (!productToArchive) return;
+    
+    try {
+      await archiveProduct.mutateAsync({ 
+        product: productToArchive, 
+        reason, 
+        archivedBy: "Admin User" 
+      });
+      addNotification(`"${productToArchive.name}" has been archived successfully`, "success");
+      setSelectedItems((prev) => prev.filter((id) => id !== productToArchive.id));
+    } catch (error) {
+      addNotification(error.message || "Failed to archive product", "error");
     }
   };
 
   // Handle bulk operations
-  const handleBulkArchive = async () => {
+  const handleBulkArchive = () => {
+    if (selectedItems.length === 0) return;
+    setShowBulkArchiveModal(true);
+  };
+
+  const confirmBulkArchive = async (reason) => {
     if (selectedItems.length === 0) return;
 
-    if (
-      window.confirm(
-        `Are you sure you want to archive ${selectedItems.length} products?`
-      )
-    ) {
-      try {
-        const selectedProducts = products.filter(product => selectedItems.includes(product.id));
-        await Promise.all(
-          selectedProducts.map((product) => archiveProduct.mutateAsync({ 
-            product, 
-            reason: "Bulk archived from management",
-            archivedBy: "Admin User"
-          }))
-        );
-        addNotification(
-          `${selectedItems.length} products archived successfully`,
-          "success"
-        );
-        setSelectedItems([]);
-      } catch {
-        addNotification("Failed to archive some products", "error");
-      }
+    try {
+      const selectedProducts = products.filter(product => selectedItems.includes(product.id));
+      await Promise.all(
+        selectedProducts.map((product) => archiveProduct.mutateAsync({ 
+          product, 
+          reason: `Bulk: ${reason}`,
+          archivedBy: "Admin User"
+        }))
+      );
+      addNotification(
+        `${selectedItems.length} products archived successfully`,
+        "success"
+      );
+      setSelectedItems([]);
+    } catch {
+      addNotification("Failed to archive some products", "error");
     }
   };
 
@@ -550,6 +558,31 @@ export default function Management() {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         products={displayProducts}
+      />
+
+      <ArchiveReasonModal
+        isOpen={showArchiveModal}
+        onClose={() => {
+          setShowArchiveModal(false);
+          setProductToArchive(null);
+        }}
+        onConfirm={confirmArchiveProduct}
+        product={productToArchive}
+        isLoading={archiveProduct.isPending}
+      />
+
+      <ArchiveReasonModal
+        isOpen={showBulkArchiveModal}
+        onClose={() => {
+          setShowBulkArchiveModal(false);
+        }}
+        onConfirm={confirmBulkArchive}
+        product={{
+          name: `${selectedItems.length} Selected Products`,
+          total_stock: selectedItems.length,
+          category: "Multiple Categories"
+        }}
+        isLoading={archiveProduct.isPending}
       />
     </div>
   );
