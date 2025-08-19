@@ -29,9 +29,39 @@ export default function Header({ onLogout, user }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [userProfile, setUserProfile] = useState(null);
   const menuRef = useRef(null);
   const notifRef = useRef(null);
   const actionsRef = useRef(null);
+
+  // Load initial user profile from localStorage and listen for settings updates
+  useEffect(() => {
+    // Load initial profile from localStorage
+    const loadInitialProfile = async () => {
+      try {
+        const stored = localStorage.getItem("medcure_user_profile");
+        if (stored && stored !== "[object Object]") {
+          const profile = JSON.parse(stored);
+          setUserProfile(profile);
+        }
+      } catch (error) {
+        console.warn("Failed to load initial profile:", error);
+      }
+    };
+
+    loadInitialProfile();
+
+    // Listen for real-time updates
+    const handleSettingsUpdate = (event) => {
+      if (event.detail?.profile) {
+        setUserProfile(event.detail.profile);
+      }
+    };
+
+    window.addEventListener("settingsUpdated", handleSettingsUpdate);
+    return () =>
+      window.removeEventListener("settingsUpdated", handleSettingsUpdate);
+  }, []);
 
   // Mock notifications data with enhanced design
   const [notifications] = useState([
@@ -509,15 +539,23 @@ export default function Header({ onLogout, user }) {
             aria-expanded={menuOpen}
           >
             <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-semibold shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
-              <div className="w-full h-full flex items-center justify-center">
-                {user?.name
-                  ? user.name.charAt(0).toUpperCase()
-                  : user?.initials || "A"}
-              </div>
+              {userProfile?.avatar_url ? (
+                <img
+                  src={userProfile.avatar_url}
+                  alt="Profile"
+                  className="w-full h-full object-cover rounded-lg sm:rounded-xl"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  {user?.name
+                    ? user.name.charAt(0).toUpperCase()
+                    : user?.initials || "A"}
+                </div>
+              )}
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-sm font-semibold text-gray-900">
-                {user?.name || "Admin User"}
+                {userProfile?.full_name || user?.name || "Admin User"}
               </div>
               <div className="text-xs text-gray-500 font-medium">
                 {user?.role || "Administrator"}
@@ -536,10 +574,10 @@ export default function Header({ onLogout, user }) {
               {/* User Info Header */}
               <div className="px-3 sm:px-4 py-3 border-b border-gray-100">
                 <div className="font-semibold text-gray-900">
-                  {user?.name || "Admin User"}
+                  {userProfile?.full_name || user?.name || "Admin User"}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {user?.email || "admin@medcure.com"}
+                  {userProfile?.email || user?.email || "admin@medcure.com"}
                 </div>
               </div>
 

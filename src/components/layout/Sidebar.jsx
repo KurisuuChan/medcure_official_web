@@ -77,6 +77,36 @@ export default function Sidebar({ branding }) {
     return stored ? JSON.parse(stored) : true;
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [businessSettings, setBusinessSettings] = useState(null);
+
+  // Load initial business settings from localStorage and listen for settings updates
+  useEffect(() => {
+    // Load initial business settings from localStorage
+    const loadInitialBusinessSettings = async () => {
+      try {
+        const stored = localStorage.getItem("medcure_business_settings");
+        if (stored && stored !== "[object Object]") {
+          const settings = JSON.parse(stored);
+          setBusinessSettings(settings);
+        }
+      } catch (error) {
+        console.warn("Failed to load initial business settings:", error);
+      }
+    };
+
+    loadInitialBusinessSettings();
+
+    // Listen for real-time updates
+    const handleSettingsUpdate = (event) => {
+      if (event.detail?.business) {
+        setBusinessSettings(event.detail.business);
+      }
+    };
+
+    window.addEventListener("settingsUpdated", handleSettingsUpdate);
+    return () =>
+      window.removeEventListener("settingsUpdated", handleSettingsUpdate);
+  }, []);
 
   // Auto-collapse sidebar on mobile screens
   useEffect(() => {
@@ -164,7 +194,19 @@ export default function Sidebar({ branding }) {
                 }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300 overflow-hidden">
-                  <span>{branding?.name?.[0] || "M"}</span>
+                  {businessSettings?.logo_url ? (
+                    <img
+                      src={businessSettings.logo_url}
+                      alt="Business Logo"
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <span>
+                      {businessSettings?.business_name?.[0] ||
+                        branding?.name?.[0] ||
+                        "M"}
+                    </span>
+                  )}
                 </div>
                 <div
                   className={`space-y-0.5 transition-all duration-500 delay-100 ease-[cubic-bezier(0.4,0,0.2,1)] ${
@@ -174,10 +216,12 @@ export default function Sidebar({ branding }) {
                   }`}
                 >
                   <div className="font-semibold text-gray-900 text-base">
-                    {branding?.name || "MedCure"}
+                    {businessSettings?.business_name ||
+                      branding?.name ||
+                      "MedCure"}
                   </div>
                   <div className="text-xs text-gray-500 hidden sm:block">
-                    Pharmacy System
+                    {businessSettings?.tagline || "Pharmacy System"}
                   </div>
                 </div>
               </div>
@@ -203,7 +247,19 @@ export default function Sidebar({ branding }) {
           ) : (
             <>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm transition-all duration-300 hover:scale-105 overflow-hidden">
-                <span>{branding?.name?.[0] || "M"}</span>
+                {businessSettings?.logo_url ? (
+                  <img
+                    src={businessSettings.logo_url}
+                    alt="Business Logo"
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                ) : (
+                  <span>
+                    {businessSettings?.business_name?.[0] ||
+                      branding?.name?.[0] ||
+                      "M"}
+                  </span>
+                )}
               </div>
               {/* Toggle Button - Floating when collapsed */}
               <button
@@ -423,7 +479,10 @@ export default function Sidebar({ branding }) {
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-gray-500 transition-all duration-300">
-                  © {new Date().getFullYear()} {branding?.name || "MedCure"}
+                  © {new Date().getFullYear()}{" "}
+                  {businessSettings?.business_name ||
+                    branding?.name ||
+                    "MedCure"}
                 </div>
                 <div className="text-xs text-gray-400 transition-all duration-300">
                   Version 2.1.0
