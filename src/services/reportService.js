@@ -1,5 +1,10 @@
 import { getProducts, getLowStockProducts } from "./productService.js";
-import { getSales, getSalesSummary, getSalesByCategory, getSalesByHour } from "./salesService.js";
+import {
+  getSales,
+  getSalesSummary,
+  getSalesByCategory,
+  getSalesByHour,
+} from "./salesService.js";
 
 /**
  * Report Service - Handles all report generation and data aggregation
@@ -30,11 +35,13 @@ export async function generateInventoryReport(options = {}) {
     // Calculate basic inventory metrics
     const totalProducts = products.length;
     const totalStockValue = products.reduce(
-      (sum, product) => sum + (product.total_stock || 0) * (product.cost_price || 0),
+      (sum, product) =>
+        sum + (product.total_stock || 0) * (product.cost_price || 0),
       0
     );
     const totalRetailValue = products.reduce(
-      (sum, product) => sum + (product.total_stock || 0) * (product.selling_price || 0),
+      (sum, product) =>
+        sum + (product.total_stock || 0) * (product.selling_price || 0),
       0
     );
 
@@ -51,7 +58,8 @@ export async function generateInventoryReport(options = {}) {
       }
       acc[category].count += 1;
       acc[category].totalStock += product.total_stock || 0;
-      acc[category].totalValue += (product.total_stock || 0) * (product.selling_price || 0);
+      acc[category].totalValue +=
+        (product.total_stock || 0) * (product.selling_price || 0);
       acc[category].products.push(product);
       return acc;
     }, {});
@@ -62,13 +70,18 @@ export async function generateInventoryReport(options = {}) {
         totalStockValue,
         totalRetailValue,
         potentialProfit: totalRetailValue - totalStockValue,
-        profitMargin: totalStockValue > 0 ? ((totalRetailValue - totalStockValue) / totalStockValue) * 100 : 0,
+        profitMargin:
+          totalStockValue > 0
+            ? ((totalRetailValue - totalStockValue) / totalStockValue) * 100
+            : 0,
         lastUpdated: new Date().toISOString(),
       },
-      categoryBreakdown: Object.entries(categoryBreakdown).map(([category, data]) => ({
-        category,
-        ...data,
-      })),
+      categoryBreakdown: Object.entries(categoryBreakdown).map(
+        ([category, data]) => ({
+          category,
+          ...data,
+        })
+      ),
       products,
     };
 
@@ -79,27 +92,33 @@ export async function generateInventoryReport(options = {}) {
         threshold: lowStockThreshold,
         count: lowStockProducts.length,
         products: lowStockProducts,
-        criticalProducts: lowStockProducts.filter(p => (p.total_stock || 0) === 0),
+        criticalProducts: lowStockProducts.filter(
+          (p) => (p.total_stock || 0) === 0
+        ),
       };
     }
 
     // Add inventory valuation details if requested
     if (includeValuation) {
       reportData.valuation = {
-        byCategory: Object.entries(categoryBreakdown).map(([category, data]) => ({
-          category,
-          stockValue: data.products.reduce(
-            (sum, p) => sum + (p.total_stock || 0) * (p.cost_price || 0),
-            0
-          ),
-          retailValue: data.totalValue,
-          profitPotential: data.totalValue - data.products.reduce(
-            (sum, p) => sum + (p.total_stock || 0) * (p.cost_price || 0),
-            0
-          ),
-        })),
+        byCategory: Object.entries(categoryBreakdown).map(
+          ([category, data]) => ({
+            category,
+            stockValue: data.products.reduce(
+              (sum, p) => sum + (p.total_stock || 0) * (p.cost_price || 0),
+              0
+            ),
+            retailValue: data.totalValue,
+            profitPotential:
+              data.totalValue -
+              data.products.reduce(
+                (sum, p) => sum + (p.total_stock || 0) * (p.cost_price || 0),
+                0
+              ),
+          })
+        ),
         topValueProducts: products
-          .map(p => ({
+          .map((p) => ({
             ...p,
             stockValue: (p.total_stock || 0) * (p.selling_price || 0),
           }))
@@ -153,12 +172,15 @@ export async function generateSalesReport(options = {}) {
 
     // Calculate basic metrics
     const totalSales = sales.length;
-    const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+    const totalRevenue = sales.reduce(
+      (sum, sale) => sum + (sale.total || 0),
+      0
+    );
     const averageTransaction = totalSales > 0 ? totalRevenue / totalSales : 0;
 
     // Calculate daily breakdown
     const dailyBreakdown = {};
-    sales.forEach(sale => {
+    sales.forEach((sale) => {
       const date = new Date(sale.created_at).toDateString();
       if (!dailyBreakdown[date]) {
         dailyBreakdown[date] = {
@@ -180,7 +202,10 @@ export async function generateSalesReport(options = {}) {
           startDate: filters.startDate,
           endDate: filters.endDate,
         },
-        dailyAverage: totalSales > 0 ? totalRevenue / Object.keys(dailyBreakdown).length : 0,
+        dailyAverage:
+          totalSales > 0
+            ? totalRevenue / Object.keys(dailyBreakdown).length
+            : 0,
         lastUpdated: new Date().toISOString(),
       },
       dailyBreakdown: Object.values(dailyBreakdown).sort(
@@ -192,7 +217,9 @@ export async function generateSalesReport(options = {}) {
     // Add hourly data if requested
     if (includeHourlyData && sales.length > 0) {
       // Get hourly data for the most recent day with sales
-      const latestSaleDate = new Date(Math.max(...sales.map(s => new Date(s.created_at))));
+      const latestSaleDate = new Date(
+        Math.max(...sales.map((s) => new Date(s.created_at)))
+      );
       const hourlyData = await getSalesByHour(latestSaleDate.toISOString());
       reportData.hourlyData = {
         date: latestSaleDate.toDateString(),
@@ -209,9 +236,10 @@ export async function generateSalesReport(options = {}) {
     // Add top products if requested
     if (includeTopProducts) {
       const productSales = {};
-      sales.forEach(sale => {
-        sale.sale_items?.forEach(item => {
-          const productName = item.products?.name || `Product ${item.product_id}`;
+      sales.forEach((sale) => {
+        sale.sale_items?.forEach((item) => {
+          const productName =
+            item.products?.name || `Product ${item.product_id}`;
           if (!productSales[productName]) {
             productSales[productName] = {
               name: productName,
@@ -281,7 +309,10 @@ export async function generateFinancialReport(options = {}) {
       },
       profitability: {
         grossProfit: potentialRevenue - inventoryValue,
-        marginPercentage: inventoryValue > 0 ? ((potentialRevenue - inventoryValue) / inventoryValue) * 100 : 0,
+        marginPercentage:
+          inventoryValue > 0
+            ? ((potentialRevenue - inventoryValue) / inventoryValue) * 100
+            : 0,
         turnoverRate: inventoryValue > 0 ? cashFlow / inventoryValue : 0,
       },
       cashFlow: {
@@ -315,9 +346,15 @@ export async function generateLowStockReport(options = {}) {
     const lowStockProducts = await getLowStockProducts(threshold);
 
     // Categorize by urgency
-    const outOfStock = lowStockProducts.filter(p => (p.total_stock || 0) === 0);
-    const criticallyLow = lowStockProducts.filter(p => (p.total_stock || 0) > 0 && (p.total_stock || 0) <= 3);
-    const low = lowStockProducts.filter(p => (p.total_stock || 0) > 3 && (p.total_stock || 0) <= threshold);
+    const outOfStock = lowStockProducts.filter(
+      (p) => (p.total_stock || 0) === 0
+    );
+    const criticallyLow = lowStockProducts.filter(
+      (p) => (p.total_stock || 0) > 0 && (p.total_stock || 0) <= 3
+    );
+    const low = lowStockProducts.filter(
+      (p) => (p.total_stock || 0) > 3 && (p.total_stock || 0) <= threshold
+    );
 
     let reportData = {
       summary: {
@@ -338,13 +375,16 @@ export async function generateLowStockReport(options = {}) {
 
     // Add reorder recommendations if requested
     if (includeRecommendations) {
-      reportData.recommendations = lowStockProducts.map(product => {
+      reportData.recommendations = lowStockProducts.map((product) => {
         const avgMonthlySales = 30; // This could be calculated from sales history
         const leadTime = 7; // Days
         const safetyStock = 10; // Minimum stock to maintain
 
         const reorderPoint = (avgMonthlySales / 30) * leadTime + safetyStock;
-        const recommendedOrderQuantity = Math.max(reorderPoint - (product.total_stock || 0), safetyStock);
+        const recommendedOrderQuantity = Math.max(
+          reorderPoint - (product.total_stock || 0),
+          safetyStock
+        );
 
         return {
           productId: product.id,
@@ -352,8 +392,12 @@ export async function generateLowStockReport(options = {}) {
           currentStock: product.total_stock || 0,
           reorderPoint,
           recommendedOrderQuantity,
-          urgency: (product.total_stock || 0) === 0 ? "Critical" : 
-                   (product.total_stock || 0) <= 3 ? "High" : "Medium",
+          urgency:
+            (product.total_stock || 0) === 0
+              ? "Critical"
+              : (product.total_stock || 0) <= 3
+              ? "High"
+              : "Medium",
           estimatedCost: recommendedOrderQuantity * (product.cost_price || 0),
         };
       });
@@ -399,7 +443,7 @@ export async function generateProductPerformanceReport(options = {}) {
     const productMetrics = {};
 
     // Initialize metrics for all products
-    products.forEach(product => {
+    products.forEach((product) => {
       productMetrics[product.id] = {
         id: product.id,
         name: product.name,
@@ -416,26 +460,30 @@ export async function generateProductPerformanceReport(options = {}) {
     });
 
     // Aggregate sales data
-    sales.forEach(sale => {
-      sale.sale_items?.forEach(item => {
+    sales.forEach((sale) => {
+      sale.sale_items?.forEach((item) => {
         const productId = item.product_id;
         if (productMetrics[productId]) {
           productMetrics[productId].quantitySold += item.quantity || 0;
           productMetrics[productId].revenue += item.subtotal || 0;
-          productMetrics[productId].profit += (item.subtotal || 0) - 
-            ((item.quantity || 0) * (productMetrics[productId].costPrice || 0));
+          productMetrics[productId].profit +=
+            (item.subtotal || 0) -
+            (item.quantity || 0) * (productMetrics[productId].costPrice || 0);
           productMetrics[productId].transactionCount += 1;
         }
       });
     });
 
     // Calculate averages and additional metrics
-    Object.values(productMetrics).forEach(metric => {
+    Object.values(productMetrics).forEach((metric) => {
       if (metric.transactionCount > 0) {
-        metric.averagePerTransaction = metric.quantitySold / metric.transactionCount;
+        metric.averagePerTransaction =
+          metric.quantitySold / metric.transactionCount;
       }
-      metric.profitMargin = metric.revenue > 0 ? (metric.profit / metric.revenue) * 100 : 0;
-      metric.turnoverRate = metric.currentStock > 0 ? metric.quantitySold / metric.currentStock : 0;
+      metric.profitMargin =
+        metric.revenue > 0 ? (metric.profit / metric.revenue) * 100 : 0;
+      metric.turnoverRate =
+        metric.currentStock > 0 ? metric.quantitySold / metric.currentStock : 0;
     });
 
     const allProducts = Object.values(productMetrics);
@@ -443,7 +491,7 @@ export async function generateProductPerformanceReport(options = {}) {
     const reportData = {
       summary: {
         totalProducts: allProducts.length,
-        productsWithSales: allProducts.filter(p => p.quantitySold > 0).length,
+        productsWithSales: allProducts.filter((p) => p.quantitySold > 0).length,
         totalRevenue: allProducts.reduce((sum, p) => sum + p.revenue, 0),
         totalProfit: allProducts.reduce((sum, p) => sum + p.profit, 0),
         period: filters,
@@ -451,20 +499,20 @@ export async function generateProductPerformanceReport(options = {}) {
       },
       topPerformers: {
         byRevenue: allProducts
-          .filter(p => p.revenue > 0)
+          .filter((p) => p.revenue > 0)
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, topCount),
         byQuantity: allProducts
-          .filter(p => p.quantitySold > 0)
+          .filter((p) => p.quantitySold > 0)
           .sort((a, b) => b.quantitySold - a.quantitySold)
           .slice(0, topCount),
         byProfit: allProducts
-          .filter(p => p.profit > 0)
+          .filter((p) => p.profit > 0)
           .sort((a, b) => b.profit - a.profit)
           .slice(0, topCount),
       },
       underPerformers: allProducts
-        .filter(p => p.quantitySold === 0 || p.turnoverRate < 0.1)
+        .filter((p) => p.quantitySold === 0 || p.turnoverRate < 0.1)
         .sort((a, b) => a.turnoverRate - b.turnoverRate)
         .slice(0, 10),
       categoryPerformance: {},
@@ -472,7 +520,7 @@ export async function generateProductPerformanceReport(options = {}) {
 
     // Group performance by category
     const categoryGroups = {};
-    allProducts.forEach(product => {
+    allProducts.forEach((product) => {
       const category = product.category || "Uncategorized";
       if (!categoryGroups[category]) {
         categoryGroups[category] = [];
@@ -480,14 +528,18 @@ export async function generateProductPerformanceReport(options = {}) {
       categoryGroups[category].push(product);
     });
 
-    reportData.categoryPerformance = Object.entries(categoryGroups).map(([category, products]) => ({
-      category,
-      totalProducts: products.length,
-      totalRevenue: products.reduce((sum, p) => sum + p.revenue, 0),
-      totalProfit: products.reduce((sum, p) => sum + p.profit, 0),
-      averageTurnover: products.reduce((sum, p) => sum + p.turnoverRate, 0) / products.length,
-      topProduct: products.sort((a, b) => b.revenue - a.revenue)[0],
-    }));
+    reportData.categoryPerformance = Object.entries(categoryGroups).map(
+      ([category, products]) => ({
+        category,
+        totalProducts: products.length,
+        totalRevenue: products.reduce((sum, p) => sum + p.revenue, 0),
+        totalProfit: products.reduce((sum, p) => sum + p.profit, 0),
+        averageTurnover:
+          products.reduce((sum, p) => sum + p.turnoverRate, 0) /
+          products.length,
+        topProduct: products.sort((a, b) => b.revenue - a.revenue)[0],
+      })
+    );
 
     console.log("✅ Product performance report generated successfully");
     return reportData;
@@ -517,7 +569,10 @@ export async function generateDashboardReport() {
       getSalesSummary("today"),
       getSalesSummary("week"),
       getSalesSummary("month"),
-      generateInventoryReport({ includeLowStock: false, includeValuation: true }),
+      generateInventoryReport({
+        includeLowStock: false,
+        includeValuation: true,
+      }),
       generateLowStockReport({ threshold: 10 }),
       getSalesByCategory(),
     ]);

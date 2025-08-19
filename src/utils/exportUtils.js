@@ -40,32 +40,34 @@ export function generateCSVContent(data, columns = null) {
   // Auto-detect columns if not provided
   if (!columns) {
     const firstItem = data[0];
-    columns = Object.keys(firstItem).map(key => ({
+    columns = Object.keys(firstItem).map((key) => ({
       key,
-      label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      label: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
     }));
   }
 
   // Create CSV header
-  const header = columns.map(col => `"${col.label}"`).join(",");
-  
+  const header = columns.map((col) => `"${col.label}"`).join(",");
+
   // Create CSV rows
-  const rows = data.map(item => {
-    return columns.map(col => {
-      let value = item[col.key];
-      
-      // Handle different data types
-      if (value === null || value === undefined) {
-        value = "";
-      } else if (typeof value === "object") {
-        value = JSON.stringify(value);
-      } else if (typeof value === "string") {
-        // Escape quotes in strings
-        value = value.replace(/"/g, '""');
-      }
-      
-      return `"${value}"`;
-    }).join(",");
+  const rows = data.map((item) => {
+    return columns
+      .map((col) => {
+        let value = item[col.key];
+
+        // Handle different data types
+        if (value === null || value === undefined) {
+          value = "";
+        } else if (typeof value === "object") {
+          value = JSON.stringify(value);
+        } else if (typeof value === "string") {
+          // Escape quotes in strings
+          value = value.replace(/"/g, '""');
+        }
+
+        return `"${value}"`;
+      })
+      .join(",");
   });
 
   return [header, ...rows].join("\n");
@@ -79,17 +81,17 @@ export function downloadCSV(content, filename = "export.csv") {
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    
+
     link.href = url;
     link.download = filename;
     link.style.visibility = "hidden";
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     URL.revokeObjectURL(url);
-    
+
     return { success: true, filename };
   } catch (error) {
     console.error("CSV download failed:", error);
@@ -100,7 +102,10 @@ export function downloadCSV(content, filename = "export.csv") {
 /**
  * Generate inventory report CSV
  */
-export function exportInventoryCSV(reportData, filename = "inventory-report.csv") {
+export function exportInventoryCSV(
+  reportData,
+  filename = "inventory-report.csv"
+) {
   const columns = [
     { key: "name", label: "Product Name" },
     { key: "category", label: "Category" },
@@ -112,10 +117,14 @@ export function exportInventoryCSV(reportData, filename = "inventory-report.csv"
   ];
 
   // Prepare data with calculated values
-  const csvData = reportData.products.map(product => ({
+  const csvData = reportData.products.map((product) => ({
     ...product,
-    stockValue: formatCurrency((product.total_stock || 0) * (product.cost_price || 0)),
-    retailValue: formatCurrency((product.total_stock || 0) * (product.selling_price || 0)),
+    stockValue: formatCurrency(
+      (product.total_stock || 0) * (product.cost_price || 0)
+    ),
+    retailValue: formatCurrency(
+      (product.total_stock || 0) * (product.selling_price || 0)
+    ),
     selling_price: formatCurrency(product.selling_price || 0),
     cost_price: formatCurrency(product.cost_price || 0),
   }));
@@ -137,7 +146,7 @@ export function exportSalesCSV(reportData, filename = "sales-report.csv") {
   ];
 
   // Prepare data
-  const csvData = reportData.sales.map(sale => ({
+  const csvData = reportData.sales.map((sale) => ({
     ...sale,
     created_at: formatDate(sale.created_at),
     total: formatCurrency(sale.total || 0),
@@ -151,7 +160,10 @@ export function exportSalesCSV(reportData, filename = "sales-report.csv") {
 /**
  * Generate low stock report CSV
  */
-export function exportLowStockCSV(reportData, filename = "low-stock-report.csv") {
+export function exportLowStockCSV(
+  reportData,
+  filename = "low-stock-report.csv"
+) {
   const columns = [
     { key: "name", label: "Product Name" },
     { key: "category", label: "Category" },
@@ -162,10 +174,14 @@ export function exportLowStockCSV(reportData, filename = "low-stock-report.csv")
   ];
 
   // Prepare data with urgency calculation
-  const csvData = reportData.products.all.map(product => ({
+  const csvData = reportData.products.all.map((product) => ({
     ...product,
-    urgency: (product.total_stock || 0) === 0 ? "Critical" : 
-             (product.total_stock || 0) <= 3 ? "High" : "Medium",
+    urgency:
+      (product.total_stock || 0) === 0
+        ? "Critical"
+        : (product.total_stock || 0) <= 3
+        ? "High"
+        : "Medium",
     selling_price: formatCurrency(product.selling_price || 0),
   }));
 
@@ -176,7 +192,10 @@ export function exportLowStockCSV(reportData, filename = "low-stock-report.csv")
 /**
  * Generate product performance CSV
  */
-export function exportProductPerformanceCSV(reportData, filename = "product-performance.csv") {
+export function exportProductPerformanceCSV(
+  reportData,
+  filename = "product-performance.csv"
+) {
   const columns = [
     { key: "name", label: "Product Name" },
     { key: "category", label: "Category" },
@@ -188,7 +207,7 @@ export function exportProductPerformanceCSV(reportData, filename = "product-perf
   ];
 
   // Use top performers by revenue for the CSV
-  const csvData = reportData.topPerformers.byRevenue.map(product => ({
+  const csvData = reportData.topPerformers.byRevenue.map((product) => ({
     ...product,
     revenue: formatCurrency(product.revenue),
     profit: formatCurrency(product.profit),
@@ -245,14 +264,22 @@ function generateInventoryTextReport(reportData) {
   let content = `INVENTORY SUMMARY\n`;
   content += `-`.repeat(30) + `\n`;
   content += `Total Products: ${reportData.summary.totalProducts}\n`;
-  content += `Total Stock Value: ${formatCurrency(reportData.summary.totalStockValue)}\n`;
-  content += `Total Retail Value: ${formatCurrency(reportData.summary.totalRetailValue)}\n`;
-  content += `Potential Profit: ${formatCurrency(reportData.summary.potentialProfit)}\n`;
-  content += `Profit Margin: ${formatPercentage(reportData.summary.profitMargin)}\n\n`;
+  content += `Total Stock Value: ${formatCurrency(
+    reportData.summary.totalStockValue
+  )}\n`;
+  content += `Total Retail Value: ${formatCurrency(
+    reportData.summary.totalRetailValue
+  )}\n`;
+  content += `Potential Profit: ${formatCurrency(
+    reportData.summary.potentialProfit
+  )}\n`;
+  content += `Profit Margin: ${formatPercentage(
+    reportData.summary.profitMargin
+  )}\n\n`;
 
   content += `CATEGORY BREAKDOWN\n`;
   content += `-`.repeat(30) + `\n`;
-  reportData.categoryBreakdown.forEach(category => {
+  reportData.categoryBreakdown.forEach((category) => {
     content += `${category.category}:\n`;
     content += `  Products: ${category.count}\n`;
     content += `  Total Stock: ${category.totalStock}\n`;
@@ -264,11 +291,13 @@ function generateInventoryTextReport(reportData) {
     content += `-`.repeat(30) + `\n`;
     content += `Low Stock Products: ${reportData.lowStock.count}\n`;
     content += `Out of Stock: ${reportData.lowStock.criticalProducts.length}\n\n`;
-    
+
     if (reportData.lowStock.products.length > 0) {
       content += `Low Stock Products:\n`;
       reportData.lowStock.products.slice(0, 10).forEach((product, index) => {
-        content += `${index + 1}. ${product.name} - Stock: ${product.total_stock || 0}\n`;
+        content += `${index + 1}. ${product.name} - Stock: ${
+          product.total_stock || 0
+        }\n`;
       });
     }
   }
@@ -283,11 +312,19 @@ function generateSalesTextReport(reportData) {
   let content = `SALES SUMMARY\n`;
   content += `-`.repeat(30) + `\n`;
   content += `Total Sales: ${reportData.summary.totalSales}\n`;
-  content += `Total Revenue: ${formatCurrency(reportData.summary.totalRevenue)}\n`;
-  content += `Average Transaction: ${formatCurrency(reportData.summary.averageTransaction)}\n`;
-  content += `Daily Average: ${formatCurrency(reportData.summary.dailyAverage)}\n\n`;
+  content += `Total Revenue: ${formatCurrency(
+    reportData.summary.totalRevenue
+  )}\n`;
+  content += `Average Transaction: ${formatCurrency(
+    reportData.summary.averageTransaction
+  )}\n`;
+  content += `Daily Average: ${formatCurrency(
+    reportData.summary.dailyAverage
+  )}\n\n`;
 
-  content += `PERIOD: ${formatDate(reportData.summary.period.startDate)} to ${formatDate(reportData.summary.period.endDate)}\n\n`;
+  content += `PERIOD: ${formatDate(
+    reportData.summary.period.startDate
+  )} to ${formatDate(reportData.summary.period.endDate)}\n\n`;
 
   if (reportData.topProducts) {
     content += `TOP PRODUCTS\n`;
@@ -302,7 +339,7 @@ function generateSalesTextReport(reportData) {
   if (reportData.categoryBreakdown) {
     content += `SALES BY CATEGORY\n`;
     content += `-`.repeat(30) + `\n`;
-    reportData.categoryBreakdown.forEach(category => {
+    reportData.categoryBreakdown.forEach((category) => {
       content += `${category.category}: ${formatCurrency(category.revenue)}\n`;
     });
   }
@@ -318,19 +355,31 @@ function generateFinancialTextReport(reportData) {
   content += `-`.repeat(30) + `\n`;
   content += `Revenue: ${formatCurrency(reportData.sales.revenue)}\n`;
   content += `Transactions: ${reportData.sales.transactions}\n`;
-  content += `Average Transaction: ${formatCurrency(reportData.sales.averageTransaction)}\n\n`;
+  content += `Average Transaction: ${formatCurrency(
+    reportData.sales.averageTransaction
+  )}\n\n`;
 
   content += `INVENTORY\n`;
   content += `-`.repeat(30) + `\n`;
-  content += `Stock Value: ${formatCurrency(reportData.inventory.stockValue)}\n`;
-  content += `Retail Value: ${formatCurrency(reportData.inventory.retailValue)}\n`;
+  content += `Stock Value: ${formatCurrency(
+    reportData.inventory.stockValue
+  )}\n`;
+  content += `Retail Value: ${formatCurrency(
+    reportData.inventory.retailValue
+  )}\n`;
   content += `Total Products: ${reportData.inventory.totalProducts}\n\n`;
 
   content += `PROFITABILITY\n`;
   content += `-`.repeat(30) + `\n`;
-  content += `Gross Profit: ${formatCurrency(reportData.profitability.grossProfit)}\n`;
-  content += `Margin: ${formatPercentage(reportData.profitability.marginPercentage)}\n`;
-  content += `Turnover Rate: ${Number(reportData.profitability.turnoverRate).toFixed(2)}\n\n`;
+  content += `Gross Profit: ${formatCurrency(
+    reportData.profitability.grossProfit
+  )}\n`;
+  content += `Margin: ${formatPercentage(
+    reportData.profitability.marginPercentage
+  )}\n`;
+  content += `Turnover Rate: ${Number(
+    reportData.profitability.turnoverRate
+  ).toFixed(2)}\n\n`;
 
   return content;
 }
@@ -350,13 +399,15 @@ function generateLowStockTextReport(reportData) {
   content += `OUT OF STOCK PRODUCTS\n`;
   content += `-`.repeat(30) + `\n`;
   reportData.products.outOfStock.forEach((product, index) => {
-    content += `${index + 1}. ${product.name} (${product.category || 'N/A'})\n`;
+    content += `${index + 1}. ${product.name} (${product.category || "N/A"})\n`;
   });
 
   content += `\nCRITICALLY LOW STOCK\n`;
   content += `-`.repeat(30) + `\n`;
   reportData.products.criticallyLow.forEach((product, index) => {
-    content += `${index + 1}. ${product.name} - Stock: ${product.total_stock || 0}\n`;
+    content += `${index + 1}. ${product.name} - Stock: ${
+      product.total_stock || 0
+    }\n`;
   });
 
   if (reportData.recommendations) {
@@ -382,8 +433,12 @@ function generatePerformanceTextReport(reportData) {
   content += `-`.repeat(30) + `\n`;
   content += `Total Products: ${reportData.summary.totalProducts}\n`;
   content += `Products with Sales: ${reportData.summary.productsWithSales}\n`;
-  content += `Total Revenue: ${formatCurrency(reportData.summary.totalRevenue)}\n`;
-  content += `Total Profit: ${formatCurrency(reportData.summary.totalProfit)}\n\n`;
+  content += `Total Revenue: ${formatCurrency(
+    reportData.summary.totalRevenue
+  )}\n`;
+  content += `Total Profit: ${formatCurrency(
+    reportData.summary.totalProfit
+  )}\n\n`;
 
   content += `TOP PERFORMERS BY REVENUE\n`;
   content += `-`.repeat(30) + `\n`;
@@ -396,12 +451,14 @@ function generatePerformanceTextReport(reportData) {
 
   content += `CATEGORY PERFORMANCE\n`;
   content += `-`.repeat(30) + `\n`;
-  reportData.categoryPerformance.forEach(category => {
+  reportData.categoryPerformance.forEach((category) => {
     content += `${category.category}:\n`;
     content += `  Products: ${category.totalProducts}\n`;
     content += `  Revenue: ${formatCurrency(category.totalRevenue)}\n`;
     content += `  Profit: ${formatCurrency(category.totalProfit)}\n`;
-    content += `  Avg Turnover: ${Number(category.averageTurnover).toFixed(2)}\n\n`;
+    content += `  Avg Turnover: ${Number(category.averageTurnover).toFixed(
+      2
+    )}\n\n`;
   });
 
   return content;
@@ -415,17 +472,17 @@ export function downloadTextPDF(content, filename = "report.txt") {
     const blob = new Blob([content], { type: "text/plain;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    
+
     link.href = url;
     link.download = filename;
     link.style.visibility = "hidden";
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     URL.revokeObjectURL(url);
-    
+
     return { success: true, filename };
   } catch (error) {
     console.error("Text PDF download failed:", error);
@@ -438,7 +495,7 @@ export function downloadTextPDF(content, filename = "report.txt") {
  */
 export function exportReportPDF(reportData, reportType, filename) {
   const content = generateTextReport(reportData, reportType);
-  const txtFilename = filename.replace('.pdf', '.txt');
+  const txtFilename = filename.replace(".pdf", ".txt");
   return downloadTextPDF(content, txtFilename);
 }
 

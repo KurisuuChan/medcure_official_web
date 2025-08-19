@@ -44,19 +44,19 @@ export function useReports() {
    * Generate inventory report
    */
   const generateInventory = useCallback(async (options = {}) => {
-    setLoading(prev => ({ ...prev, inventory: true }));
-    setErrors(prev => ({ ...prev, inventory: null }));
+    setLoading((prev) => ({ ...prev, inventory: true }));
+    setErrors((prev) => ({ ...prev, inventory: null }));
 
     try {
       const reportData = await generateInventoryReport(options);
-      setReports(prev => ({ ...prev, inventory: reportData }));
+      setReports((prev) => ({ ...prev, inventory: reportData }));
       return reportData;
     } catch (error) {
       console.error("Error generating inventory report:", error);
-      setErrors(prev => ({ ...prev, inventory: error.message }));
+      setErrors((prev) => ({ ...prev, inventory: error.message }));
       throw error;
     } finally {
-      setLoading(prev => ({ ...prev, inventory: false }));
+      setLoading((prev) => ({ ...prev, inventory: false }));
     }
   }, []);
 
@@ -64,19 +64,19 @@ export function useReports() {
    * Generate sales report
    */
   const generateSales = useCallback(async (options = {}) => {
-    setLoading(prev => ({ ...prev, sales: true }));
-    setErrors(prev => ({ ...prev, sales: null }));
+    setLoading((prev) => ({ ...prev, sales: true }));
+    setErrors((prev) => ({ ...prev, sales: null }));
 
     try {
       const reportData = await generateSalesReport(options);
-      setReports(prev => ({ ...prev, sales: reportData }));
+      setReports((prev) => ({ ...prev, sales: reportData }));
       return reportData;
     } catch (error) {
       console.error("Error generating sales report:", error);
-      setErrors(prev => ({ ...prev, sales: error.message }));
+      setErrors((prev) => ({ ...prev, sales: error.message }));
       throw error;
     } finally {
-      setLoading(prev => ({ ...prev, sales: false }));
+      setLoading((prev) => ({ ...prev, sales: false }));
     }
   }, []);
 
@@ -84,19 +84,19 @@ export function useReports() {
    * Generate financial report
    */
   const generateFinancial = useCallback(async (options = {}) => {
-    setLoading(prev => ({ ...prev, financial: true }));
-    setErrors(prev => ({ ...prev, financial: null }));
+    setLoading((prev) => ({ ...prev, financial: true }));
+    setErrors((prev) => ({ ...prev, financial: null }));
 
     try {
       const reportData = await generateFinancialReport(options);
-      setReports(prev => ({ ...prev, financial: reportData }));
+      setReports((prev) => ({ ...prev, financial: reportData }));
       return reportData;
     } catch (error) {
       console.error("Error generating financial report:", error);
-      setErrors(prev => ({ ...prev, financial: error.message }));
+      setErrors((prev) => ({ ...prev, financial: error.message }));
       throw error;
     } finally {
-      setLoading(prev => ({ ...prev, financial: false }));
+      setLoading((prev) => ({ ...prev, financial: false }));
     }
   }, []);
 
@@ -104,19 +104,19 @@ export function useReports() {
    * Generate low stock report
    */
   const generateLowStock = useCallback(async (options = {}) => {
-    setLoading(prev => ({ ...prev, lowStock: true }));
-    setErrors(prev => ({ ...prev, lowStock: null }));
+    setLoading((prev) => ({ ...prev, lowStock: true }));
+    setErrors((prev) => ({ ...prev, lowStock: null }));
 
     try {
       const reportData = await generateLowStockReport(options);
-      setReports(prev => ({ ...prev, lowStock: reportData }));
+      setReports((prev) => ({ ...prev, lowStock: reportData }));
       return reportData;
     } catch (error) {
       console.error("Error generating low stock report:", error);
-      setErrors(prev => ({ ...prev, lowStock: error.message }));
+      setErrors((prev) => ({ ...prev, lowStock: error.message }));
       throw error;
     } finally {
-      setLoading(prev => ({ ...prev, lowStock: false }));
+      setLoading((prev) => ({ ...prev, lowStock: false }));
     }
   }, []);
 
@@ -124,19 +124,19 @@ export function useReports() {
    * Generate product performance report
    */
   const generateProductPerformance = useCallback(async (options = {}) => {
-    setLoading(prev => ({ ...prev, productPerformance: true }));
-    setErrors(prev => ({ ...prev, productPerformance: null }));
+    setLoading((prev) => ({ ...prev, productPerformance: true }));
+    setErrors((prev) => ({ ...prev, productPerformance: null }));
 
     try {
       const reportData = await generateProductPerformanceReport(options);
-      setReports(prev => ({ ...prev, productPerformance: reportData }));
+      setReports((prev) => ({ ...prev, productPerformance: reportData }));
       return reportData;
     } catch (error) {
       console.error("Error generating product performance report:", error);
-      setErrors(prev => ({ ...prev, productPerformance: error.message }));
+      setErrors((prev) => ({ ...prev, productPerformance: error.message }));
       throw error;
     } finally {
-      setLoading(prev => ({ ...prev, productPerformance: false }));
+      setLoading((prev) => ({ ...prev, productPerformance: false }));
     }
   }, []);
 
@@ -144,19 +144,19 @@ export function useReports() {
    * Generate dashboard report
    */
   const generateDashboard = useCallback(async () => {
-    setLoading(prev => ({ ...prev, dashboard: true }));
-    setErrors(prev => ({ ...prev, dashboard: null }));
+    setLoading((prev) => ({ ...prev, dashboard: true }));
+    setErrors((prev) => ({ ...prev, dashboard: null }));
 
     try {
       const reportData = await generateDashboardReport();
-      setReports(prev => ({ ...prev, dashboard: reportData }));
+      setReports((prev) => ({ ...prev, dashboard: reportData }));
       return reportData;
     } catch (error) {
       console.error("Error generating dashboard report:", error);
-      setErrors(prev => ({ ...prev, dashboard: error.message }));
+      setErrors((prev) => ({ ...prev, dashboard: error.message }));
       throw error;
     } finally {
-      setLoading(prev => ({ ...prev, dashboard: false }));
+      setLoading((prev) => ({ ...prev, dashboard: false }));
     }
   }, []);
 
@@ -164,8 +164,8 @@ export function useReports() {
    * Clear a specific report
    */
   const clearReport = useCallback((reportType) => {
-    setReports(prev => ({ ...prev, [reportType]: null }));
-    setErrors(prev => ({ ...prev, [reportType]: null }));
+    setReports((prev) => ({ ...prev, [reportType]: null }));
+    setErrors((prev) => ({ ...prev, [reportType]: null }));
   }, []);
 
   /**
@@ -193,7 +193,7 @@ export function useReports() {
   /**
    * Check if any report is currently loading
    */
-  const isAnyLoading = Object.values(loading).some(isLoading => isLoading);
+  const isAnyLoading = Object.values(loading).some((isLoading) => isLoading);
 
   /**
    * Get reports that have data
@@ -212,14 +212,14 @@ export function useReports() {
   return {
     // Report data
     reports,
-    
+
     // Loading states
     loading,
     isAnyLoading,
-    
+
     // Error states
     errors,
-    
+
     // Generation functions
     generateInventory,
     generateSales,
@@ -227,7 +227,7 @@ export function useReports() {
     generateLowStock,
     generateProductPerformance,
     generateDashboard,
-    
+
     // Utility functions
     clearReport,
     clearAllReports,
@@ -247,28 +247,34 @@ export function useReportStatus() {
   });
 
   const updateReportGenerated = useCallback((reportType) => {
-    setLastGenerated(prev => ({
+    setLastGenerated((prev) => ({
       ...prev,
       [reportType]: new Date().toISOString(),
     }));
-    setReportCounts(prev => ({
+    setReportCounts((prev) => ({
       ...prev,
       total: prev.total + 1,
       today: prev.today + 1,
     }));
   }, []);
 
-  const getLastGenerated = useCallback((reportType) => {
-    return lastGenerated[reportType] || null;
-  }, [lastGenerated]);
+  const getLastGenerated = useCallback(
+    (reportType) => {
+      return lastGenerated[reportType] || null;
+    },
+    [lastGenerated]
+  );
 
-  const isReportFresh = useCallback((reportType, maxAgeMinutes = 30) => {
-    const lastGen = lastGenerated[reportType];
-    if (!lastGen) return false;
-    
-    const ageMinutes = (new Date() - new Date(lastGen)) / (1000 * 60);
-    return ageMinutes <= maxAgeMinutes;
-  }, [lastGenerated]);
+  const isReportFresh = useCallback(
+    (reportType, maxAgeMinutes = 30) => {
+      const lastGen = lastGenerated[reportType];
+      if (!lastGen) return false;
+
+      const ageMinutes = (new Date() - new Date(lastGen)) / (1000 * 60);
+      return ageMinutes <= maxAgeMinutes;
+    },
+    [lastGenerated]
+  );
 
   return {
     lastGenerated,

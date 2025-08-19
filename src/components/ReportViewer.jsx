@@ -1,5 +1,9 @@
 import React from "react";
-import { formatCurrency, formatDate, formatPercentage } from "../utils/exportUtils.js";
+import {
+  formatCurrency,
+  formatDate,
+  formatPercentage,
+} from "../utils/exportUtils.js";
 
 /**
  * Report Viewer Component
@@ -46,7 +50,10 @@ export default function ReportViewer({ report, reportType, onClose }) {
         <h3 className="font-semibold mb-3">Category Breakdown</h3>
         <div className="grid gap-3">
           {report.categoryBreakdown.map((category) => (
-            <div key={category.category} className="bg-white border border-gray-200 rounded-lg p-3">
+            <div
+              key={category.category}
+              className="bg-white border border-gray-200 rounded-lg p-3"
+            >
               <div className="flex justify-between items-center">
                 <div>
                   <div className="font-medium">{category.category}</div>
@@ -55,7 +62,9 @@ export default function ReportViewer({ report, reportType, onClose }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{formatCurrency(category.totalValue)}</div>
+                  <div className="font-medium">
+                    {formatCurrency(category.totalValue)}
+                  </div>
                   <div className="text-sm text-gray-600">Total Value</div>
                 </div>
               </div>
@@ -94,7 +103,10 @@ export default function ReportViewer({ report, reportType, onClose }) {
                 <h4 className="font-medium mb-2">Critical Products</h4>
                 <div className="space-y-2">
                   {report.lowStock.products.slice(0, 10).map((product) => (
-                    <div key={product.id} className="flex justify-between items-center bg-white rounded p-2">
+                    <div
+                      key={product.id}
+                      className="flex justify-between items-center bg-white rounded p-2"
+                    >
                       <span>{product.name}</span>
                       <span className="text-orange-600 font-medium">
                         {product.total_stock || 0} units
@@ -142,7 +154,8 @@ export default function ReportViewer({ report, reportType, onClose }) {
           </div>
         </div>
         <div className="mt-3 text-sm text-green-600">
-          Period: {formatDate(report.summary.period.startDate)} to {formatDate(report.summary.period.endDate)}
+          Period: {formatDate(report.summary.period.startDate)} to{" "}
+          {formatDate(report.summary.period.endDate)}
         </div>
       </div>
 
@@ -152,16 +165,23 @@ export default function ReportViewer({ report, reportType, onClose }) {
           <h3 className="font-semibold mb-3">Top Products</h3>
           <div className="space-y-2">
             {report.topProducts.slice(0, 10).map((product, index) => (
-              <div key={product.name} className="bg-white border border-gray-200 rounded-lg p-3">
+              <div
+                key={product.name}
+                className="bg-white border border-gray-200 rounded-lg p-3"
+              >
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-medium">#{index + 1} {product.name}</div>
+                    <div className="font-medium">
+                      #{index + 1} {product.name}
+                    </div>
                     <div className="text-sm text-gray-600">
                       {product.category} • {product.quantitySold} units sold
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-medium">{formatCurrency(product.revenue)}</div>
+                    <div className="font-medium">
+                      {formatCurrency(product.revenue)}
+                    </div>
                     <div className="text-sm text-gray-600">Revenue</div>
                   </div>
                 </div>
@@ -177,10 +197,15 @@ export default function ReportViewer({ report, reportType, onClose }) {
           <h3 className="font-semibold mb-3">Sales by Category</h3>
           <div className="grid gap-3">
             {report.categoryBreakdown.map((category) => (
-              <div key={category.category} className="bg-white border border-gray-200 rounded-lg p-3">
+              <div
+                key={category.category}
+                className="bg-white border border-gray-200 rounded-lg p-3"
+              >
                 <div className="flex justify-between items-center">
                   <div className="font-medium">{category.category}</div>
-                  <div className="font-medium">{formatCurrency(category.revenue)}</div>
+                  <div className="font-medium">
+                    {formatCurrency(category.revenue)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -194,7 +219,9 @@ export default function ReportViewer({ report, reportType, onClose }) {
     <div className="space-y-6">
       {/* Summary */}
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-        <h3 className="font-semibold text-orange-900 mb-3">Low Stock Alert Summary</h3>
+        <h3 className="font-semibold text-orange-900 mb-3">
+          Low Stock Alert Summary
+        </h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <div className="text-sm text-orange-600">Total Low Stock</div>
@@ -226,14 +253,23 @@ export default function ReportViewer({ report, reportType, onClose }) {
       {/* Out of Stock Products */}
       {report.products.outOfStock.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-3 text-red-600">⚠️ Out of Stock Products</h3>
+          <h3 className="font-semibold mb-3 text-red-600">
+            ⚠️ Out of Stock Products
+          </h3>
           <div className="space-y-2">
             {report.products.outOfStock.map((product) => (
-              <div key={product.id} className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div
+                key={product.id}
+                className="bg-red-50 border border-red-200 rounded-lg p-3"
+              >
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-medium text-red-900">{product.name}</div>
-                    <div className="text-sm text-red-600">{product.category || "N/A"}</div>
+                    <div className="font-medium text-red-900">
+                      {product.name}
+                    </div>
+                    <div className="text-sm text-red-600">
+                      {product.category || "N/A"}
+                    </div>
                   </div>
                   <div className="text-red-600 font-bold">0 units</div>
                 </div>
@@ -246,16 +282,27 @@ export default function ReportViewer({ report, reportType, onClose }) {
       {/* Critically Low Products */}
       {report.products.criticallyLow.length > 0 && (
         <div>
-          <h3 className="font-semibold mb-3 text-orange-600">🔶 Critically Low Stock</h3>
+          <h3 className="font-semibold mb-3 text-orange-600">
+            🔶 Critically Low Stock
+          </h3>
           <div className="space-y-2">
             {report.products.criticallyLow.map((product) => (
-              <div key={product.id} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <div
+                key={product.id}
+                className="bg-orange-50 border border-orange-200 rounded-lg p-3"
+              >
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-medium text-orange-900">{product.name}</div>
-                    <div className="text-sm text-orange-600">{product.category || "N/A"}</div>
+                    <div className="font-medium text-orange-900">
+                      {product.name}
+                    </div>
+                    <div className="text-sm text-orange-600">
+                      {product.category || "N/A"}
+                    </div>
                   </div>
-                  <div className="text-orange-600 font-bold">{product.total_stock || 0} units</div>
+                  <div className="text-orange-600 font-bold">
+                    {product.total_stock || 0} units
+                  </div>
                 </div>
               </div>
             ))}
@@ -269,22 +316,33 @@ export default function ReportViewer({ report, reportType, onClose }) {
           <h3 className="font-semibold mb-3">Reorder Recommendations</h3>
           <div className="space-y-2">
             {report.recommendations.slice(0, 10).map((rec) => (
-              <div key={rec.productId} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div
+                key={rec.productId}
+                className="bg-blue-50 border border-blue-200 rounded-lg p-3"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="font-medium text-blue-900">{rec.productName}</div>
-                    <div className="text-sm text-blue-600">
-                      Current: {rec.currentStock} • Recommended: {rec.recommendedOrderQuantity}
+                    <div className="font-medium text-blue-900">
+                      {rec.productName}
                     </div>
                     <div className="text-sm text-blue-600">
-                      Urgency: {rec.urgency} • Est. Cost: {formatCurrency(rec.estimatedCost)}
+                      Current: {rec.currentStock} • Recommended:{" "}
+                      {rec.recommendedOrderQuantity}
+                    </div>
+                    <div className="text-sm text-blue-600">
+                      Urgency: {rec.urgency} • Est. Cost:{" "}
+                      {formatCurrency(rec.estimatedCost)}
                     </div>
                   </div>
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    rec.urgency === "Critical" ? "bg-red-100 text-red-800" :
-                    rec.urgency === "High" ? "bg-orange-100 text-orange-800" :
-                    "bg-yellow-100 text-yellow-800"
-                  }`}>
+                  <div
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      rec.urgency === "Critical"
+                        ? "bg-red-100 text-red-800"
+                        : rec.urgency === "High"
+                        ? "bg-orange-100 text-orange-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
                     {rec.urgency}
                   </div>
                 </div>
@@ -300,7 +358,9 @@ export default function ReportViewer({ report, reportType, onClose }) {
     <div className="space-y-6">
       {/* Summary */}
       <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <h3 className="font-semibold text-purple-900 mb-3">Performance Summary</h3>
+        <h3 className="font-semibold text-purple-900 mb-3">
+          Performance Summary
+        </h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <div className="text-sm text-purple-600">Total Products</div>
@@ -334,17 +394,24 @@ export default function ReportViewer({ report, reportType, onClose }) {
         <h3 className="font-semibold mb-3">Top Performers by Revenue</h3>
         <div className="space-y-2">
           {report.topPerformers.byRevenue.slice(0, 10).map((product, index) => (
-            <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-3">
+            <div
+              key={product.id}
+              className="bg-white border border-gray-200 rounded-lg p-3"
+            >
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-medium">#{index + 1} {product.name}</div>
+                  <div className="font-medium">
+                    #{index + 1} {product.name}
+                  </div>
                   <div className="text-sm text-gray-600">
-                    {product.category} • {product.quantitySold} sold • 
+                    {product.category} • {product.quantitySold} sold •
                     {formatPercentage(product.profitMargin)} margin
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{formatCurrency(product.revenue)}</div>
+                  <div className="font-medium">
+                    {formatCurrency(product.revenue)}
+                  </div>
                   <div className="text-sm text-gray-600">
                     Profit: {formatCurrency(product.profit)}
                   </div>
@@ -360,13 +427,16 @@ export default function ReportViewer({ report, reportType, onClose }) {
         <h3 className="font-semibold mb-3">Category Performance</h3>
         <div className="grid gap-3">
           {report.categoryPerformance.map((category) => (
-            <div key={category.category} className="bg-white border border-gray-200 rounded-lg p-3">
+            <div
+              key={category.category}
+              className="bg-white border border-gray-200 rounded-lg p-3"
+            >
               <div className="flex justify-between items-start">
                 <div>
                   <div className="font-medium">{category.category}</div>
                   <div className="text-sm text-gray-600">
-                    {category.totalProducts} products • 
-                    Avg turnover: {Number(category.averageTurnover).toFixed(2)}
+                    {category.totalProducts} products • Avg turnover:{" "}
+                    {Number(category.averageTurnover).toFixed(2)}
                   </div>
                   {category.topProduct && (
                     <div className="text-sm text-blue-600">
@@ -375,7 +445,9 @@ export default function ReportViewer({ report, reportType, onClose }) {
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{formatCurrency(category.totalRevenue)}</div>
+                  <div className="font-medium">
+                    {formatCurrency(category.totalRevenue)}
+                  </div>
                   <div className="text-sm text-gray-600">
                     Profit: {formatCurrency(category.totalProfit)}
                   </div>
@@ -390,21 +462,31 @@ export default function ReportViewer({ report, reportType, onClose }) {
 
   const getReportTitle = () => {
     switch (reportType) {
-      case "inventory": return "Inventory Report";
-      case "sales": return "Sales Report";
-      case "lowStock": return "Low Stock Alert Report";
-      case "productPerformance": return "Product Performance Report";
-      default: return "Report";
+      case "inventory":
+        return "Inventory Report";
+      case "sales":
+        return "Sales Report";
+      case "lowStock":
+        return "Low Stock Alert Report";
+      case "productPerformance":
+        return "Product Performance Report";
+      default:
+        return "Report";
     }
   };
 
   const renderReportContent = () => {
     switch (reportType) {
-      case "inventory": return renderInventoryReport();
-      case "sales": return renderSalesReport();
-      case "lowStock": return renderLowStockReport();
-      case "productPerformance": return renderPerformanceReport();
-      default: return <div>Unsupported report type</div>;
+      case "inventory":
+        return renderInventoryReport();
+      case "sales":
+        return renderSalesReport();
+      case "lowStock":
+        return renderLowStockReport();
+      case "productPerformance":
+        return renderPerformanceReport();
+      default:
+        return <div>Unsupported report type</div>;
     }
   };
 
@@ -416,15 +498,28 @@ export default function ReportViewer({ report, reportType, onClose }) {
           <div>
             <h2 className="text-xl font-bold">{getReportTitle()}</h2>
             <div className="text-sm text-gray-600">
-              Generated on {formatDate(report.summary?.lastUpdated || new Date().toISOString())}
+              Generated on{" "}
+              {formatDate(
+                report.summary?.lastUpdated || new Date().toISOString()
+              )}
             </div>
           </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
