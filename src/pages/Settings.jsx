@@ -148,11 +148,11 @@ export default function Settings() {
   const handleProfilePictureUpload = async (file) => {
     try {
       setLoading(true);
-      
+
       // Create a preview URL immediately for instant feedback
       const previewUrl = URL.createObjectURL(file);
       setProfile((prev) => ({ ...prev, avatar_url: previewUrl }));
-      
+
       // Now upload and get the permanent URL
       const result = await updateProfilePicture(file);
       if (result?.avatar_url) {
@@ -188,11 +188,11 @@ export default function Settings() {
   const handleBusinessLogoUpload = async (file) => {
     try {
       setLoading(true);
-      
+
       // Create a preview URL immediately for instant feedback
       const previewUrl = URL.createObjectURL(file);
       setBusiness((prev) => ({ ...prev, logo_url: previewUrl }));
-      
+
       // Now upload and get the permanent URL
       const result = await updateBusinessLogo(file);
       if (result?.logo_url) {
@@ -242,7 +242,7 @@ export default function Settings() {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       showMessage("error", "Please select a valid image file");
       return;
     }
@@ -262,7 +262,7 @@ export default function Settings() {
     }
 
     // Clear the input to allow re-uploading the same file
-    event.target.value = '';
+    event.target.value = "";
   };
 
   const tabs = [
@@ -360,11 +360,17 @@ export default function Settings() {
                               alt="Profile"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                console.error("Profile image failed to load:", profile.avatar_url);
-                                e.target.style.display = 'none';
+                                console.error(
+                                  "Profile image failed to load:",
+                                  profile.avatar_url
+                                );
+                                e.target.style.display = "none";
                               }}
                               onLoad={() => {
-                                console.log("Profile image loaded successfully:", profile.avatar_url);
+                                console.log(
+                                  "Profile image loaded successfully:",
+                                  profile.avatar_url
+                                );
                               }}
                             />
                           ) : (
@@ -447,11 +453,17 @@ export default function Settings() {
                               alt="Business Logo"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                console.error("Business logo failed to load:", business.logo_url);
-                                e.target.style.display = 'none';
+                                console.error(
+                                  "Business logo failed to load:",
+                                  business.logo_url
+                                );
+                                e.target.style.display = "none";
                               }}
                               onLoad={() => {
-                                console.log("Business logo loaded successfully:", business.logo_url);
+                                console.log(
+                                  "Business logo loaded successfully:",
+                                  business.logo_url
+                                );
                               }}
                             />
                           ) : (
