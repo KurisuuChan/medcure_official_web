@@ -263,7 +263,7 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Modal Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -491,7 +491,7 @@ function TransactionDetailsModal({ transaction, onClose, onPrintReceipt }) {
   const dateTime = new Date(transaction.created_at);
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">

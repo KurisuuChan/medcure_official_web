@@ -13,6 +13,7 @@ import {
   PackageX,
   AlertCircle,
   Loader,
+  Eye,
 } from "lucide-react";
 
 // Import real backend hooks and components
@@ -28,6 +29,7 @@ import ProductModal from "../components/modals/ProductModal.jsx";
 import ImportModal from "../components/modals/ImportModal.jsx";
 import ExportModal from "../components/ExportModal.jsx";
 import ArchiveReasonModal from "../components/modals/ArchiveReasonModal.jsx";
+import ViewProductModal from "../components/modals/ViewProductModal.jsx";
 import { formatCurrency, formatStockStatus } from "../utils/formatters.js";
 import { useNotification } from "../hooks/useNotification.js";
 
@@ -42,6 +44,13 @@ export default function Management() {
   const [showBulkArchiveModal, setShowBulkArchiveModal] = useState(false);
   const [productToArchive, setProductToArchive] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState(null);
+  // Handle viewing product
+  const handleViewProduct = (product) => {
+    setViewingProduct(product);
+    setShowViewModal(true);
+  };
 
   // Real backend hooks
   const { data: products = [], isLoading, error, refetch } = useProducts();
@@ -383,6 +392,13 @@ export default function Management() {
 
                     <div className="flex gap-2 pt-4 border-t border-gray-100">
                       <button
+                        onClick={() => handleViewProduct(product)}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-blue-600 rounded-lg text-sm hover:bg-blue-200"
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                      <button
                         onClick={() => handleEditProduct(product)}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
                       >
@@ -494,6 +510,12 @@ export default function Management() {
                       <td className="py-4 px-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
+                            onClick={() => handleViewProduct(product)}
+                            className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
                             onClick={() => handleEditProduct(product)}
                             className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
                           >
@@ -536,6 +558,14 @@ export default function Management() {
       ) : null}
 
       {/* Modals */}
+      <ViewProductModal
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false);
+          setViewingProduct(null);
+        }}
+        product={viewingProduct}
+      />
       <ProductModal
         isOpen={showProductModal}
         onClose={() => {
