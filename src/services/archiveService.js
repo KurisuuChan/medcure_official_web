@@ -337,9 +337,8 @@ export function resetArchivedItemsStorage() {
  */
 export async function archiveProduct(product, reason, archivedBy = "System") {
   try {
-    // Create archived item record
+    // Create archived item record (without manual ID - let database auto-generate)
     const archivedItem = {
-      id: Date.now(), // Temporary ID for localStorage fallback
       type: "product",
       name: product.name,
       description:
@@ -353,6 +352,42 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
     };
 
     try {
+      // First, check if this product is already archived
+      const { data: existingArchive, error: checkError } = await supabase
+        .from("archived_items")
+        .select("id")
+        .eq("original_data->>id", product.id.toString())
+        .eq("type", "product")
+        .maybeSingle();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        throw checkError;
+      }
+
+      // If already archived, skip insertion
+      if (existingArchive) {
+        console.log(`Product ${product.name} is already archived.`);
+
+        // Still try to delete from products table
+        try {
+          const { error: deleteError } = await supabase
+            .from("products")
+            .delete()
+            .eq("id", product.id);
+
+          if (deleteError) {
+            console.warn(
+              "Could not delete product from main table:",
+              deleteError
+            );
+          }
+        } catch (deleteErr) {
+          console.warn("Delete operation failed:", deleteErr);
+        }
+
+        return { success: true, archived: existingArchive };
+      }
+
       // Try to insert into archived_items table
       const { data: archived, error: archiveError } = await supabase
         .from("archived_items")
@@ -369,27 +404,33 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
           console.warn(
             "archived_items table not found, using localStorage fallback"
           );
-          return archiveProductToStorage(archivedItem);
+          // Add temporary ID for localStorage
+          const storageItem = { ...archivedItem, id: Date.now() };
+          return archiveProductToStorage(storageItem);
         }
         throw archiveError;
       }
 
-      // Delete from products table
+      // Delete from products table after successful archiving
       const { error: deleteError } = await supabase
         .from("products")
         .delete()
         .eq("id", product.id);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.warn("Could not delete product from main table:", deleteError);
+      }
 
-      return archived;
+      return archived[0]; // Return the first (and only) archived item
     } catch (error) {
       // Fallback to localStorage if database operations fail
       console.warn(
         "Database operations failed, using localStorage fallback:",
         error.message
       );
-      return archiveProductToStorage(archivedItem);
+      // Add temporary ID for localStorage
+      const storageItem = { ...archivedItem, id: Date.now() + Math.random() };
+      return archiveProductToStorage(storageItem);
     }
   } catch (error) {
     console.error("Error archiving product:", error);
