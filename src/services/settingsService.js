@@ -11,22 +11,24 @@ import { supabase } from "../config/supabase.js";
 async function ensureStorageBuckets() {
   try {
     // Check if avatars bucket exists
-    const { data: avatarsBucket } = await supabase.storage.getBucket('avatars');
+    const { data: avatarsBucket } = await supabase.storage.getBucket("avatars");
     if (!avatarsBucket) {
-      console.log('Creating avatars bucket...');
-      await supabase.storage.createBucket('avatars', { public: true });
+      console.log("Creating avatars bucket...");
+      await supabase.storage.createBucket("avatars", { public: true });
     }
 
     // Check if business-assets bucket exists
-    const { data: businessBucket } = await supabase.storage.getBucket('business-assets');
+    const { data: businessBucket } = await supabase.storage.getBucket(
+      "business-assets"
+    );
     if (!businessBucket) {
-      console.log('Creating business-assets bucket...');
-      await supabase.storage.createBucket('business-assets', { public: true });
+      console.log("Creating business-assets bucket...");
+      await supabase.storage.createBucket("business-assets", { public: true });
     }
-    
+
     return true;
   } catch (error) {
-    console.warn('Could not create storage buckets:', error);
+    console.warn("Could not create storage buckets:", error);
     return false;
   }
 }
@@ -59,9 +61,9 @@ export async function getUserProfile() {
     if (user) {
       // Get profile from database
       const { data: profileData, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
       if (!error && profileData) {
@@ -73,7 +75,7 @@ export async function getUserProfile() {
           phone: profileData.phone || "",
           address: profileData.address || "",
         };
-        
+
         // Cache in localStorage
         localStorage.setItem("medcure_user_profile", JSON.stringify(profile));
         return profile;
@@ -88,17 +90,18 @@ export async function getUserProfile() {
           address: "",
         };
 
-        await supabase
-          .from('user_profiles')
-          .upsert({
-            user_id: user.id,
-            full_name: defaultProfile.full_name,
-            avatar_url: defaultProfile.avatar_url,
-            phone: defaultProfile.phone,
-            address: defaultProfile.address,
-          });
+        await supabase.from("user_profiles").upsert({
+          user_id: user.id,
+          full_name: defaultProfile.full_name,
+          avatar_url: defaultProfile.avatar_url,
+          phone: defaultProfile.phone,
+          address: defaultProfile.address,
+        });
 
-        localStorage.setItem("medcure_user_profile", JSON.stringify(defaultProfile));
+        localStorage.setItem(
+          "medcure_user_profile",
+          JSON.stringify(defaultProfile)
+        );
         return defaultProfile;
       }
     }
@@ -181,15 +184,13 @@ export async function updateUserProfile(profileData) {
 
       if (user) {
         // Update database
-        const { error } = await supabase
-          .from('user_profiles')
-          .upsert({
-            user_id: user.id,
-            full_name: profileData.full_name,
-            avatar_url: profileData.avatar_url,
-            phone: profileData.phone,
-            address: profileData.address,
-          });
+        const { error } = await supabase.from("user_profiles").upsert({
+          user_id: user.id,
+          full_name: profileData.full_name,
+          avatar_url: profileData.avatar_url,
+          phone: profileData.phone,
+          address: profileData.address,
+        });
 
         if (!error) {
           // Also update auth metadata if needed
@@ -211,8 +212,11 @@ export async function updateUserProfile(profileData) {
             phone: profileData.phone || "",
             address: profileData.address || "",
           };
-          
-          localStorage.setItem("medcure_user_profile", JSON.stringify(updatedProfile));
+
+          localStorage.setItem(
+            "medcure_user_profile",
+            JSON.stringify(updatedProfile)
+          );
           return updatedProfile;
         } else {
           throw error;
@@ -258,16 +262,16 @@ export async function updateProfilePicture(file) {
 
       if (user) {
         console.log("Authenticated user found, attempting Supabase upload...");
-        
+
         // Ensure storage buckets exist
         await ensureStorageBuckets();
-        
+
         // Upload to Supabase Storage
-        const fileExt = file.name.split(".").pop() || 'jpg';
+        const fileExt = file.name.split(".").pop() || "jpg";
         const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
 
         console.log("Uploading file to Supabase:", fileName);
-        
+
         const { data, error } = await supabase.storage
           .from("avatars")
           .upload(fileName, file, { upsert: true });
@@ -278,7 +282,10 @@ export async function updateProfilePicture(file) {
           } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
           imageUrl = publicUrl;
-          console.log("Profile picture uploaded to Supabase successfully:", imageUrl);
+          console.log(
+            "Profile picture uploaded to Supabase successfully:",
+            imageUrl
+          );
         } else {
           console.error("Supabase upload error:", error);
           throw error;
@@ -319,9 +326,9 @@ export async function getBusinessSettings() {
     if (user) {
       // Get business settings from database
       const { data: businessData, error } = await supabase
-        .from('business_settings')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("business_settings")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
       if (!error && businessData) {
@@ -337,9 +344,12 @@ export async function getBusinessSettings() {
           registration_number: businessData.registration_number || "",
           tax_id: businessData.tax_id || "",
         };
-        
+
         // Cache in localStorage
-        localStorage.setItem("medcure_business_settings", JSON.stringify(settings));
+        localStorage.setItem(
+          "medcure_business_settings",
+          JSON.stringify(settings)
+        );
         return settings;
       } else {
         // Create default business settings in database
@@ -356,14 +366,15 @@ export async function getBusinessSettings() {
           tax_id: "",
         };
 
-        await supabase
-          .from('business_settings')
-          .upsert({
-            user_id: user.id,
-            ...defaultSettings,
-          });
+        await supabase.from("business_settings").upsert({
+          user_id: user.id,
+          ...defaultSettings,
+        });
 
-        localStorage.setItem("medcure_business_settings", JSON.stringify(defaultSettings));
+        localStorage.setItem(
+          "medcure_business_settings",
+          JSON.stringify(defaultSettings)
+        );
         return defaultSettings;
       }
     }
@@ -433,20 +444,21 @@ export async function updateBusinessSettings(businessData) {
 
       if (user) {
         // Update database
-        const { error } = await supabase
-          .from('business_settings')
-          .upsert({
-            user_id: user.id,
-            ...businessData,
-          });
+        const { error } = await supabase.from("business_settings").upsert({
+          user_id: user.id,
+          ...businessData,
+        });
 
         if (!error) {
           // Get current settings and merge with updates
           const currentSettings = await getBusinessSettings();
           const updatedSettings = { ...currentSettings, ...businessData };
-          
+
           // Cache in localStorage
-          localStorage.setItem("medcure_business_settings", JSON.stringify(updatedSettings));
+          localStorage.setItem(
+            "medcure_business_settings",
+            JSON.stringify(updatedSettings)
+          );
           return updatedSettings;
         } else {
           throw error;
@@ -490,17 +502,19 @@ export async function updateBusinessLogo(file) {
       } = await supabase.auth.getUser();
 
       if (user) {
-        console.log("Authenticated user found, attempting Supabase logo upload...");
-        
+        console.log(
+          "Authenticated user found, attempting Supabase logo upload..."
+        );
+
         // Ensure storage buckets exist
         await ensureStorageBuckets();
-        
+
         // Upload to Supabase Storage
-        const fileExt = file.name.split(".").pop() || 'png';
+        const fileExt = file.name.split(".").pop() || "png";
         const fileName = `business/logo-${Date.now()}.${fileExt}`;
 
         console.log("Uploading logo to Supabase:", fileName);
-        
+
         const { data, error } = await supabase.storage
           .from("business-assets")
           .upload(fileName, file, { upsert: true });
@@ -511,7 +525,10 @@ export async function updateBusinessLogo(file) {
           } = supabase.storage.from("business-assets").getPublicUrl(fileName);
 
           logoUrl = publicUrl;
-          console.log("Business logo uploaded to Supabase successfully:", logoUrl);
+          console.log(
+            "Business logo uploaded to Supabase successfully:",
+            logoUrl
+          );
         } else {
           console.error("Supabase logo upload error:", error);
           throw error;
@@ -524,7 +541,7 @@ export async function updateBusinessLogo(file) {
         "Supabase storage not available, using base64 encoding:",
         authError.message
       );
-      // Fallback to base64 encoding for persistence  
+      // Fallback to base64 encoding for persistence
       logoUrl = await fileToBase64(file);
       console.log("Using base64 encoded image for business logo");
     }
@@ -567,9 +584,9 @@ export async function getAppSettings() {
     if (user) {
       // Get app settings from database
       const { data: appData, error } = await supabase
-        .from('app_settings')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("app_settings")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
       if (!error && appData) {
@@ -584,7 +601,7 @@ export async function getAppSettings() {
           low_stock_threshold: appData.low_stock_threshold || 10,
           expiry_warning_days: appData.expiry_warning_days || 30,
         };
-        
+
         // Cache in localStorage
         localStorage.setItem("medcure_app_settings", JSON.stringify(settings));
         return settings;
@@ -602,14 +619,15 @@ export async function getAppSettings() {
           expiry_warning_days: 30,
         };
 
-        await supabase
-          .from('app_settings')
-          .upsert({
-            user_id: user.id,
-            ...defaultSettings,
-          });
+        await supabase.from("app_settings").upsert({
+          user_id: user.id,
+          ...defaultSettings,
+        });
 
-        localStorage.setItem("medcure_app_settings", JSON.stringify(defaultSettings));
+        localStorage.setItem(
+          "medcure_app_settings",
+          JSON.stringify(defaultSettings)
+        );
         return defaultSettings;
       }
     }
@@ -678,20 +696,21 @@ export async function updateAppSetting(key, value) {
 
       if (user) {
         // Update database
-        const { error } = await supabase
-          .from('app_settings')
-          .upsert({
-            user_id: user.id,
-            [key]: value,
-          });
+        const { error } = await supabase.from("app_settings").upsert({
+          user_id: user.id,
+          [key]: value,
+        });
 
         if (!error) {
           // Get current settings and merge with updates
           const currentSettings = await getAppSettings();
           const updatedSettings = { ...currentSettings, [key]: value };
-          
+
           // Cache in localStorage
-          localStorage.setItem("medcure_app_settings", JSON.stringify(updatedSettings));
+          localStorage.setItem(
+            "medcure_app_settings",
+            JSON.stringify(updatedSettings)
+          );
           return updatedSettings;
         } else {
           throw error;
