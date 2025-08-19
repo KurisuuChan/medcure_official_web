@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getArchivedItems,
+  getArchivedProducts,
   archiveProduct,
   restoreArchivedProduct,
-  permanentlyDeleteArchivedItem,
+  permanentlyDeleteProduct,
   bulkArchiveProducts,
-  getArchivedItemsByType,
-  searchArchivedItems,
+  searchArchivedProducts,
+  getArchiveStats,
 } from "../services/archiveService.js";
 
 /**
@@ -15,7 +15,7 @@ import {
 export function useArchivedItems() {
   return useQuery({
     queryKey: ["archived-items"],
-    queryFn: getArchivedItems,
+    queryFn: getArchivedProducts,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -66,7 +66,8 @@ export function usePermanentlyDeleteArchivedItem() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: permanentlyDeleteArchivedItem,
+    mutationFn: ({ productId, deletedBy }) =>
+      permanentlyDeleteProduct(productId, deletedBy),
     onSuccess: () => {
       // Invalidate archived items query
       queryClient.invalidateQueries({ queryKey: ["archived-items"] });
@@ -84,8 +85,8 @@ export function useBulkArchiveProducts() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ products, reason, archivedBy }) =>
-      bulkArchiveProducts(products, reason, archivedBy),
+    mutationFn: ({ productIds, reason, archivedBy }) =>
+      bulkArchiveProducts(productIds, reason, archivedBy),
     onSuccess: () => {
       // Invalidate both products and archived items queries
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -98,13 +99,12 @@ export function useBulkArchiveProducts() {
 }
 
 /**
- * Hook for fetching archived items by type
+ * Hook for fetching archived products (replaces getArchivedItemsByType)
  */
-export function useArchivedItemsByType(type) {
+export function useArchivedProducts() {
   return useQuery({
-    queryKey: ["archived-items", "type", type],
-    queryFn: () => getArchivedItemsByType(type),
-    enabled: !!type,
+    queryKey: ["archived-products"],
+    queryFn: getArchivedProducts,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -115,8 +115,19 @@ export function useArchivedItemsByType(type) {
 export function useSearchArchivedItems(searchTerm) {
   return useQuery({
     queryKey: ["archived-items", "search", searchTerm],
-    queryFn: () => searchArchivedItems(searchTerm),
+    queryFn: () => searchArchivedProducts(searchTerm),
     enabled: !!searchTerm && searchTerm.length >= 2,
     staleTime: 1 * 60 * 1000, // 1 minute
+  });
+}
+
+/**
+ * Hook for getting archive statistics
+ */
+export function useArchiveStats() {
+  return useQuery({
+    queryKey: ["archive-stats"],
+    queryFn: getArchiveStats,
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 }

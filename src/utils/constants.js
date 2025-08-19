@@ -80,7 +80,12 @@ export const PAGINATION = {
 // File upload limits
 export const FILE_LIMITS = {
   CSV_MAX_SIZE: 5 * 1024 * 1024, // 5MB
-  ALLOWED_CSV_TYPES: [".csv", "text/csv", "application/vnd.ms-excel"],
+  ALLOWED_CSV_TYPES: [
+    "text/csv",
+    "application/vnd.ms-excel",
+    "application/csv",
+  ],
+  ALLOWED_CSV_EXTENSIONS: [".csv"],
 };
 
 // Notification durations (in milliseconds)

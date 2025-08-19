@@ -15,10 +15,12 @@ import {
   Clock,
   Tag,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import {
-  useArchivedItems,
+  useArchivedProducts,
   useRestoreArchivedProduct,
+  usePermanentlyDeleteArchivedItem,
 } from "../hooks/useArchive.js";
 import { useNotification } from "../hooks/useNotification.js";
 import { formatCurrency, formatDate } from "../utils/formatters.js";
@@ -30,8 +32,9 @@ export default function Archived() {
     isLoading,
     error,
     refetch,
-  } = useArchivedItems();
+  } = useArchivedProducts();
   const restoreProduct = useRestoreArchivedProduct();
+  const deleteProduct = usePermanentlyDeleteArchivedItem();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBy, setFilterBy] = useState("all"); // all, week, month, year
@@ -92,6 +95,63 @@ export default function Archived() {
         setSelectedItems((prev) => prev.filter((id) => id !== item.id));
       } catch (error) {
         addNotification(error.message || "Failed to restore product", "error");
+      }
+    }
+  };
+
+  // Handle permanent delete functionality
+  const handleDelete = async (item) => {
+    if (
+      window.confirm(
+        `Are you sure you want to permanently delete "${item.name}"? This action cannot be undone.`
+      )
+    ) {
+      try {
+        await deleteProduct.mutateAsync({
+          productId: item.id,
+          deletedBy: "Admin", // You can modify this to use actual user info
+        });
+        addNotification(
+          `"${item.name}" has been permanently deleted`,
+          "success"
+        );
+        setSelectedItems((prev) => prev.filter((id) => id !== item.id));
+      } catch (error) {
+        addNotification(error.message || "Failed to delete product", "error");
+      }
+    }
+  };
+
+  // Handle bulk delete functionality
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) return;
+
+    if (
+      window.confirm(
+        `Are you sure you want to permanently delete ${selectedItems.length} products? This action cannot be undone.`
+      )
+    ) {
+      try {
+        // Delete each item individually
+        for (const itemId of selectedItems) {
+          const item = archivedItems.find((item) => item.id === itemId);
+          if (item) {
+            await deleteProduct.mutateAsync({
+              productId: itemId,
+              deletedBy: "Admin", // You can modify this to use actual user info
+            });
+          }
+        }
+        addNotification(
+          `${selectedItems.length} products permanently deleted successfully`,
+          "success"
+        );
+        setSelectedItems([]);
+      } catch (error) {
+        addNotification(
+          error.message || "Failed to delete selected products",
+          "error"
+        );
       }
     }
   };
@@ -512,6 +572,14 @@ export default function Archived() {
                 <RotateCcw size={14} />
                 {restoreProduct.isPending ? "Restoring..." : "Restore Selected"}
               </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={deleteProduct.isPending}
+                className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 border border-red-700"
+              >
+                <Trash2 size={14} />
+                {deleteProduct.isPending ? "Deleting..." : "Delete Selected"}
+              </button>
             </div>
           )}
         </div>
@@ -662,6 +730,17 @@ export default function Archived() {
                               {restoreProduct.isPending
                                 ? "Restoring..."
                                 : "Restore"}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item)}
+                              disabled={deleteProduct.isPending}
+                              className="flex items-center gap-1 px-3 py-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 text-sm font-medium transition-colors disabled:opacity-50 border border-red-200 hover:border-red-300"
+                              title="Permanently delete this product"
+                            >
+                              <Trash2 size={14} />
+                              {deleteProduct.isPending
+                                ? "Deleting..."
+                                : "Delete"}
                             </button>
                           </div>
                         </div>

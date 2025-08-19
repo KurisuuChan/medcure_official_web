@@ -14,6 +14,7 @@ export async function getProducts() {
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq("is_archived", false)
       .order("name", { ascending: true });
 
     if (error) throw error;
@@ -61,6 +62,7 @@ export async function getProduct(id) {
       .from("products")
       .select("*")
       .eq("id", id)
+      .eq("is_archived", false)
       .single();
 
     if (error) throw error;
@@ -163,6 +165,7 @@ export async function getLowStockProducts(threshold = 10) {
       .from("products")
       .select("*")
       .lt("stock", threshold)
+      .eq("is_archived", false)
       .order("stock", { ascending: true });
 
     if (error) throw error;
@@ -184,6 +187,7 @@ export async function searchProducts(searchTerm) {
       .from("products")
       .select("*")
       .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`)
+      .eq("is_archived", false)
       .order("name", { ascending: true });
 
     if (error) throw error;
