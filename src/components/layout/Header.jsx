@@ -17,13 +17,24 @@ import {
   Plus,
   CheckCircle,
   Info,
+  PackageCheck,
+  TrendingUp,
+  CreditCard,
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNotification } from "@/hooks/useNotification";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function Header({ onLogout, user }) {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    loadRecentNotifications,
+    markAsRead,
+  } = useNotifications();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -63,38 +74,12 @@ export default function Header({ onLogout, user }) {
       window.removeEventListener("settingsUpdated", handleSettingsUpdate);
   }, []);
 
-  // Mock notifications data with enhanced design
-  const [notifications] = useState([
-    {
-      id: 1,
-      title: "Low Stock Alert",
-      message: "Paracetamol 500mg is running low. Only 15 units remaining.",
-      type: "warning",
-      category: "Inventory",
-      created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      is_read: false,
-    },
-    {
-      id: 2,
-      title: "Sale Completed",
-      message: "Transaction #1234 completed successfully. Total: ₱750.00",
-      type: "success",
-      category: "Sales",
-      created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      is_read: true,
-    },
-    {
-      id: 3,
-      title: "System Update",
-      message: "New features have been added to the POS system.",
-      type: "info",
-      category: "System",
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      is_read: false,
-    },
-  ]);
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  // Load recent notifications when dropdown opens
+  useEffect(() => {
+    if (notifOpen && !notificationsLoading) {
+      loadRecentNotifications(5);
+    }
+  }, [notifOpen, loadRecentNotifications, notificationsLoading]);
 
   // Handle search functionality
   const handleSearch = (e) => {
@@ -105,8 +90,22 @@ export default function Header({ onLogout, user }) {
     }
   };
 
-  // Get notification icon based on type
-  const getNotificationIcon = (type) => {
+  // Get notification icon based on type and category
+  const getNotificationIcon = (type, category) => {
+    if (category === "inventory") {
+      if (type === "error" || type === "warning") return Package;
+      return PackageCheck;
+    }
+
+    if (category === "sales") {
+      if (type === "success") return TrendingUp;
+      return CreditCard;
+    }
+
+    if (category === "system") {
+      return Settings;
+    }
+
     switch (type) {
       case "error":
         return AlertTriangle;
@@ -168,6 +167,44 @@ export default function Header({ onLogout, user }) {
     onLogout?.();
     addNotification("Logged out successfully", "success");
     setMenuOpen(false);
+  };
+
+  // Handle marking all notifications as read
+  const handleMarkAllRead = async () => {
+    try {
+      await markAsRead(null, true);
+      addNotification("All notifications marked as read", "success");
+    } catch (error) {
+      addNotification("Failed to mark notifications as read", "error");
+    }
+  };
+
+  // Handle clicking on a notification
+  const handleNotificationClick = async (notification) => {
+    try {
+      if (!notification.is_read) {
+        await markAsRead([notification.id]);
+      }
+
+      // Navigate based on notification type/category
+      if (
+        notification.category === "inventory" &&
+        notification.related_entity_id
+      ) {
+        navigate(`/inventory?highlight=${notification.related_entity_id}`);
+      } else if (
+        notification.category === "sales" &&
+        notification.related_entity_id
+      ) {
+        navigate(`/pos`);
+      } else if (notification.category === "system") {
+        navigate("/settings");
+      }
+
+      setNotifOpen(false);
+    } catch (error) {
+      console.error("Error handling notification click:", error);
+    }
   };
 
   // Close dropdowns when clicking outside
@@ -439,7 +476,7 @@ export default function Header({ onLogout, user }) {
                     </span>
                   </div>
                   <button
-                    onClick={() => setNotifOpen(false)}
+                    onClick={handleMarkAllRead}
                     className="ml-auto text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors text-xs sm:text-sm"
                   >
                     Mark all read
@@ -449,11 +486,19 @@ export default function Header({ onLogout, user }) {
 
               {/* Notifications List */}
               <div className="max-h-72 sm:max-h-80 overflow-y-auto">
-                {notifications && notifications.length > 0 ? (
+                {notificationsLoading ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-500">
+                      Loading notifications...
+                    </p>
+                  </div>
+                ) : notifications && notifications.length > 0 ? (
                   <div className="divide-y divide-gray-100/80">
                     {notifications.slice(0, 5).map((notification) => {
                       const IconComponent = getNotificationIcon(
-                        notification.type
+                        notification.type,
+                        notification.category
                       );
                       const displayConfig = getNotificationDisplayConfig(
                         notification.type
@@ -467,7 +512,7 @@ export default function Header({ onLogout, user }) {
                               ? "bg-blue-50/30 border-l-2 border-l-blue-500"
                               : ""
                           }`}
-                          onClick={() => {}}
+                          onClick={() => handleNotificationClick(notification)}
                         >
                           <div className="flex items-start gap-3">
                             <div
@@ -490,11 +535,27 @@ export default function Header({ onLogout, user }) {
                               <p className="text-sm text-gray-600 mb-2 leading-relaxed">
                                 {notification.message}
                               </p>
-                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-                                {formatNotificationTime(
-                                  notification.created_at
-                                )}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                                  {notification.time_ago ||
+                                    formatNotificationTime(
+                                      notification.created_at
+                                    )}
+                                </span>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded-md font-medium ${
+                                    notification.category === "inventory"
+                                      ? "bg-orange-100 text-orange-700"
+                                      : notification.category === "sales"
+                                      ? "bg-green-100 text-green-700"
+                                      : notification.category === "system"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-gray-100 text-gray-700"
+                                  }`}
+                                >
+                                  {notification.category}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </button>

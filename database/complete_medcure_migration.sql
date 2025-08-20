@@ -116,8 +116,288 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     UNIQUE(user_id)
 );
 
+-- 1.8 Notifications Table (Real-time notification system)
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'info', -- 'info', 'success', 'warning', 'error'
+    category VARCHAR(100) NOT NULL DEFAULT 'system', -- 'inventory', 'sales', 'system', 'reports', 'user'
+    priority INTEGER DEFAULT 1, -- 1=low, 2=medium, 3=high, 4=critical
+    is_read BOOLEAN DEFAULT FALSE,
+    is_archived BOOLEAN DEFAULT FALSE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- NULL for system-wide notifications
+    related_entity_type VARCHAR(100), -- 'product', 'sale', 'user', etc.
+    related_entity_id BIGINT, -- ID of the related entity
+    metadata JSONB DEFAULT '{}', -- Additional data like product info, sale details, etc.
+    expires_at TIMESTAMP WITH TIME ZONE, -- For temporary notifications
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    -- Constraints
+    CONSTRAINT chk_notification_type CHECK (type IN ('info', 'success', 'warning', 'error')),
+    CONSTRAINT chk_notification_priority CHECK (priority BETWEEN 1 AND 4)
+);
+
+-- 1.9 Notification Templates Table (Reusable notification templates)
+CREATE TABLE IF NOT EXISTS public.notification_templates (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    title_template VARCHAR(255) NOT NULL,
+    message_template TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'info',
+    category VARCHAR(100) NOT NULL DEFAULT 'system',
+    priority INTEGER DEFAULT 1,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- =====================================================
--- SECTION 2: INDEXES FOR PERFORMANCE
+-- SECTION 2: NOTIFICATION FUNCTIONS
+-- =====================================================
+
+-- 2.1 Function to create notifications from templates
+CREATE OR REPLACE FUNCTION public.create_notification_from_template(
+    template_name VARCHAR(255),
+    template_data JSONB DEFAULT '{}'::JSONB,
+    target_user_id UUID DEFAULT NULL
+) RETURNS BIGINT AS $$
+DECLARE
+    template_record RECORD;
+    new_notification_id BIGINT;
+    processed_title TEXT;
+    processed_message TEXT;
+BEGIN
+    -- Get the template
+    SELECT * INTO template_record 
+    FROM public.notification_templates 
+    WHERE name = template_name AND is_active = true;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Template % not found or inactive', template_name;
+    END IF;
+    
+    -- Process title and message with template data
+    processed_title := template_record.title_template;
+    processed_message := template_record.message_template;
+    
+    -- Simple template variable replacement (you can enhance this)
+    IF template_data ? 'product_name' THEN
+        processed_title := REPLACE(processed_title, '{{product_name}}', template_data->>'product_name');
+        processed_message := REPLACE(processed_message, '{{product_name}}', template_data->>'product_name');
+    END IF;
+    
+    IF template_data ? 'stock_level' THEN
+        processed_title := REPLACE(processed_title, '{{stock_level}}', template_data->>'stock_level');
+        processed_message := REPLACE(processed_message, '{{stock_level}}', template_data->>'stock_level');
+    END IF;
+    
+    IF template_data ? 'days_until_expiry' THEN
+        processed_title := REPLACE(processed_title, '{{days_until_expiry}}', template_data->>'days_until_expiry');
+        processed_message := REPLACE(processed_message, '{{days_until_expiry}}', template_data->>'days_until_expiry');
+    END IF;
+    
+    -- Create the notification
+    INSERT INTO public.notifications (
+        title, message, type, category, priority, user_id, 
+        related_entity_type, related_entity_id, metadata
+    ) VALUES (
+        processed_title,
+        processed_message,
+        template_record.type,
+        template_record.category,
+        template_record.priority,
+        target_user_id,
+        COALESCE(template_data->>'entity_type', 'system'),
+        CASE WHEN template_data ? 'entity_id' THEN (template_data->>'entity_id')::BIGINT ELSE NULL END,
+        template_data
+    ) RETURNING id INTO new_notification_id;
+    
+    RETURN new_notification_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2.2 Function to check for low stock and create notifications
+CREATE OR REPLACE FUNCTION public.check_low_stock_notifications() RETURNS void AS $$
+DECLARE
+    product_record RECORD;
+BEGIN
+    FOR product_record IN 
+        SELECT id, name, total_stock, low_stock_threshold
+        FROM public.products 
+        WHERE is_archived = false 
+        AND total_stock <= low_stock_threshold
+        AND total_stock > 0
+    LOOP
+        -- Check if we already have a recent low stock notification for this product
+        IF NOT EXISTS (
+            SELECT 1 FROM public.notifications 
+            WHERE related_entity_type = 'product' 
+            AND related_entity_id = product_record.id
+            AND category = 'inventory'
+            AND type = 'warning'
+            AND created_at > NOW() - INTERVAL '24 hours'
+        ) THEN
+            -- Create low stock notification
+            PERFORM public.create_notification_from_template(
+                'low_stock_alert',
+                jsonb_build_object(
+                    'product_name', product_record.name,
+                    'stock_level', product_record.total_stock,
+                    'entity_type', 'product',
+                    'entity_id', product_record.id
+                )
+            );
+        END IF;
+    END LOOP;
+    
+    -- Check for out of stock products
+    FOR product_record IN 
+        SELECT id, name, total_stock
+        FROM public.products 
+        WHERE is_archived = false 
+        AND total_stock = 0
+    LOOP
+        -- Check if we already have a recent out of stock notification for this product
+        IF NOT EXISTS (
+            SELECT 1 FROM public.notifications 
+            WHERE related_entity_type = 'product' 
+            AND related_entity_id = product_record.id
+            AND category = 'inventory'
+            AND type = 'error'
+            AND title LIKE 'Out of Stock:%'
+            AND created_at > NOW() - INTERVAL '6 hours'
+        ) THEN
+            -- Create out of stock notification
+            PERFORM public.create_notification_from_template(
+                'out_of_stock',
+                jsonb_build_object(
+                    'product_name', product_record.name,
+                    'entity_type', 'product',
+                    'entity_id', product_record.id
+                )
+            );
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2.3 Function to check for expiring products and create notifications
+CREATE OR REPLACE FUNCTION public.check_expiring_products_notifications() RETURNS void AS $$
+DECLARE
+    product_record RECORD;
+    days_until_expiry INTEGER;
+BEGIN
+    FOR product_record IN 
+        SELECT id, name, expiration_date
+        FROM public.products 
+        WHERE is_archived = false 
+        AND expiration_date IS NOT NULL
+        AND expiration_date <= CURRENT_DATE + INTERVAL '30 days'
+        AND expiration_date > CURRENT_DATE
+    LOOP
+        days_until_expiry := (product_record.expiration_date - CURRENT_DATE);
+        
+        -- Check if we already have a recent expiry notification for this product
+        IF NOT EXISTS (
+            SELECT 1 FROM public.notifications 
+            WHERE related_entity_type = 'product' 
+            AND related_entity_id = product_record.id
+            AND category = 'inventory'
+            AND (type = 'warning' OR type = 'error')
+            AND created_at > NOW() - INTERVAL '24 hours'
+        ) THEN
+            -- Create expiry notification with appropriate urgency
+            IF days_until_expiry <= 7 THEN
+                PERFORM public.create_notification_from_template(
+                    'product_expiring_urgent',
+                    jsonb_build_object(
+                        'product_name', product_record.name,
+                        'days_until_expiry', days_until_expiry,
+                        'entity_type', 'product',
+                        'entity_id', product_record.id
+                    )
+                );
+            ELSE
+                PERFORM public.create_notification_from_template(
+                    'product_expiring_soon',
+                    jsonb_build_object(
+                        'product_name', product_record.name,
+                        'days_until_expiry', days_until_expiry,
+                        'entity_type', 'product',
+                        'entity_id', product_record.id
+                    )
+                );
+            END IF;
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2.4 Trigger function for automatic stock notifications
+CREATE OR REPLACE FUNCTION public.trigger_stock_notifications() RETURNS trigger AS $$
+BEGIN
+    -- Only check if total_stock changed and product is not archived
+    IF TG_OP = 'UPDATE' AND OLD.total_stock != NEW.total_stock AND NEW.is_archived = false THEN
+        -- Check for out of stock (new stock is 0, old stock was > 0)
+        IF NEW.total_stock = 0 AND OLD.total_stock > 0 THEN
+            -- Create out of stock notification immediately
+            PERFORM public.create_notification_from_template(
+                'out_of_stock',
+                jsonb_build_object(
+                    'product_name', NEW.name,
+                    'entity_type', 'product',
+                    'entity_id', NEW.id
+                )
+            );
+        -- Check for low stock (new stock <= threshold, old stock was > threshold)
+        ELSIF NEW.total_stock <= NEW.low_stock_threshold 
+              AND NEW.total_stock > 0 
+              AND OLD.total_stock > NEW.low_stock_threshold THEN
+            -- Create low stock notification
+            PERFORM public.create_notification_from_template(
+                'low_stock_alert',
+                jsonb_build_object(
+                    'product_name', NEW.name,
+                    'stock_level', NEW.total_stock,
+                    'entity_type', 'product',
+                    'entity_id', NEW.id
+                )
+            );
+        END IF;
+    END IF;
+    
+    -- For INSERT operations, check if product starts with low/no stock
+    IF TG_OP = 'INSERT' AND NEW.is_archived = false THEN
+        IF NEW.total_stock = 0 THEN
+            PERFORM public.create_notification_from_template(
+                'out_of_stock',
+                jsonb_build_object(
+                    'product_name', NEW.name,
+                    'entity_type', 'product',
+                    'entity_id', NEW.id
+                )
+            );
+        ELSIF NEW.total_stock <= NEW.low_stock_threshold AND NEW.total_stock > 0 THEN
+            PERFORM public.create_notification_from_template(
+                'low_stock_alert',
+                jsonb_build_object(
+                    'product_name', NEW.name,
+                    'stock_level', NEW.total_stock,
+                    'entity_type', 'product',
+                    'entity_id', NEW.id
+                )
+            );
+        END IF;
+    END IF;
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- SECTION 3: INDEXES FOR PERFORMANCE
 -- =====================================================
 
 -- Products table indexes
@@ -154,6 +434,20 @@ CREATE INDEX IF NOT EXISTS idx_archived_items_archived_date ON public.archived_i
 CREATE INDEX IF NOT EXISTS idx_archived_items_name ON public.archived_items(name);
 CREATE INDEX IF NOT EXISTS idx_archived_items_category ON public.archived_items(category);
 CREATE INDEX IF NOT EXISTS idx_archived_items_archived_by ON public.archived_items(archived_by);
+
+-- Notification indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_archived ON public.notifications(is_archived);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON public.notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_category ON public.notifications(category);
+CREATE INDEX IF NOT EXISTS idx_notifications_priority ON public.notifications(priority);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON public.notifications(user_id, is_read, created_at DESC) WHERE is_archived = false;
+CREATE INDEX IF NOT EXISTS idx_notifications_related_entity ON public.notifications(related_entity_type, related_entity_id);
+
+-- User profiles indexes
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON public.user_profiles(user_id);
 
 -- =====================================================
 -- SECTION 3: CORE FUNCTIONS
@@ -693,6 +987,26 @@ CREATE TRIGGER trigger_audit_products
     FOR EACH ROW
     EXECUTE FUNCTION public.audit_product_changes();
 
+-- Notification triggers
+DROP TRIGGER IF EXISTS trigger_notifications_updated_at ON public.notifications;
+CREATE TRIGGER trigger_notifications_updated_at
+    BEFORE UPDATE ON public.notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+DROP TRIGGER IF EXISTS trigger_notification_templates_updated_at ON public.notification_templates;
+CREATE TRIGGER trigger_notification_templates_updated_at
+    BEFORE UPDATE ON public.notification_templates
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+-- Automatic stock notification trigger
+DROP TRIGGER IF EXISTS trigger_stock_notifications ON public.products;
+CREATE TRIGGER trigger_stock_notifications
+    AFTER INSERT OR UPDATE ON public.products
+    FOR EACH ROW
+    EXECUTE FUNCTION public.trigger_stock_notifications();
+
 -- =====================================================
 -- SECTION 6: ROW LEVEL SECURITY & POLICIES
 -- =====================================================
@@ -705,6 +1019,8 @@ ALTER TABLE public.archived_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notification_templates ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Public can view products" ON public.products;
@@ -734,6 +1050,11 @@ DROP POLICY IF EXISTS "Public can view settings" ON public.app_settings;
 DROP POLICY IF EXISTS "Public can update settings" ON public.app_settings;
 
 DROP POLICY IF EXISTS "Users can manage own profile" ON public.user_profiles;
+DROP POLICY IF EXISTS "Public can view notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "System can create notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Public can view notification_templates" ON public.notification_templates;
 
 -- Create new policies for public access (adjust based on your security needs)
 CREATE POLICY "Public can view products" ON public.products FOR SELECT USING (true);
@@ -763,6 +1084,12 @@ CREATE POLICY "Public can view settings" ON public.app_settings FOR SELECT USING
 CREATE POLICY "Public can update settings" ON public.app_settings FOR ALL USING (true);
 
 CREATE POLICY "Users can manage own profile" ON public.user_profiles FOR ALL USING (auth.uid() = user_id);
+
+-- Notification policies
+CREATE POLICY "Public can view notifications" ON public.notifications FOR SELECT USING (user_id IS NULL OR auth.uid() = user_id);
+CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "System can create notifications" ON public.notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public can view notification_templates" ON public.notification_templates FOR SELECT USING (is_active = true);
 
 -- =====================================================
 -- SECTION 7: PERMISSIONS
@@ -830,6 +1157,76 @@ INSERT INTO public.archived_items (
 )
 ON CONFLICT DO NOTHING;
 
+-- 8.4 Insert notification templates
+INSERT INTO public.notification_templates (
+    name, title_template, message_template, type, category, priority
+) VALUES 
+(
+    'low_stock_alert',
+    'Low Stock Alert: {{product_name}}',
+    'Product "{{product_name}}" is running low with only {{stock_level}} units remaining. Consider restocking soon.',
+    'warning', 'inventory', 2
+),
+(
+    'out_of_stock',
+    'Out of Stock: {{product_name}}',
+    '{{product_name}} is now out of stock. Please reorder immediately.',
+    'error', 'inventory', 4
+),
+(
+    'product_expiring_soon',
+    'Product Expiring: {{product_name}}',
+    'Product "{{product_name}}" will expire in {{days_until_expiry}} days. Consider action to prevent loss.',
+    'warning', 'inventory', 2
+),
+(
+    'product_expiring_urgent',
+    'Urgent: Product Expiring Soon - {{product_name}}',
+    'URGENT: Product "{{product_name}}" expires in {{days_until_expiry}} days! Immediate attention required.',
+    'error', 'inventory', 4
+),
+(
+    'sale_completed',
+    'Sale Completed',
+    'Sale transaction completed successfully for ₱{{total_amount}}.',
+    'success', 'sales', 1
+),
+(
+    'product_added',
+    'New Product Added',
+    'Product "{{product_name}}" has been added to inventory.',
+    'success', 'inventory', 1
+),
+(
+    'system_backup',
+    'System Backup Completed',
+    'Daily system backup completed successfully at {{backup_time}}.',
+    'info', 'system', 1
+),
+(
+    'user_login',
+    'User Login',
+    'User {{user_name}} logged into the system.',
+    'info', 'user', 1
+)
+ON CONFLICT (name) DO NOTHING;
+
+-- 8.5 Insert sample notifications (for demonstration)
+INSERT INTO public.notifications (
+    title, message, type, category, priority, is_read, metadata
+) VALUES 
+(
+    'Welcome to MedCure!',
+    'Your pharmacy management system is ready to use. Start by adding products to your inventory.',
+    'info', 'system', 1, false, '{"source": "system_setup"}'
+),
+(
+    'Sample Low Stock Alert',
+    'This is a sample notification showing how low stock alerts work.',
+    'warning', 'inventory', 2, false, '{"product_id": 1, "stock_level": 5}'
+)
+ON CONFLICT DO NOTHING;
+
 -- =====================================================
 -- SECTION 9: FINAL VALIDATION
 -- =====================================================
@@ -845,14 +1242,14 @@ BEGIN
     SELECT COUNT(*) INTO table_count
     FROM information_schema.tables 
     WHERE table_schema = 'public' 
-    AND table_name IN ('products', 'sales', 'sale_items', 'archived_items', 'product_audit_log', 'app_settings', 'user_profiles');
+    AND table_name IN ('products', 'sales', 'sale_items', 'archived_items', 'product_audit_log', 'app_settings', 'user_profiles', 'notifications', 'notification_templates');
     
     -- Count functions
     SELECT COUNT(*) INTO function_count
     FROM information_schema.routines 
     WHERE routine_schema = 'public' 
     AND routine_type = 'FUNCTION'
-    AND routine_name IN ('decrement_stock', 'update_product_stock', 'process_sale_transaction', 'get_sales_analytics', 'get_inventory_analytics', 'get_app_settings', 'update_app_setting');
+    AND routine_name IN ('decrement_stock', 'update_product_stock', 'process_sale_transaction', 'get_sales_analytics', 'get_inventory_analytics', 'get_app_settings', 'update_app_setting', 'create_notification_from_template', 'check_low_stock_notifications', 'check_expiring_products_notifications');
     
     -- Count views
     SELECT COUNT(*) INTO view_count
@@ -864,8 +1261,8 @@ BEGIN
     RAISE NOTICE '=================================================';
     RAISE NOTICE 'MEDCURE DATABASE MIGRATION COMPLETED SUCCESSFULLY!';
     RAISE NOTICE '=================================================';
-    RAISE NOTICE 'Tables created: % of 7 expected', table_count;
-    RAISE NOTICE 'Functions created: % of 7 expected', function_count;
+    RAISE NOTICE 'Tables created: % of 9 expected', table_count;
+    RAISE NOTICE 'Functions created: % of 10 expected', function_count;
     RAISE NOTICE 'Views created: % of 2 expected', view_count;
     RAISE NOTICE '';
     RAISE NOTICE 'Core Features Available:';
@@ -876,6 +1273,8 @@ BEGIN
     RAISE NOTICE '✓ Audit Trail for all product changes';
     RAISE NOTICE '✓ Settings Management System';
     RAISE NOTICE '✓ User Profile Management';
+    RAISE NOTICE '✓ Real-time Notification System';
+    RAISE NOTICE '✓ Automated Inventory Alerts';
     RAISE NOTICE '✓ Full-Text Search Capabilities';
     RAISE NOTICE '✓ Advanced Stock Management';
     RAISE NOTICE '✓ ROW Level Security enabled';

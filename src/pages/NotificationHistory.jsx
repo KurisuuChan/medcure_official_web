@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Bell,
   AlertTriangle,
@@ -11,93 +11,65 @@ import {
   Trash2,
   Archive,
   MoreVertical,
+  Package,
+  PackageCheck,
+  TrendingUp,
+  CreditCard,
+  Settings,
 } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function NotificationHistory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [notificationsPerPage] = useState(10);
 
-  // Mock notification data
-  const notifications = [
-    {
-      id: 1,
-      type: "warning",
-      title: "Low Stock Alert",
-      message: "Paracetamol 500mg is running low. Only 8 units remaining.",
-      time: "2024-08-16 14:30",
-      read: false,
-      category: "Inventory",
-    },
-    {
-      id: 2,
-      type: "error",
-      title: "Out of Stock",
-      message:
-        "Vitamin C 1000mg is now out of stock. Please reorder immediately.",
-      time: "2024-08-16 12:15",
-      read: false,
-      category: "Inventory",
-    },
-    {
-      id: 3,
-      type: "info",
-      title: "New Product Added",
-      message: "Aspirin 81mg has been successfully added to inventory.",
-      time: "2024-08-16 10:45",
-      read: true,
-      category: "System",
-    },
-    {
-      id: 4,
-      type: "success",
-      title: "Sale Completed",
-      message: "Transaction #1248 completed successfully. Total: ₱1,250.00",
-      time: "2024-08-16 09:20",
-      read: true,
-      category: "Sales",
-    },
-    {
-      id: 5,
-      type: "warning",
-      title: "Expiry Alert",
-      message:
-        "Amoxicillin 500mg expires in 30 days. Consider promotional pricing.",
-      time: "2024-08-15 16:30",
-      read: true,
-      category: "Inventory",
-    },
-    {
-      id: 6,
-      type: "info",
-      title: "Daily Report",
-      message: "Your daily sales report is now available for download.",
-      time: "2024-08-15 18:00",
-      read: true,
-      category: "Reports",
-    },
-    {
-      id: 7,
-      type: "error",
-      title: "Payment Failed",
-      message:
-        "Payment processing failed for transaction #1247. Manual review required.",
-      time: "2024-08-15 14:22",
-      read: false,
-      category: "Sales",
-    },
-    {
-      id: 8,
-      type: "success",
-      title: "Backup Completed",
-      message: "Daily database backup completed successfully.",
-      time: "2024-08-15 02:00",
-      read: true,
-      category: "System",
-    },
-  ];
+  // Use real notifications data
+  const {
+    notifications,
+    stats,
+    loading,
+    error,
+    loadNotifications,
+    markAsRead,
+    archiveNotifications,
+    deleteNotifications,
+    searchNotifications,
+  } = useNotifications();
 
-  const getNotificationIcon = (type) => {
+  const { addNotification } = useNotification();
+
+  // Load notifications with filters
+  useEffect(() => {
+    loadNotifications({
+      category: filterType === "all" ? null : filterType,
+      unreadOnly: filterType === "unread",
+      includeArchived: false,
+      limit: 100, // Load more for history page
+    });
+  }, [filterType, loadNotifications]);
+
+  // Get notification icon based on type and category
+  const getNotificationIcon = (type, category) => {
+    if (category === "inventory") {
+      if (type === "error" || type === "warning")
+        return <Package size={20} className="text-orange-500" />;
+      return <PackageCheck size={20} className="text-green-500" />;
+    }
+
+    if (category === "sales") {
+      if (type === "success")
+        return <TrendingUp size={20} className="text-green-500" />;
+      return <CreditCard size={20} className="text-blue-500" />;
+    }
+
+    if (category === "system") {
+      return <Settings size={20} className="text-blue-500" />;
+    }
+
     switch (type) {
       case "warning":
         return <AlertTriangle size={20} className="text-orange-500" />;
@@ -111,32 +83,32 @@ export default function NotificationHistory() {
     }
   };
 
-  const getNotificationBg = (type, read) => {
-    const base = read ? "bg-gray-50" : "bg-white border-l-4";
+  const getNotificationBg = (type, isRead) => {
+    const base = isRead ? "bg-gray-50" : "bg-white border-l-4";
     switch (type) {
       case "warning":
-        return `${base} ${!read ? "border-orange-500" : ""}`;
+        return `${base} ${!isRead ? "border-orange-500" : ""}`;
       case "error":
-        return `${base} ${!read ? "border-red-500" : ""}`;
+        return `${base} ${!isRead ? "border-red-500" : ""}`;
       case "success":
-        return `${base} ${!read ? "border-green-500" : ""}`;
+        return `${base} ${!isRead ? "border-green-500" : ""}`;
       case "info":
       default:
-        return `${base} ${!read ? "border-blue-500" : ""}`;
+        return `${base} ${!isRead ? "border-blue-500" : ""}`;
     }
   };
 
-  const filteredNotifications = notifications.filter((notification) => {
-    const matchesSearch =
-      notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      filterType === "all" ||
-      (filterType === "unread" && !notification.read) ||
-      (filterType === "read" && notification.read) ||
-      notification.category.toLowerCase() === filterType.toLowerCase();
-    return matchesSearch && matchesFilter;
-  });
+  // Filter notifications based on search and filter type
+  const filteredNotifications = searchNotifications(searchTerm).filter(
+    (notification) => {
+      const matchesFilter =
+        filterType === "all" ||
+        (filterType === "unread" && !notification.is_read) ||
+        (filterType === "read" && notification.is_read) ||
+        notification.category.toLowerCase() === filterType.toLowerCase();
+      return matchesFilter;
+    }
+  );
 
   const handleSelectNotification = (id) => {
     setSelectedNotifications((prev) =>
@@ -144,12 +116,43 @@ export default function NotificationHistory() {
     );
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Handle bulk actions
+  const handleMarkSelectedAsRead = async () => {
+    try {
+      await markAsRead(selectedNotifications);
+      setSelectedNotifications([]);
+      addNotification("Selected notifications marked as read", "success");
+    } catch (err) {
+      addNotification("Failed to mark notifications as read", "error");
+    }
+  };
+
+  const handleArchiveSelected = async () => {
+    try {
+      await archiveNotifications(selectedNotifications);
+      setSelectedNotifications([]);
+      addNotification("Selected notifications archived", "success");
+    } catch (err) {
+      addNotification("Failed to archive notifications", "error");
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    try {
+      await deleteNotifications({ notificationIds: selectedNotifications });
+      setSelectedNotifications([]);
+      addNotification("Selected notifications deleted", "success");
+    } catch (err) {
+      addNotification("Failed to delete notifications", "error");
+    }
+  };
+
+  // Calculate stats from real data
   const categoryStats = {
-    inventory: notifications.filter((n) => n.category === "Inventory").length,
-    sales: notifications.filter((n) => n.category === "Sales").length,
-    system: notifications.filter((n) => n.category === "System").length,
-    reports: notifications.filter((n) => n.category === "Reports").length,
+    inventory: notifications.filter((n) => n.category === "inventory").length,
+    sales: notifications.filter((n) => n.category === "sales").length,
+    system: notifications.filter((n) => n.category === "system").length,
+    reports: notifications.filter((n) => n.category === "reports").length,
   };
 
   return (
@@ -186,7 +189,7 @@ export default function NotificationHistory() {
                   Total Notifications
                 </p>
                 <p className="text-2xl font-bold text-blue-900">
-                  {notifications.length}
+                  {stats.total_count || notifications.length}
                 </p>
               </div>
             </div>
@@ -199,7 +202,8 @@ export default function NotificationHistory() {
               <div>
                 <p className="text-sm text-amber-600 font-medium">Unread</p>
                 <p className="text-2xl font-bold text-amber-900">
-                  {unreadCount}
+                  {stats.unread_count ||
+                    notifications.filter((n) => !n.is_read).length}
                 </p>
               </div>
             </div>
@@ -242,13 +246,22 @@ export default function NotificationHistory() {
             <p className="font-semibold text-blue-800 flex-grow">
               {selectedNotifications.length} selected
             </p>
-            <button className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold hover:bg-green-200">
+            <button
+              onClick={handleMarkSelectedAsRead}
+              className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold hover:bg-green-200"
+            >
               <CheckCircle size={16} /> Mark as Read
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200">
+            <button
+              onClick={handleArchiveSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-semibold hover:bg-orange-200"
+            >
               <Archive size={16} /> Archive
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200">
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg font-semibold hover:bg-red-200"
+            >
               <Trash2 size={16} /> Delete
             </button>
           </div>
@@ -294,14 +307,33 @@ export default function NotificationHistory() {
         </div>
 
         {/* Notifications List */}
-        {filteredNotifications.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading notifications...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <AlertTriangle size={48} className="mx-auto mb-4 text-red-400" />
+            <h3 className="text-lg font-semibold text-red-600 mb-2">
+              Error loading notifications
+            </h3>
+            <p className="text-red-500 mb-6">{error}</p>
+            <button
+              onClick={() => loadNotifications()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : filteredNotifications.length > 0 ? (
           <div className="space-y-4">
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
                 className={`${getNotificationBg(
                   notification.type,
-                  notification.read
+                  notification.is_read
                 )} border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all`}
               >
                 <div className="flex items-start justify-between">
@@ -313,36 +345,57 @@ export default function NotificationHistory() {
                       className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div className="mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(
+                        notification.type,
+                        notification.category
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3
                           className={`font-semibold ${
-                            !notification.read
+                            !notification.is_read
                               ? "text-gray-900"
                               : "text-gray-700"
                           }`}
                         >
                           {notification.title}
                         </h3>
-                        {!notification.read && (
+                        {!notification.is_read && (
                           <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                         )}
-                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            notification.category === "inventory"
+                              ? "bg-orange-100 text-orange-700"
+                              : notification.category === "sales"
+                              ? "bg-green-100 text-green-700"
+                              : notification.category === "system"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
                           {notification.category}
                         </span>
+                        {notification.priority >= 3 && (
+                          <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+                            {notification.priority === 4 ? "Critical" : "High"}
+                          </span>
+                        )}
                       </div>
                       <p
                         className={`mb-3 ${
-                          !notification.read ? "text-gray-800" : "text-gray-600"
+                          !notification.is_read
+                            ? "text-gray-800"
+                            : "text-gray-600"
                         }`}
                       >
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Clock size={14} />
-                        {notification.time}
+                        {notification.time_ago ||
+                          new Date(notification.created_at).toLocaleString()}
                       </div>
                     </div>
                   </div>
