@@ -18,7 +18,7 @@ export function QuantitySelectionModal({
   onClose,
   product,
   onAddToCart,
-  existingQuantity = 0, // eslint-disable-line no-unused-vars
+  initialQuantity = null,
 }) {
   const [quantityMode, setQuantityMode] = useState({
     boxes: 0,
@@ -32,22 +32,39 @@ export function QuantitySelectionModal({
   // Reset when product changes or modal opens
   useEffect(() => {
     if (isOpen && product) {
-      setQuantityMode({
-        boxes: 0,
-        sheets: 0,
-        pieces: 0,
-      });
+      // Use initial quantity if provided, otherwise start fresh
+      if (initialQuantity) {
+        setQuantityMode({
+          boxes: initialQuantity.boxes || 0,
+          sheets: initialQuantity.sheets || 0,
+          pieces: initialQuantity.pieces || 0,
+        });
+      } else {
+        setQuantityMode({
+          boxes: 0,
+          sheets: 0,
+          pieces: 0,
+        });
+      }
       setErrors([]);
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, initialQuantity]);
 
-  // Calculate total pieces
+  // Calculate total pieces with proper validation
   const calculateTotalPieces = React.useCallback(
     (boxes, sheets, pieces) => {
       if (!product) return 0;
 
-      const piecesFromBoxes = boxes * (product.total_pieces_per_box || 0);
-      const piecesFromSheets = sheets * (product.pieces_per_sheet || 0);
+      // Use safe defaults for product properties
+      const piecesPerSheet = product.pieces_per_sheet || 1;
+      const sheetsPerBox = product.sheets_per_box || 1;
+
+      // Calculate pieces per box
+      const piecesPerBox = piecesPerSheet * sheetsPerBox;
+
+      const piecesFromBoxes = boxes * piecesPerBox;
+      const piecesFromSheets = sheets * piecesPerSheet;
+
       return piecesFromBoxes + piecesFromSheets + pieces;
     },
     [product]
@@ -106,7 +123,7 @@ export function QuantitySelectionModal({
   };
 
   const handleAddToCart = () => {
-    if (!isValid) return;
+    if (!isValid || !product) return;
 
     const totalPieces = calculateTotalPieces(
       quantityMode.boxes,
@@ -114,14 +131,24 @@ export function QuantitySelectionModal({
       quantityMode.pieces
     );
 
-    // Call onAddToCart with product and quantityInfo as separate parameters
-    onAddToCart(product, {
+    // Create standardized quantity info object
+    const quantityInfo = {
       boxes: quantityMode.boxes,
       sheets: quantityMode.sheets,
       pieces: quantityMode.pieces,
       totalPieces: totalPieces,
-    });
+      breakdown: {
+        piecesFromBoxes:
+          quantityMode.boxes *
+          (product.pieces_per_sheet || 1) *
+          (product.sheets_per_box || 1),
+        piecesFromSheets: quantityMode.sheets * (product.pieces_per_sheet || 1),
+        individualPieces: quantityMode.pieces,
+      },
+    };
 
+    // Call onAddToCart with standardized parameters
+    onAddToCart(product, quantityInfo);
     onClose();
   };
 
@@ -176,10 +203,15 @@ export function QuantitySelectionModal({
                   Available Stock
                 </span>
                 <div className="text-3xl font-bold text-white flex items-center gap-2">
-                  {product.total_stock || 0}
+                  {Math.max(0, product.total_stock || 0)}
                   <span className="text-lg font-medium text-blue-100">
                     pieces
                   </span>
+                  {(product.total_stock || 0) < 0 && (
+                    <span className="text-sm bg-red-500/20 text-red-200 px-2 py-1 rounded-lg">
+                      Out of Stock
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-right text-blue-100 text-sm space-y-1">
@@ -217,9 +249,12 @@ export function QuantitySelectionModal({
               <div className="text-base font-bold text-blue-800">1 Box</div>
               <div className="text-xs text-blue-600 mt-1">
                 Max:{" "}
-                {Math.floor(
-                  (product.total_stock || 0) /
-                    (product.total_pieces_per_box || 1)
+                {Math.max(
+                  0,
+                  Math.floor(
+                    (product.total_stock || 0) /
+                      (product.total_pieces_per_box || 1)
+                  )
                 )}
               </div>
             </button>
@@ -237,8 +272,11 @@ export function QuantitySelectionModal({
               <div className="text-base font-bold text-green-800">1 Sheet</div>
               <div className="text-xs text-green-600 mt-1">
                 Max:{" "}
-                {Math.floor(
-                  (product.total_stock || 0) / (product.pieces_per_sheet || 1)
+                {Math.max(
+                  0,
+                  Math.floor(
+                    (product.total_stock || 0) / (product.pieces_per_sheet || 1)
+                  )
                 )}
               </div>
             </button>
@@ -255,7 +293,7 @@ export function QuantitySelectionModal({
               />
               <div className="text-base font-bold text-orange-800">1 Piece</div>
               <div className="text-xs text-orange-600 mt-1">
-                Max: {product.total_stock || 0}
+                Max: {Math.max(0, product.total_stock || 0)}
               </div>
             </button>
           </div>
@@ -497,11 +535,11 @@ QuantitySelectionModal.propTypes = {
     total_pieces_per_box: PropTypes.number,
   }).isRequired,
   onAddToCart: PropTypes.func.isRequired,
-  existingQuantity: PropTypes.number,
+  initialQuantity: PropTypes.number,
 };
 
 QuantitySelectionModal.defaultProps = {
-  existingQuantity: 0,
+  initialQuantity: 0,
 };
 
 export default QuantitySelectionModal;

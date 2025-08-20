@@ -1,98 +1,121 @@
 import { supabase } from "../config/supabase.js";
 
 /**
- * Sales Service - Handles all sales and transaction-related database operations
- * This service manages the complex transaction flow for POS operations
+ * Enhanced Sales Service - Implements atomic transactions for data integrity
+ * Uses database functions to ensure all-or-nothing transaction processing
  */
 
 /**
- * Create a new sale with multiple items and update inventory
- * This is the core transaction function used by the POS system
+ * Create a new sale with atomic transaction processing
+ * This ensures all operations succeed or fail together
  * @param {Object} saleData - Sale data object
  * @param {Array} saleData.items - Array of sale items with product info and quantities
  * @param {number} saleData.total - Total sale amount
  * @param {string} saleData.payment_method - Payment method used
- * @returns {Promise<Object>} Created sale object with items
+ * @returns {Promise<Object>} Created sale object with transaction details
  */
 export async function createSale(saleData) {
   try {
-    console.log("Creating sale with data:", saleData);
+    console.log("Processing atomic sale transaction:", saleData);
 
-    // Start a transaction by creating the sale record first
-    const { data: sale, error: saleError } = await supabase
-      .from("sales")
-      .insert([
-        {
-          total: saleData.total,
-          payment_method: saleData.payment_method,
-          created_at: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single();
+    // Validate sale data first using database function
+    const validationResult = await validateSaleData(saleData.items);
 
-    if (saleError) {
-      console.error("Sale creation error:", saleError);
-      throw saleError;
+    if (!validationResult.is_valid) {
+      throw new Error(
+        `Sale validation failed: ${validationResult.error_message}`
+      );
     }
 
-    // Prepare sale items for insertion
-    const saleItems = saleData.items.map((item) => ({
-      sale_id: sale.id,
-      product_id: item.product_id,
-      quantity: item.quantity, // Total pieces sold
-      unit_price: item.unit_price,
-      subtotal: item.subtotal,
-      variant_info: item.variant_info, // Store box/sheet/piece breakdown
-    }));
+    // Process the sale atomically using database function
+    const { data, error } = await supabase.rpc("process_sale_transaction", {
+      sale_total: saleData.total,
+      payment_method: saleData.payment_method,
+      sale_items: saleData.items.map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+        variant_info: item.variant_info || {},
+      })),
+    });
 
-    console.log("Inserting sale items:", saleItems);
-
-    // Insert all sale items
-    const { data: items, error: itemsError } = await supabase
-      .from("sale_items")
-      .insert(saleItems)
-      .select();
-
-    if (itemsError) {
-      console.error("Sale items creation error:", itemsError);
-      throw itemsError;
+    if (error) {
+      console.error("Atomic sale transaction error:", error);
+      throw error;
     }
 
-    // Update inventory for each item sold
-    for (const item of saleData.items) {
-      await decrementStock(item.product_id, item.quantity);
-    }
+    console.log("Sale transaction completed successfully:", data[0]);
 
+    // Return the sale details
     return {
-      ...sale,
-      items,
+      id: data[0].sale_id,
+      total: data[0].sale_total,
+      payment_method: data[0].payment_method,
+      created_at: data[0].created_at,
+      items_processed: data[0].items_processed,
+      inventory_updated: data[0].inventory_updated,
     };
   } catch (error) {
-    console.error("Error creating sale:", error);
-    throw new Error("Failed to create sale");
+    console.error("Error in atomic sale creation:", error);
+
+    // Provide more specific error messages
+    if (error.message.includes("Insufficient stock")) {
+      throw new Error(`Transaction failed: ${error.message}`);
+    } else if (error.message.includes("not found")) {
+      throw new Error(`Transaction failed: ${error.message}`);
+    } else if (error.message.includes("archived")) {
+      throw new Error(`Transaction failed: ${error.message}`);
+    }
+
+    throw new Error(`Sale transaction failed: ${error.message}`);
   }
 }
 
 /**
- * Decrement product stock after a sale
- * @param {number} productId - Product ID
- * @param {number} quantity - Quantity to subtract (in individual pieces)
- * @returns {Promise<Object>} Updated product object
+ * Validate sale data before processing
+ * @param {Array} items - Array of sale items to validate
+ * @returns {Promise<Object>} Validation result with details
  */
-export async function decrementStock(productId, quantity) {
+export async function validateSaleData(items) {
   try {
-    // Use Supabase RPC function for atomic stock update
-    const { data, error } = await supabase.rpc("decrement_stock", {
-      product_id: productId,
-      decrement_amount: quantity,
+    const { data, error } = await supabase.rpc("validate_sale_data", {
+      sale_items: items,
     });
 
     if (error) throw error;
-    return data;
+
+    return data[0];
   } catch (error) {
-    console.error("Error decrementing stock:", error);
-    throw new Error("Failed to update inventory");
+    console.error("Error validating sale data:", error);
+    throw new Error("Failed to validate sale data");
+  }
+}
+
+/**
+ * Reverse/cancel a sale transaction
+ * @param {number} saleId - Sale ID to reverse
+ * @param {string} reason - Reason for reversal
+ * @returns {Promise<Object>} Reversal result
+ */
+export async function reverseSale(saleId, reason = "Sale cancellation") {
+  try {
+    const { data, error } = await supabase.rpc("reverse_sale_transaction", {
+      sale_id_to_reverse: saleId,
+      reversal_reason: reason,
+    });
+
+    if (error) throw error;
+
+    const result = data[0];
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error reversing sale:", error);
+    throw new Error(`Failed to reverse sale: ${error.message}`);
   }
 }
 
@@ -101,6 +124,7 @@ export async function decrementStock(productId, quantity) {
  * @param {Object} filters - Filter options
  * @param {string} filters.startDate - Start date (ISO string)
  * @param {string} filters.endDate - End date (ISO string)
+ * @param {boolean} filters.includeReversed - Include reversed sales
  * @returns {Promise<Array>} Array of sales with items
  */
 export async function getSales(filters = {}) {
@@ -114,12 +138,18 @@ export async function getSales(filters = {}) {
           *,
           products (
             name,
-            category
+            category,
+            brand_name
           )
         )
       `
       )
       .order("created_at", { ascending: false });
+
+    // Filter out reversed sales unless specifically requested
+    if (!filters.includeReversed) {
+      query = query.gt("total", 0);
+    }
 
     if (filters.startDate) {
       query = query.gte("created_at", filters.startDate);
@@ -139,7 +169,46 @@ export async function getSales(filters = {}) {
 }
 
 /**
- * Get sales summary data for dashboard
+ * Get comprehensive sales analytics using enhanced database function
+ * @param {Object} options - Analytics options
+ * @param {string} options.startDate - Start date (ISO string)
+ * @param {string} options.endDate - End date (ISO string)
+ * @param {string} options.groupBy - Group by period ('day', 'week', 'month')
+ * @returns {Promise<Object>} Comprehensive analytics object
+ */
+export async function getSalesAnalytics(options = {}) {
+  try {
+    const { data, error } = await supabase.rpc("get_sales_analytics", {
+      start_date: options.startDate || null,
+      end_date: options.endDate || null,
+      group_by_period: options.groupBy || "day",
+    });
+
+    if (error) throw error;
+
+    const analytics = data[0];
+    if (!analytics) {
+      return {
+        period_start: options.startDate,
+        period_end: options.endDate,
+        total_sales: 0,
+        total_revenue: 0,
+        total_items_sold: 0,
+        average_transaction: 0,
+        top_selling_categories: [],
+        hourly_distribution: {},
+      };
+    }
+
+    return analytics;
+  } catch (error) {
+    console.error("Error fetching sales analytics:", error);
+    throw new Error("Failed to fetch sales analytics");
+  }
+}
+
+/**
+ * Get sales summary data for dashboard (backward compatibility)
  * @param {string} period - Time period ('today', 'week', 'month', 'year')
  * @returns {Promise<Object>} Sales summary object
  */
@@ -165,23 +234,19 @@ export async function getSalesSummary(period = "today") {
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     }
 
-    const { data, error } = await supabase
-      .from("sales")
-      .select("total, created_at")
-      .gte("created_at", startDate.toISOString());
-
-    if (error) throw error;
-
-    const sales = data || [];
-    const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
-    const totalTransactions = sales.length;
+    const analytics = await getSalesAnalytics({
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+    });
 
     return {
-      totalRevenue,
-      totalTransactions,
-      averageTransaction:
-        totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
+      totalRevenue: analytics.total_revenue || 0,
+      totalTransactions: analytics.total_sales || 0,
+      averageTransaction: analytics.average_transaction || 0,
+      totalItemsSold: analytics.total_items_sold || 0,
       period,
+      topCategories: analytics.top_selling_categories || [],
+      hourlyDistribution: analytics.hourly_distribution || {},
     };
   } catch (error) {
     console.error("Error fetching sales summary:", error);
@@ -190,47 +255,18 @@ export async function getSalesSummary(period = "today") {
 }
 
 /**
- * Get sales by category for analytics
+ * Get sales by category for analytics (enhanced version)
  * @param {Object} filters - Date filters
  * @returns {Promise<Array>} Sales data grouped by category
  */
 export async function getSalesByCategory(filters = {}) {
   try {
-    let query = supabase.from("sale_items").select(`
-        subtotal,
-        products!inner (
-          category
-        ),
-        sales!inner (
-          created_at
-        )
-      `);
-
-    if (filters.startDate) {
-      query = query.gte("sales.created_at", filters.startDate);
-    }
-    if (filters.endDate) {
-      query = query.lte("sales.created_at", filters.endDate);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Group by category and sum revenue
-    const categoryData = {};
-    data.forEach((item) => {
-      const category = item.products.category;
-      if (!categoryData[category]) {
-        categoryData[category] = 0;
-      }
-      categoryData[category] += item.subtotal;
+    const analytics = await getSalesAnalytics({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
     });
 
-    return Object.entries(categoryData).map(([category, revenue]) => ({
-      category,
-      revenue,
-    }));
+    return analytics.top_selling_categories || [];
   } catch (error) {
     console.error("Error fetching sales by category:", error);
     throw new Error("Failed to fetch sales by category");
@@ -238,158 +274,143 @@ export async function getSalesByCategory(filters = {}) {
 }
 
 /**
- * Get recent sales for dashboard
- * @param {number} limit - Number of recent sales to fetch
- * @returns {Promise<Array>} Recent sales with product info
+ * Get hourly sales data for analytics (enhanced version)
+ * @param {string} date - Date to get hourly data for (ISO string)
+ * @returns {Promise<Array>} Hourly sales data
  */
-export async function getRecentSales(limit = 10) {
+export async function getSalesByHour(date) {
+  try {
+    const startDate = new Date(date);
+    const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+
+    const analytics = await getSalesAnalytics({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    });
+
+    const hourlyData = analytics.hourly_distribution || {};
+
+    // Convert to array format for backward compatibility
+    return Array.from({ length: 24 }, (_, hour) => {
+      const hourKey = hour.toString();
+      const hourData = hourlyData[hourKey] || { sales_count: 0, revenue: 0 };
+
+      return {
+        hour: `${hour.toString().padStart(2, "0")}:00`,
+        sales: hourData.sales_count || 0,
+        revenue: hourData.revenue || 0,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching sales by hour:", error);
+    throw new Error("Failed to fetch hourly sales data");
+  }
+}
+
+/**
+ * Get detailed sale information by ID
+ * @param {number} saleId - Sale ID
+ * @returns {Promise<Object>} Detailed sale object
+ */
+export async function getSaleById(saleId) {
   try {
     const { data, error } = await supabase
       .from("sales")
       .select(
         `
-        id,
-        total,
-        created_at,
+        *,
         sale_items (
-          quantity,
-          unit_price,
-          subtotal,
+          *,
           products (
-            name
+            name,
+            category,
+            brand_name,
+            pieces_per_sheet,
+            sheets_per_box
           )
         )
       `
       )
-      .order("created_at", { ascending: false })
-      .limit(limit);
+      .eq("id", saleId)
+      .single();
 
     if (error) throw error;
-
-    // Transform the data to flatten for easier display
-    const recentSales = [];
-    data.forEach((sale) => {
-      sale.sale_items.forEach((item) => {
-        recentSales.push({
-          id: `${sale.id}-${item.products.name}`,
-          product: item.products.name,
-          qty: item.quantity,
-          price: item.unit_price,
-          time: new Date(sale.created_at).toLocaleTimeString(),
-          total: item.subtotal,
-        });
-      });
-    });
-
-    return recentSales.slice(0, limit);
+    return data;
   } catch (error) {
-    console.error("Error fetching recent sales:", error);
-    throw new Error("Failed to fetch recent sales");
+    console.error("Error fetching sale by ID:", error);
+    throw new Error("Failed to fetch sale details");
   }
 }
 
 /**
- * Get best selling products
- * @param {number} limit - Number of top products to return
- * @param {Object} filters - Date filters
- * @returns {Promise<Array>} Best selling products
+ * Check inventory availability before sale
+ * @param {Array} items - Array of items to check
+ * @returns {Promise<Object>} Availability check result
  */
-export async function getBestSellers(limit = 5, filters = {}) {
+export async function checkInventoryAvailability(items) {
   try {
-    let query = supabase.from("sale_items").select(`
-        quantity,
-        products!inner (
-          name,
-          category
-        ),
-        sales!inner (
-          created_at
-        )
-      `);
+    const validation = await validateSaleData(items);
 
-    if (filters.startDate) {
-      query = query.gte("sales.created_at", filters.startDate);
-    }
-    if (filters.endDate) {
-      query = query.lte("sales.created_at", filters.endDate);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Group by product and sum quantities
-    const productSales = {};
-    data.forEach((item) => {
-      const productName = item.products.name;
-      if (!productSales[productName]) {
-        productSales[productName] = {
-          name: productName,
-          category: item.products.category,
-          totalQuantity: 0,
-        };
-      }
-      productSales[productName].totalQuantity += item.quantity;
-    });
-
-    // Sort by total quantity and return top products
-    return Object.values(productSales)
-      .sort((a, b) => b.totalQuantity - a.totalQuantity)
-      .slice(0, limit)
-      .map((product) => ({
-        name: product.name,
-        category: product.category,
-        quantity: product.totalQuantity,
-      }));
+    return {
+      available: validation.is_valid,
+      issues: validation.validation_details?.stock_issues || [],
+      message: validation.error_message || "All items available",
+    };
   } catch (error) {
-    console.error("Error fetching best sellers:", error);
-    throw new Error("Failed to fetch best sellers");
+    console.error("Error checking inventory availability:", error);
+    throw new Error("Failed to check inventory availability");
   }
 }
 
+// Export utility functions and constants
+export const PAYMENT_METHODS = {
+  CASH: "cash",
+  CARD: "card",
+  GCASH: "gcash",
+  BANK_TRANSFER: "bank_transfer",
+};
+
+export const SALE_STATUS = {
+  COMPLETED: "completed",
+  REVERSED: "reversed",
+  PENDING: "pending",
+};
+
 /**
- * Get sales data grouped by hour for charts
- * @param {Object} filters - Date filters
- * @returns {Promise<Array>} Sales data grouped by hour
+ * Utility function to calculate sale totals
+ * @param {Array} items - Sale items
+ * @returns {Object} Calculated totals
  */
-export async function getSalesByHour(filters = {}) {
-  try {
-    const now = new Date();
-    const startDate =
-      filters.startDate ||
-      new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const endDate =
-      filters.endDate ||
-      new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1
-      ).toISOString();
+export function calculateSaleTotals(items) {
+  const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
-    const { data, error } = await supabase
-      .from("sales")
-      .select("total, created_at")
-      .gte("created_at", startDate)
-      .lt("created_at", endDate)
-      .order("created_at");
+  return {
+    subtotal: Math.round(subtotal * 100) / 100,
+    totalItems,
+    averageItemPrice:
+      totalItems > 0 ? Math.round((subtotal / totalItems) * 100) / 100 : 0,
+  };
+}
 
-    if (error) throw error;
+/**
+ * Validate sale item structure
+ * @param {Object} item - Sale item to validate
+ * @returns {Object} Validation result
+ */
+export function validateSaleItem(item) {
+  const errors = [];
 
-    // Group sales by hour
-    const hourlyData = {};
-    for (let i = 0; i < 24; i++) {
-      hourlyData[i] = { hour: i, sales: 0, revenue: 0 };
-    }
+  if (!item.product_id) errors.push("Product ID is required");
+  if (!item.quantity || item.quantity <= 0)
+    errors.push("Valid quantity is required");
+  if (!item.unit_price || item.unit_price < 0)
+    errors.push("Valid unit price is required");
+  if (!item.subtotal || item.subtotal <= 0)
+    errors.push("Valid subtotal is required");
 
-    data.forEach((sale) => {
-      const hour = new Date(sale.created_at).getHours();
-      hourlyData[hour].sales += 1;
-      hourlyData[hour].revenue += sale.total;
-    });
-
-    return Object.values(hourlyData);
-  } catch (error) {
-    console.error("Error fetching sales by hour:", error);
-    throw new Error("Failed to fetch sales by hour");
-  }
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
 }

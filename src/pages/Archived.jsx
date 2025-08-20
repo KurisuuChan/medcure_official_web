@@ -21,6 +21,7 @@ import {
   useArchivedProducts,
   useRestoreArchivedProduct,
   usePermanentlyDeleteArchivedItem,
+  useBulkPermanentlyDeleteArchivedItems,
 } from "../hooks/useArchive.js";
 import { useNotification } from "../hooks/useNotification.js";
 import { formatCurrency, formatDate } from "../utils/formatters.js";
@@ -35,6 +36,7 @@ export default function Archived() {
   } = useArchivedProducts();
   const restoreProduct = useRestoreArchivedProduct();
   const deleteProduct = usePermanentlyDeleteArchivedItem();
+  const bulkDeleteProducts = useBulkPermanentlyDeleteArchivedItems();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBy, setFilterBy] = useState("all"); // all, week, month, year
@@ -107,17 +109,39 @@ export default function Archived() {
       )
     ) {
       try {
-        await deleteProduct.mutateAsync({
+        const result = await deleteProduct.mutateAsync({
           productId: item.id,
           deletedBy: "Admin", // You can modify this to use actual user info
         });
+
         addNotification(
           `"${item.name}" has been permanently deleted`,
           "success"
         );
         setSelectedItems((prev) => prev.filter((id) => id !== item.id));
+
+        // Optional: Log successful deletion
+        console.log("Product deleted successfully:", result);
       } catch (error) {
-        addNotification(error.message || "Failed to delete product", "error");
+        console.error("Delete error:", error);
+
+        // Provide more specific error messages
+        const errorMessage = error.message || "Failed to delete product";
+
+        if (
+          errorMessage.includes("not found") ||
+          errorMessage.includes("not archived")
+        ) {
+          addNotification(
+            `Cannot delete "${item.name}": Product not found or not archived`,
+            "error"
+          );
+        } else {
+          addNotification(
+            `Failed to delete "${item.name}": ${errorMessage}`,
+            "error"
+          );
+        }
       }
     }
   };
@@ -132,22 +156,29 @@ export default function Archived() {
       )
     ) {
       try {
-        // Delete each item individually
-        for (const itemId of selectedItems) {
-          const item = archivedItems.find((item) => item.id === itemId);
-          if (item) {
-            await deleteProduct.mutateAsync({
-              productId: itemId,
-              deletedBy: "Admin", // You can modify this to use actual user info
-            });
+        // Use the bulk delete hook for better performance
+        const result = await bulkDeleteProducts.mutateAsync({
+          productIds: selectedItems,
+          deletedBy: "Admin", // You can modify this to use actual user info
+        });
+
+        if (result.success) {
+          addNotification(
+            `${result.totalDeleted} products permanently deleted successfully`,
+            "success"
+          );
+
+          if (result.skipped > 0) {
+            addNotification(
+              `${result.skipped} products were skipped (not archived)`,
+              "warning"
+            );
           }
         }
-        addNotification(
-          `${selectedItems.length} products permanently deleted successfully`,
-          "success"
-        );
+
         setSelectedItems([]);
       } catch (error) {
+        console.error("Bulk delete error:", error);
         addNotification(
           error.message || "Failed to delete selected products",
           "error"
@@ -586,11 +617,15 @@ export default function Archived() {
               </button>
               <button
                 onClick={handleBulkDelete}
-                disabled={deleteProduct.isPending}
+                disabled={
+                  bulkDeleteProducts.isPending || deleteProduct.isPending
+                }
                 className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 border border-red-700"
               >
                 <Trash2 size={14} />
-                {deleteProduct.isPending ? "Deleting..." : "Delete Selected"}
+                {bulkDeleteProducts.isPending || deleteProduct.isPending
+                  ? "Deleting..."
+                  : "Delete Selected"}
               </button>
             </div>
           )}

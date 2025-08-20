@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import {
   X,
   CreditCard,
@@ -297,5 +298,22 @@ export function PaymentModal({
     </div>
   );
 }
+
+PaymentModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onProcessPayment: PropTypes.func.isRequired,
+  totals: PropTypes.shape({
+    subtotal: PropTypes.number,
+    total: PropTypes.number,
+    itemCount: PropTypes.number,
+  }),
+  isProcessing: PropTypes.bool,
+};
+
+PaymentModal.defaultProps = {
+  isProcessing: false,
+  totals: { subtotal: 0, total: 0, itemCount: 0 },
+};
 
 export default PaymentModal;

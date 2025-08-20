@@ -5,6 +5,7 @@ import {
   restoreArchivedProduct,
   permanentlyDeleteProduct,
   bulkArchiveProducts,
+  bulkPermanentlyDeleteProducts,
   searchArchivedProducts,
   getArchiveStats,
 } from "../services/archiveService.js";
@@ -74,6 +75,28 @@ export function usePermanentlyDeleteArchivedItem() {
     },
     onError: (error) => {
       console.error("Failed to permanently delete archived item:", error);
+    },
+  });
+}
+
+/**
+ * Hook for bulk permanent deletion of archived products
+ */
+export function useBulkPermanentlyDeleteArchivedItems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ productIds, deletedBy }) =>
+      bulkPermanentlyDeleteProducts(productIds, deletedBy),
+    onSuccess: (result) => {
+      // Invalidate archived items query
+      queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+      console.log(
+        `Bulk deletion completed: ${result.totalDeleted} products deleted`
+      );
+    },
+    onError: (error) => {
+      console.error("Failed to bulk delete archived items:", error);
     },
   });
 }

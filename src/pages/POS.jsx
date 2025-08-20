@@ -91,16 +91,15 @@ export default function POS() {
     });
   };
 
-  const calculateTotalPieces = (boxes, sheets, pieces, packaging) => {
-    // Provide default packaging values if not available
-    const defaultPackaging = {
-      totalPieces: 1,
-      piecesPerSheet: 1,
-      ...packaging,
-    };
+  const calculateTotalPieces = (boxes, sheets, pieces, product) => {
+    // Use actual product properties for packaging calculations
+    const piecesPerSheet = product?.pieces_per_sheet || 1;
+    const sheetsPerBox = product?.sheets_per_box || 1;
+    const totalPiecesPerBox =
+      product?.total_pieces_per_box || piecesPerSheet * sheetsPerBox;
 
-    const piecesFromBoxes = boxes * defaultPackaging.totalPieces;
-    const piecesFromSheets = sheets * defaultPackaging.piecesPerSheet;
+    const piecesFromBoxes = boxes * totalPiecesPerBox;
+    const piecesFromSheets = sheets * piecesPerSheet;
     return piecesFromBoxes + piecesFromSheets + pieces;
   };
 
@@ -111,10 +110,49 @@ export default function POS() {
       quantityMode.boxes,
       quantityMode.sheets,
       quantityMode.pieces,
-      selectedProduct.packaging || { piecesPerSheet: 1, totalPieces: 1 }
+      selectedProduct
     );
 
     if (totalPieces <= 0) return;
+
+    // ✅ VALIDATION 1: Check for negative stock
+    if (selectedProduct.total_stock < 0) {
+      addNotification(
+        `Cannot add ${selectedProduct.name} - Product is out of stock (negative inventory)`,
+        "error"
+      );
+      return;
+    }
+
+    // ✅ VALIDATION 2: Check available stock vs requested quantity
+    const currentCartQuantity =
+      cart.find((item) => item.id === selectedProduct.id)?.quantity || 0;
+    const totalRequestedQuantity = currentCartQuantity + totalPieces;
+
+    if (totalRequestedQuantity > selectedProduct.total_stock) {
+      const availableQuantity = Math.max(
+        0,
+        selectedProduct.total_stock - currentCartQuantity
+      );
+      addNotification(
+        `Insufficient stock! Only ${availableQuantity} pieces available for ${selectedProduct.name}`,
+        "error"
+      );
+      return;
+    }
+
+    // ✅ VALIDATION 3: Prevent overselling by validating entire cart
+    const wouldOverSell = cart.some((item) => {
+      if (item.id === selectedProduct.id) {
+        return item.quantity + totalPieces > selectedProduct.total_stock;
+      }
+      return false;
+    });
+
+    if (wouldOverSell) {
+      addNotification("This would exceed available stock", "error");
+      return;
+    }
 
     // Check if product already exists in cart
     const existingItemIndex = cart.findIndex(
@@ -157,10 +195,38 @@ export default function POS() {
       removeFromCart(id);
       return;
     }
+
+    // ✅ VALIDATION: Check stock availability before updating quantity
+    const currentProduct = allProducts.find((p) => p.id === id);
+
+    if (!currentProduct) {
+      addNotification("Product not found", "error");
+      return;
+    }
+
+    if (currentProduct.total_stock < 0) {
+      addNotification(
+        `${currentProduct.name} is out of stock (negative inventory)`,
+        "error"
+      );
+      return;
+    }
+
+    if (newQuantity > currentProduct.total_stock) {
+      addNotification(
+        `Cannot add ${newQuantity} pieces of ${currentProduct.name}. Only ${currentProduct.total_stock} available.`,
+        "error"
+      );
+      return;
+    }
+
     setCart((prev) =>
       prev.map((item) =>
         item.id === id
-          ? { ...item, quantity: Math.min(newQuantity, item.stock) }
+          ? {
+              ...item,
+              quantity: Math.min(newQuantity, currentProduct.total_stock),
+            }
           : item
       )
     );
@@ -183,6 +249,39 @@ export default function POS() {
   const handleCheckout = async () => {
     if (cart.length === 0) {
       addNotification("Cart is empty", "error");
+      return;
+    }
+
+    // ✅ FINAL VALIDATION: Check all cart items against current stock before checkout
+    const stockValidationErrors = [];
+
+    for (const cartItem of cart) {
+      const currentProduct = allProducts.find((p) => p.id === cartItem.id);
+
+      if (!currentProduct) {
+        stockValidationErrors.push(`Product ${cartItem.name} not found`);
+        continue;
+      }
+
+      if (currentProduct.total_stock < 0) {
+        stockValidationErrors.push(
+          `${cartItem.name} is out of stock (negative inventory)`
+        );
+        continue;
+      }
+
+      if (cartItem.quantity > currentProduct.total_stock) {
+        stockValidationErrors.push(
+          `${cartItem.name}: Requested ${cartItem.quantity}, but only ${currentProduct.total_stock} available`
+        );
+      }
+    }
+
+    if (stockValidationErrors.length > 0) {
+      addNotification(
+        `Cannot proceed with checkout:\n${stockValidationErrors.join("\n")}`,
+        "error"
+      );
       return;
     }
 

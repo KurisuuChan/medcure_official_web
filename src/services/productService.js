@@ -1,50 +1,26 @@
 import { supabase } from "../config/supabase.js";
 
 /**
- * Product Service - Handles all product-related database operations
- * This is the only layer that directly communicates with Supabase for products
+ * Enhanced Product Service - Implements improved backend architecture
+ * Leverages database views, functions, and constraints for better data integrity
  */
 
 /**
- * Fetch all products from the database
- * @returns {Promise<Array>} Array of product objects
+ * Fetch all products using enhanced database view
+ * @returns {Promise<Array>} Array of enhanced product objects
  */
 export async function getProducts() {
   try {
     const { data, error } = await supabase
-      .from("products")
+      .from("products_enhanced")
       .select("*")
-      .eq("is_archived", false)
       .order("name", { ascending: true });
 
     if (error) throw error;
 
-    // Add default packaging information for POS system
-    const productsWithPackaging = (data || []).map((product) => ({
-      ...product,
-      // Ensure packaging object exists
-      packaging: product.packaging || {
-        piecesPerSheet: product.pieces_per_sheet || 10,
-        sheetsPerBox: product.sheets_per_box || 10,
-        totalPieces:
-          (product.pieces_per_sheet || 10) * (product.sheets_per_box || 10),
-      },
-      // Map packaging properties for QuantitySelectionModal compatibility
-      pieces_per_sheet:
-        product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10,
-      sheets_per_box:
-        product.sheets_per_box || product.packaging?.sheetsPerBox || 10,
-      total_pieces_per_box:
-        (product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10) *
-        (product.sheets_per_box || product.packaging?.sheetsPerBox || 10),
-      // Map price properties for compatibility
-      selling_price: product.selling_price || product.price || 0,
-      cost_price: product.cost_price || 0,
-      // Map stock properties
-      total_stock: product.total_stock || product.stock || 0,
-    }));
-
-    return productsWithPackaging;
+    // Products now come with calculated fields from the database view
+    // No need for frontend manipulation - data integrity handled by DB
+    return data || [];
   } catch (error) {
     console.error("Error fetching products:", error);
     throw new Error("Failed to fetch products");
@@ -52,17 +28,81 @@ export async function getProducts() {
 }
 
 /**
- * Get a single product by ID
+ * Get comprehensive inventory analytics
+ * @returns {Promise<Object>} Analytics object with inventory statistics
+ */
+export async function getInventoryAnalytics() {
+  try {
+    const { data, error } = await supabase.rpc("get_inventory_analytics");
+
+    if (error) throw error;
+    return data?.[0] || {};
+  } catch (error) {
+    console.error("Error fetching inventory analytics:", error);
+    throw new Error("Failed to fetch inventory analytics");
+  }
+}
+
+/**
+ * Advanced product search with full-text search capabilities
+ * @param {Object} searchParams - Search parameters
+ * @param {string} searchParams.searchTerm - Search term
+ * @param {string} searchParams.category - Category filter
+ * @param {string} searchParams.stockStatus - Stock status filter
+ * @param {number} searchParams.minPrice - Minimum price filter
+ * @param {number} searchParams.maxPrice - Maximum price filter
+ * @param {string} searchParams.sortBy - Sort criteria
+ * @param {number} searchParams.limit - Result limit
+ * @returns {Promise<Array>} Array of matching products with relevance scores
+ */
+export async function searchProductsAdvanced({
+  searchTerm = "",
+  category = null,
+  stockStatus = null,
+  minPrice = null,
+  maxPrice = null,
+  sortBy = "relevance",
+  limit = 50,
+} = {}) {
+  try {
+    const { data, error } = await supabase.rpc("search_products_advanced", {
+      search_term: searchTerm || null,
+      category_filter: category,
+      stock_status_filter: stockStatus,
+      price_range_min: minPrice,
+      price_range_max: maxPrice,
+      sort_by: sortBy,
+      limit_count: limit,
+    });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error in advanced search:", error);
+    throw new Error("Failed to perform advanced search");
+  }
+}
+
+/**
+ * Simple search function for backward compatibility
+ * @param {string} searchTerm - Search term
+ * @returns {Promise<Array>} Array of matching products
+ */
+export async function searchProducts(searchTerm) {
+  return searchProductsAdvanced({ searchTerm });
+}
+
+/**
+ * Get a single product by ID from enhanced view
  * @param {number} id - Product ID
- * @returns {Promise<Object>} Product object
+ * @returns {Promise<Object>} Enhanced product object
  */
 export async function getProduct(id) {
   try {
     const { data, error } = await supabase
-      .from("products")
+      .from("products_enhanced")
       .select("*")
       .eq("id", id)
-      .eq("is_archived", false)
       .single();
 
     if (error) throw error;
@@ -74,15 +114,39 @@ export async function getProduct(id) {
 }
 
 /**
- * Add a new product to the database
+ * Add a new product with data validation
  * @param {Object} product - Product object to add
  * @returns {Promise<Object>} Created product object
  */
 export async function addProduct(product) {
   try {
+    // Ensure required fields have defaults
+    const productData = {
+      ...product,
+      cost_price: product.cost_price || 0,
+      pieces_per_sheet: product.pieces_per_sheet || 1,
+      sheets_per_box: product.sheets_per_box || 1,
+      selling_price: product.selling_price || product.price || 0,
+      total_stock: product.total_stock || product.stock || 0,
+      is_archived: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Validate required fields
+    if (!productData.name?.trim()) {
+      throw new Error("Product name is required");
+    }
+    if (!productData.category?.trim()) {
+      throw new Error("Product category is required");
+    }
+    if (!productData.price || productData.price < 0) {
+      throw new Error("Valid price is required");
+    }
+
     const { data, error } = await supabase
       .from("products")
-      .insert([product])
+      .insert([productData])
       .select()
       .single();
 
@@ -90,21 +154,32 @@ export async function addProduct(product) {
     return data;
   } catch (error) {
     console.error("Error adding product:", error);
-    throw new Error("Failed to add product");
+    if (error.message.includes("violates check constraint")) {
+      throw new Error(
+        "Product data validation failed. Check all required fields."
+      );
+    }
+    throw new Error(error.message || "Failed to add product");
   }
 }
 
 /**
- * Update an existing product
+ * Update an existing product with validation
  * @param {number} id - Product ID
  * @param {Object} updates - Object containing fields to update
  * @returns {Promise<Object>} Updated product object
  */
 export async function updateProduct(id, updates) {
   try {
+    // Add timestamp
+    const updateData = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from("products")
-      .update(updates)
+      .update(updateData)
       .eq("id", id)
       .select()
       .single();
@@ -113,7 +188,37 @@ export async function updateProduct(id, updates) {
     return data;
   } catch (error) {
     console.error("Error updating product:", error);
-    throw new Error("Failed to update product");
+    if (error.message.includes("violates check constraint")) {
+      throw new Error("Update validation failed. Check field values.");
+    }
+    throw new Error(error.message || "Failed to update product");
+  }
+}
+
+/**
+ * Safely update product stock using database function
+ * @param {number} productId - Product ID
+ * @param {number} quantityChange - Quantity to change
+ * @param {string} operation - Operation type: 'add', 'subtract', 'set'
+ * @returns {Promise<Object>} Updated product object
+ */
+export async function updateProductStock(
+  productId,
+  quantityChange,
+  operation = "subtract"
+) {
+  try {
+    const { data, error } = await supabase.rpc("update_product_stock", {
+      product_id: productId,
+      quantity_change: quantityChange,
+      operation_type: operation,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error updating product stock:", error);
+    throw new Error(error.message || "Failed to update product stock");
   }
 }
 
@@ -135,38 +240,65 @@ export async function deleteProduct(id) {
 }
 
 /**
- * Bulk add multiple products (for CSV import)
+ * Bulk add multiple products with validation
  * @param {Array} products - Array of product objects
  * @returns {Promise<Array>} Array of created product objects
  */
 export async function bulkAddProducts(products) {
   try {
+    // Validate and prepare all products
+    const validatedProducts = products.map((product, index) => {
+      if (!product.name?.trim()) {
+        throw new Error(`Product at position ${index + 1}: Name is required`);
+      }
+      if (!product.category?.trim()) {
+        throw new Error(
+          `Product at position ${index + 1}: Category is required`
+        );
+      }
+      if (!product.price || product.price < 0) {
+        throw new Error(
+          `Product at position ${index + 1}: Valid price is required`
+        );
+      }
+
+      return {
+        ...product,
+        cost_price: product.cost_price || 0,
+        pieces_per_sheet: product.pieces_per_sheet || 1,
+        sheets_per_box: product.sheets_per_box || 1,
+        selling_price: product.selling_price || product.price || 0,
+        total_stock: product.total_stock || product.stock || 0,
+        is_archived: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    });
+
     const { data, error } = await supabase
       .from("products")
-      .insert(products)
+      .insert(validatedProducts)
       .select();
 
     if (error) throw error;
     return data || [];
   } catch (error) {
     console.error("Error bulk adding products:", error);
-    throw new Error("Failed to bulk add products");
+    throw new Error(error.message || "Failed to bulk add products");
   }
 }
 
 /**
- * Get products with low stock (below a certain threshold)
- * @param {number} threshold - Stock threshold (default: 10)
+ * Get products with low stock using enhanced view
  * @returns {Promise<Array>} Array of low-stock products
  */
-export async function getLowStockProducts(threshold = 10) {
+export async function getLowStockProducts() {
   try {
     const { data, error } = await supabase
-      .from("products")
+      .from("products_enhanced")
       .select("*")
-      .lt("stock", threshold)
-      .eq("is_archived", false)
-      .order("stock", { ascending: true });
+      .or(`stock_status.eq.Low Stock,stock_status.eq.Out of Stock`)
+      .order("total_stock", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -177,122 +309,132 @@ export async function getLowStockProducts(threshold = 10) {
 }
 
 /**
- * Get total count of active products
- * @returns {Promise<number>} Total product count
+ * Get products by category with analytics
+ * @param {string} category - Category name
+ * @returns {Promise<Object>} Category products with statistics
  */
-export async function getProductCount() {
+export async function getProductsByCategory(category) {
   try {
-    const { count, error } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true })
-      .eq("is_archived", false);
-
-    if (error) throw error;
-    return count || 0;
-  } catch (error) {
-    console.error("Error fetching product count:", error);
-    throw new Error("Failed to fetch product count");
-  }
-}
-
-/**
- * Get products expiring soon
- * @param {number} days - Number of days ahead to check for expiration
- * @returns {Promise<Array>} Products expiring within the specified days
- */
-export async function getExpiringSoonProducts(days = 30) {
-  try {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + days);
-
-    const { data, error } = await supabase
-      .from("products")
+    const { data: products, error: productsError } = await supabase
+      .from("products_enhanced")
       .select("*")
-      .not("expiration_date", "is", null)
-      .lte("expiration_date", futureDate.toISOString().split("T")[0])
-      .gte("expiration_date", new Date().toISOString().split("T")[0])
-      .eq("is_archived", false)
-      .order("expiration_date", { ascending: true });
+      .ilike("category", `%${category}%`)
+      .order("name", { ascending: true });
 
-    if (error) throw error;
+    if (productsError) throw productsError;
 
-    // Add days until expiration
-    return (data || []).map((product) => ({
-      ...product,
-      daysUntilExpiration: Math.ceil(
-        (new Date(product.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)
-      ),
-    }));
+    // Get category analytics
+    const totalValue = products.reduce(
+      (sum, product) => sum + product.selling_price * product.total_stock,
+      0
+    );
+    const lowStockCount = products.filter(
+      (product) => product.stock_status === "Low Stock"
+    ).length;
+    const outOfStockCount = products.filter(
+      (product) => product.stock_status === "Out of Stock"
+    ).length;
+
+    return {
+      products,
+      analytics: {
+        totalProducts: products.length,
+        totalValue: Math.round(totalValue * 100) / 100,
+        lowStockCount,
+        outOfStockCount,
+        averagePrice:
+          products.length > 0
+            ? Math.round(
+                (products.reduce((sum, p) => sum + p.selling_price, 0) /
+                  products.length) *
+                  100
+              ) / 100
+            : 0,
+      },
+    };
   } catch (error) {
-    console.error("Error fetching expiring products:", error);
-    throw new Error("Failed to fetch expiring products");
+    console.error("Error fetching products by category:", error);
+    throw new Error("Failed to fetch products by category");
   }
 }
 
 /**
- * Search products by name, category, or other criteria
- * @param {string} searchTerm - Search term to filter products
- * @param {Object} filters - Additional filters
- * @param {string} filters.category - Category filter
- * @param {number} filters.minPrice - Minimum price filter
- * @param {number} filters.maxPrice - Maximum price filter
- * @returns {Promise<Array>} Filtered products
+ * Get product audit history
+ * @param {number} productId - Product ID
+ * @returns {Promise<Array>} Array of audit log entries
  */
-export async function searchProducts(searchTerm = "", filters = {}) {
+export async function getProductAuditHistory(productId) {
   try {
-    let query = supabase.from("products").select("*").eq("is_archived", false);
-
-    // Apply search term (search in name, category, manufacturer)
-    if (searchTerm.trim()) {
-      query = query.or(
-        `name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,manufacturer.ilike.%${searchTerm}%`
-      );
-    }
-
-    // Apply category filter
-    if (filters.category) {
-      query = query.eq("category", filters.category);
-    }
-
-    // Apply price range filters
-    if (filters.minPrice !== undefined) {
-      query = query.gte("price", filters.minPrice);
-    }
-    if (filters.maxPrice !== undefined) {
-      query = query.lte("price", filters.maxPrice);
-    }
-
-    // Order by name
-    query = query.order("name", { ascending: true });
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from("product_audit_log")
+      .select("*")
+      .eq("product_id", productId)
+      .order("changed_at", { ascending: false });
 
     if (error) throw error;
-
-    // Add packaging information like in getProducts
-    const productsWithPackaging = (data || []).map((product) => ({
-      ...product,
-      packaging: product.packaging || {
-        piecesPerSheet: product.pieces_per_sheet || 10,
-        sheetsPerBox: product.sheets_per_box || 10,
-        totalPieces:
-          (product.pieces_per_sheet || 10) * (product.sheets_per_box || 10),
-      },
-      pieces_per_sheet:
-        product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10,
-      sheets_per_box:
-        product.sheets_per_box || product.packaging?.sheetsPerBox || 10,
-      total_pieces_per_box:
-        (product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10) *
-        (product.sheets_per_box || product.packaging?.sheetsPerBox || 10),
-      selling_price: product.selling_price || product.price || 0,
-      cost_price: product.cost_price || 0,
-      total_stock: product.total_stock || product.stock || 0,
-    }));
-
-    return productsWithPackaging;
+    return data || [];
   } catch (error) {
-    console.error("Error searching products:", error);
-    throw new Error("Failed to search products");
+    console.error("Error fetching product audit history:", error);
+    throw new Error("Failed to fetch product audit history");
   }
 }
+
+/**
+ * Validate product data before operations
+ * @param {Object} product - Product object to validate
+ * @returns {Object} Validation result with errors array
+ */
+export function validateProductData(product) {
+  const errors = [];
+
+  if (!product.name?.trim()) {
+    errors.push("Product name is required");
+  }
+  if (!product.category?.trim()) {
+    errors.push("Category is required");
+  }
+  if (!product.price || product.price < 0) {
+    errors.push("Valid price is required");
+  }
+  if (product.cost_price < 0) {
+    errors.push("Cost price cannot be negative");
+  }
+  if (product.stock < 0) {
+    errors.push("Stock cannot be negative");
+  }
+  if (product.pieces_per_sheet <= 0) {
+    errors.push("Pieces per sheet must be greater than 0");
+  }
+  if (product.sheets_per_box <= 0) {
+    errors.push("Sheets per box must be greater than 0");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+// Export constants for use in components
+export const STOCK_STATUS = {
+  OUT_OF_STOCK: "Out of Stock",
+  LOW_STOCK: "Low Stock",
+  MEDIUM_STOCK: "Medium Stock",
+  IN_STOCK: "In Stock",
+};
+
+export const EXPIRY_STATUS = {
+  EXPIRED: "Expired",
+  EXPIRING_SOON: "Expiring Soon",
+  EXPIRING_IN_3_MONTHS: "Expiring in 3 Months",
+  GOOD: "Good",
+  NO_EXPIRY_DATA: "No Expiry Data",
+};
+
+export const SORT_OPTIONS = {
+  RELEVANCE: "relevance",
+  NAME: "name",
+  PRICE_ASC: "price_asc",
+  PRICE_DESC: "price_desc",
+  STOCK: "stock",
+};

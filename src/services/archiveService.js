@@ -142,14 +142,19 @@ export async function getArchivedProducts() {
     const { data: archivedProducts, error } = await supabase
       .from("products")
       .select("*")
-      .eq("is_archived", true)
-      .order("archived_date", { ascending: false });
+      .or("is_archived.eq.true,archived_at.not.is.null")
+      .order("archived_date", { ascending: false, nullsLast: true });
 
     if (error) {
       throw new Error(`Failed to fetch archived products: ${error.message}`);
     }
 
-    return archivedProducts || [];
+    // Filter and ensure we only return actually archived products
+    const validArchivedProducts = (archivedProducts || []).filter(
+      (product) => product.is_archived === true || product.archived_at !== null
+    );
+
+    return validArchivedProducts;
   } catch (error) {
     console.error("Error fetching archived products:", error);
     throw new Error(`Failed to fetch archived products: ${error.message}`);
@@ -167,27 +172,39 @@ export async function permanentlyDeleteProduct(
   deletedBy = "System"
 ) {
   try {
-    // Check if product exists and is archived
+    // Check if product exists and is archived (using both conditions for compatibility)
     const { data: existingProduct, error: checkError } = await supabase
       .from("products")
       .select("*")
       .eq("id", productId)
-      .eq("is_archived", true)
+      .or("is_archived.eq.true,archived_at.not.is.null")
       .single();
 
     if (checkError) {
+      if (checkError.code === "PGRST116") {
+        throw new Error(`Product not found or not archived`);
+      }
       throw new Error(`Failed to find archived product: ${checkError.message}`);
     }
 
+    if (!existingProduct) {
+      throw new Error("Product not found or not archived");
+    }
+
     // Create deletion log before deleting
-    await createArchiveLog({
-      type: "product_permanently_deleted",
-      item_id: productId,
-      item_name: existingProduct.name,
-      reason: "Product permanently deleted",
-      archived_by: deletedBy,
-      original_data: existingProduct,
-    });
+    try {
+      await createArchiveLog({
+        type: "product_permanently_deleted",
+        item_id: productId,
+        item_name: existingProduct.name,
+        reason: "Product permanently deleted",
+        archived_by: deletedBy,
+        original_data: existingProduct,
+      });
+    } catch (logError) {
+      console.warn("Failed to create archive log:", logError);
+      // Continue with deletion even if logging fails
+    }
 
     // Permanently delete the product
     const { error: deleteError } = await supabase
@@ -204,10 +221,100 @@ export async function permanentlyDeleteProduct(
     return {
       success: true,
       message: `Product "${existingProduct.name}" permanently deleted`,
+      deletedProduct: existingProduct,
     };
   } catch (error) {
     console.error("Error permanently deleting product:", error);
     throw new Error(`Failed to permanently delete product: ${error.message}`);
+  }
+}
+
+/**
+ * Permanently delete multiple archived products in bulk
+ * @param {Array<number>} productIds - Array of product IDs to delete
+ * @param {string} deletedBy - Who initiated the deletion
+ * @returns {Promise<Object>} Bulk deletion result
+ */
+export async function bulkPermanentlyDeleteProducts(
+  productIds,
+  deletedBy = "System"
+) {
+  try {
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      throw new Error("Product IDs array is required and must not be empty");
+    }
+
+    // First, fetch all products to be deleted for validation and logging
+    const { data: productsToDelete, error: fetchError } = await supabase
+      .from("products")
+      .select("id, name, category, archived_date, is_archived, archived_at")
+      .in("id", productIds)
+      .or("is_archived.eq.true,archived_at.not.is.null");
+
+    if (fetchError) {
+      throw new Error(
+        `Failed to fetch products for deletion: ${fetchError.message}`
+      );
+    }
+
+    if (!productsToDelete || productsToDelete.length === 0) {
+      throw new Error("No archived products found with the provided IDs");
+    }
+
+    // Validate that all products are archived
+    const validProductIds = productsToDelete.map((p) => p.id);
+    const invalidIds = productIds.filter((id) => !validProductIds.includes(id));
+
+    if (invalidIds.length > 0) {
+      console.warn(`Skipping non-archived products: ${invalidIds.join(", ")}`);
+    }
+
+    const results = {
+      success: true,
+      totalRequested: productIds.length,
+      totalDeleted: 0,
+      skipped: invalidIds.length,
+      deletedProducts: [],
+      errors: [],
+    };
+
+    // Create deletion logs for all products (batch operation)
+    try {
+      const logEntries = productsToDelete.map((product) => ({
+        type: "product_permanently_deleted",
+        item_id: product.id,
+        item_name: product.name,
+        reason: "Bulk permanent deletion",
+        archived_by: deletedBy,
+        original_data: product,
+      }));
+
+      // Insert all logs at once if createArchiveLog supports batch
+      await Promise.allSettled(
+        logEntries.map((logEntry) => createArchiveLog(logEntry))
+      );
+    } catch (logError) {
+      console.warn("Some archive logs failed to create:", logError);
+      // Continue with deletion even if some logs fail
+    }
+
+    // Perform bulk deletion using Supabase's bulk delete
+    const { error: bulkDeleteError } = await supabase
+      .from("products")
+      .delete()
+      .in("id", validProductIds);
+
+    if (bulkDeleteError) {
+      throw new Error(`Bulk deletion failed: ${bulkDeleteError.message}`);
+    }
+
+    results.totalDeleted = validProductIds.length;
+    results.deletedProducts = productsToDelete;
+
+    return results;
+  } catch (error) {
+    console.error("Error in bulk permanent deletion:", error);
+    throw new Error(`Bulk deletion failed: ${error.message}`);
   }
 }
 
