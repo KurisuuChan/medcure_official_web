@@ -4,8 +4,14 @@ import {
   getSalesSummary,
   getSalesByCategory,
   getSalesByHour,
+  getRecentSales,
+  getBestSellers,
 } from "../services/salesService.js";
-import { getLowStockProducts } from "../services/productService.js";
+import {
+  getLowStockProducts,
+  getProductCount,
+  getExpiringSoonProducts,
+} from "../services/productService.js";
 
 /**
  * Hook for fetching all dashboard data
@@ -27,6 +33,10 @@ export function useDashboardData() {
           salesByCategory,
           lowStockProducts,
           salesByHour,
+          recentSales,
+          bestSellers,
+          totalProducts,
+          expiringSoon,
         ] = await Promise.all([
           getSalesSummary("today"),
           getSalesSummary("week"),
@@ -34,43 +44,36 @@ export function useDashboardData() {
           getSalesByCategory(),
           getLowStockProducts(10),
           getSalesByHour(today),
+          getRecentSales(10),
+          getBestSellers(5),
+          getProductCount(),
+          getExpiringSoonProducts(30), // 30 days
         ]);
 
         // Calculate additional metrics
         const criticalStockItems = lowStockProducts.filter((p) => p.stock <= 5);
-        const expiringSoon = []; // TODO: Add expiration date logic when product schema is updated
 
         // Format data for dashboard cards with safe fallbacks
         const summaryCards = [
           {
-            title: "Today's Revenue",
-            value: "₱" + (todaySummary?.totalRevenue || 0).toLocaleString(),
-            iconBg: "bg-emerald-50 text-emerald-600",
-          },
-          {
-            title: "Today's Sales",
-            value: todaySummary?.totalTransactions || 0,
-            iconBg: "bg-blue-50 text-blue-600",
+            title: "Total Products",
+            value: totalProducts || 0,
+            trend: "Active inventory items",
           },
           {
             title: "Low Stock",
             value: lowStockProducts?.length || 0,
-            iconBg: "bg-amber-50 text-amber-600",
+            trend: "Needs attention",
           },
           {
-            title: "Critical Stock",
-            value: criticalStockItems?.length || 0,
-            iconBg: "bg-red-50 text-red-600",
+            title: "Expiring Soon",
+            value: expiringSoon?.length || 0,
+            trend: "Check expiry dates",
           },
           {
-            title: "Week Revenue",
-            value: "₱" + (weekSummary?.totalRevenue || 0).toLocaleString(),
-            iconBg: "bg-indigo-50 text-indigo-600",
-          },
-          {
-            title: "Avg Transaction",
-            value: "₱" + (todaySummary?.averageTransaction || 0).toFixed(2),
-            iconBg: "bg-fuchsia-50 text-fuchsia-600",
+            title: "Today Sales",
+            value: "₱" + (todaySummary?.totalRevenue || 0).toLocaleString(),
+            trend: "vs last period",
           },
         ];
 
@@ -80,10 +83,10 @@ export function useDashboardData() {
           summaryCards,
           salesByHourData: salesByHour || [],
           salesByCategory: salesByCategory || [],
-          bestSellers: [], // TODO: Calculate from sales data
+          bestSellers: bestSellers || [],
           expiringSoon: expiringSoon || [],
           lowStockItems: lowStockProducts || [],
-          recentSales: [], // TODO: Get recent sales from sales service
+          recentSales: recentSales || [],
           sales: {
             today: todaySummary || {
               totalRevenue: 0,
@@ -102,23 +105,77 @@ export function useDashboardData() {
             },
           },
           inventory: {
+            totalProducts: totalProducts || 0,
             lowStockCount: lowStockProducts?.length || 0,
             criticalStockCount: criticalStockItems?.length || 0,
+            expiringSoonCount: expiringSoon?.length || 0,
             lowStockProducts: lowStockProducts || [],
             criticalStockItems: criticalStockItems || [],
+            expiringSoon: expiringSoon || [],
           },
           analytics: {
             salesByCategory: salesByCategory || [],
             salesByHour: salesByHour || [],
+            bestSellers: bestSellers || [],
           },
         };
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        throw new Error("Failed to load dashboard data");
+
+        // Return fallback data structure to prevent crashes
+        return {
+          loading: false,
+          error: error.message,
+          summaryCards: [
+            { title: "Total Products", value: 0, trend: "No data" },
+            { title: "Low Stock", value: 0, trend: "No data" },
+            { title: "Expiring Soon", value: 0, trend: "No data" },
+            { title: "Today Sales", value: "₱0", trend: "No data" },
+          ],
+          salesByHourData: [],
+          salesByCategory: [],
+          bestSellers: [],
+          expiringSoon: [],
+          lowStockItems: [],
+          recentSales: [],
+          sales: {
+            today: {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+            week: {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+            month: {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            },
+          },
+          inventory: {
+            totalProducts: 0,
+            lowStockCount: 0,
+            criticalStockCount: 0,
+            expiringSoonCount: 0,
+            lowStockProducts: [],
+            criticalStockItems: [],
+            expiringSoon: [],
+          },
+          analytics: {
+            salesByCategory: [],
+            salesByHour: [],
+            bestSellers: [],
+          },
+        };
       }
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+    retry: 3,
+    retryDelay: 1000,
   });
 }
 

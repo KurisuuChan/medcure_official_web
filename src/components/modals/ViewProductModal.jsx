@@ -2,7 +2,7 @@ import React from "react";
 import {
   X,
   Package,
-  DollarSign,
+  Coins,
   Boxes,
   Factory,
   Tag,
@@ -97,7 +97,7 @@ export default function ViewProductModal({ isOpen, onClose, product }) {
             {/* Pricing & Stock */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <DollarSign size={20} className="text-green-600" />
+                <Coins size={20} className="text-green-600" />
                 Pricing & Inventory
               </h3>
 

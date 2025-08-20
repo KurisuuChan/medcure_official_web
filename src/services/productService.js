@@ -177,32 +177,107 @@ export async function getLowStockProducts(threshold = 10) {
 }
 
 /**
- * Search products by name or category
- * @param {string} searchTerm - Search term
- * @returns {Promise<Array>} Array of matching products
+ * Get total count of active products
+ * @returns {Promise<number>} Total product count
  */
-export async function searchProducts(searchTerm) {
+export async function getProductCount() {
   try {
+    const { count, error } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("is_archived", false);
+
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.error("Error fetching product count:", error);
+    throw new Error("Failed to fetch product count");
+  }
+}
+
+/**
+ * Get products expiring soon
+ * @param {number} days - Number of days ahead to check for expiration
+ * @returns {Promise<Array>} Products expiring within the specified days
+ */
+export async function getExpiringSoonProducts(days = 30) {
+  try {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + days);
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .or(`name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`)
+      .not("expiration_date", "is", null)
+      .lte("expiration_date", futureDate.toISOString().split("T")[0])
+      .gte("expiration_date", new Date().toISOString().split("T")[0])
       .eq("is_archived", false)
-      .order("name", { ascending: true });
+      .order("expiration_date", { ascending: true });
 
     if (error) throw error;
 
-    // Apply the same mapping as getProducts for consistency
+    // Add days until expiration
+    return (data || []).map((product) => ({
+      ...product,
+      daysUntilExpiration: Math.ceil(
+        (new Date(product.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)
+      ),
+    }));
+  } catch (error) {
+    console.error("Error fetching expiring products:", error);
+    throw new Error("Failed to fetch expiring products");
+  }
+}
+
+/**
+ * Search products by name, category, or other criteria
+ * @param {string} searchTerm - Search term to filter products
+ * @param {Object} filters - Additional filters
+ * @param {string} filters.category - Category filter
+ * @param {number} filters.minPrice - Minimum price filter
+ * @param {number} filters.maxPrice - Maximum price filter
+ * @returns {Promise<Array>} Filtered products
+ */
+export async function searchProducts(searchTerm = "", filters = {}) {
+  try {
+    let query = supabase.from("products").select("*").eq("is_archived", false);
+
+    // Apply search term (search in name, category, manufacturer)
+    if (searchTerm.trim()) {
+      query = query.or(
+        `name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,manufacturer.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Apply category filter
+    if (filters.category) {
+      query = query.eq("category", filters.category);
+    }
+
+    // Apply price range filters
+    if (filters.minPrice !== undefined) {
+      query = query.gte("price", filters.minPrice);
+    }
+    if (filters.maxPrice !== undefined) {
+      query = query.lte("price", filters.maxPrice);
+    }
+
+    // Order by name
+    query = query.order("name", { ascending: true });
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Add packaging information like in getProducts
     const productsWithPackaging = (data || []).map((product) => ({
       ...product,
-      // Ensure packaging object exists
       packaging: product.packaging || {
         piecesPerSheet: product.pieces_per_sheet || 10,
         sheetsPerBox: product.sheets_per_box || 10,
         totalPieces:
           (product.pieces_per_sheet || 10) * (product.sheets_per_box || 10),
       },
-      // Map packaging properties for QuantitySelectionModal compatibility
       pieces_per_sheet:
         product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10,
       sheets_per_box:
@@ -210,10 +285,8 @@ export async function searchProducts(searchTerm) {
       total_pieces_per_box:
         (product.pieces_per_sheet || product.packaging?.piecesPerSheet || 10) *
         (product.sheets_per_box || product.packaging?.sheetsPerBox || 10),
-      // Map price properties for compatibility
       selling_price: product.selling_price || product.price || 0,
       cost_price: product.cost_price || 0,
-      // Map stock properties
       total_stock: product.total_stock || product.stock || 0,
     }));
 

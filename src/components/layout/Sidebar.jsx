@@ -12,7 +12,6 @@ import {
   Menu,
   X,
   Archive,
-  DollarSign,
   FileText,
 } from "lucide-react";
 import PropTypes from "prop-types";

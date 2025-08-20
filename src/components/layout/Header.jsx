@@ -11,7 +11,7 @@ import {
   X,
   Settings,
   UserCircle,
-  DollarSign,
+  Coins,
   PackageX,
   BarChart3,
   Plus,
@@ -243,7 +243,7 @@ export default function Header({ onLogout, user }) {
                       className="flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 hover:bg-blue-50 rounded-lg sm:rounded-xl transition-all duration-200 group border border-transparent hover:border-blue-200"
                     >
                       <div className="w-7 sm:w-8 h-7 sm:h-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                        <DollarSign size={16} className="text-blue-600" />
+                        <Coins size={16} className="text-blue-600" />
                       </div>
                       <span className="text-xs font-medium text-gray-700">
                         New Sale
@@ -334,7 +334,7 @@ export default function Header({ onLogout, user }) {
                     className="flex items-center gap-3 w-full p-2 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
                   >
                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                      <DollarSign size={16} className="text-blue-600" />
+                      <Coins size={16} className="text-blue-600" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">
                       New Sale

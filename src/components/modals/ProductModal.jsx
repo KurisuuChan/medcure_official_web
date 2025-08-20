@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { X, Package, DollarSign, Hash, AlertTriangle, Tag } from "lucide-react";
+import { X, Package, Banknote, Hash, AlertTriangle, Tag } from "lucide-react";
 
 export function ProductModal({
   isOpen,
@@ -332,7 +332,7 @@ export function ProductModal({
           {/* Pricing */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <DollarSign size={20} />
+              <Banknote size={20} />
               Pricing
             </h3>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   X,
   CreditCard,
-  DollarSign,
+  Wallet,
   Calculator,
   CheckCircle,
   AlertTriangle,
@@ -151,7 +151,7 @@ export function PaymentModal({
                     : "border-gray-300 hover:bg-gray-50"
                 }`}
               >
-                <DollarSign size={20} />
+                <Wallet size={20} />
                 <span className="font-medium">Cash</span>
               </button>
               <button

@@ -8,7 +8,7 @@ import {
   Receipt,
   RefreshCw,
   Calendar,
-  DollarSign,
+  CreditCard,
   Package,
   AlertTriangle,
   CheckCircle,
@@ -18,126 +18,11 @@ import {
   Download,
 } from "lucide-react";
 import { useNotification } from "../../hooks/useNotification.js";
-
-// Mock service for now - you can replace with actual API calls
-const mockGetTransactionHistory = async (filters = {}) => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  // Mock transaction data
-  const mockTransactions = [
-    {
-      id: 1,
-      transaction_number: "TXN-001-2024",
-      total_amount: 250.5,
-      payment_method: "cash",
-      status: "completed",
-      is_pwd_senior: false,
-      created_at: new Date().toISOString(),
-      sales_items: [
-        {
-          id: 1,
-          product_id: 1,
-          product: { name: "Paracetamol 500mg" },
-          total_pieces: 10,
-          unit_price: 15.0,
-          line_total: 150.0,
-        },
-        {
-          id: 2,
-          product_id: 2,
-          product: { name: "Amoxicillin 250mg" },
-          total_pieces: 5,
-          unit_price: 20.1,
-          line_total: 100.5,
-        },
-      ],
-      subtotal: 250.5,
-      discount_amount: 0,
-      pwd_senior_discount: 0,
-      amount_paid: 300.0,
-      change_amount: 49.5,
-    },
-    {
-      id: 2,
-      transaction_number: "TXN-002-2024",
-      total_amount: 480.0,
-      payment_method: "card",
-      status: "completed",
-      is_pwd_senior: true,
-      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      sales_items: [
-        {
-          id: 3,
-          product_id: 3,
-          product: { name: "Vitamin C 500mg" },
-          total_pieces: 30,
-          unit_price: 16.0,
-          line_total: 480.0,
-        },
-      ],
-      subtotal: 600.0,
-      discount_amount: 0,
-      pwd_senior_discount: 120.0,
-      amount_paid: 480.0,
-      change_amount: 0,
-    },
-    {
-      id: 3,
-      transaction_number: "TXN-003-2024",
-      total_amount: 75.25,
-      payment_method: "cash",
-      status: "cancelled",
-      is_pwd_senior: false,
-      created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-      sales_items: [
-        {
-          id: 4,
-          product_id: 4,
-          product: { name: "Cough Syrup" },
-          total_pieces: 1,
-          unit_price: 75.25,
-          line_total: 75.25,
-        },
-      ],
-      subtotal: 75.25,
-      discount_amount: 0,
-      pwd_senior_discount: 0,
-      amount_paid: 0,
-      change_amount: 0,
-    },
-  ];
-
-  // Apply filters
-  let filteredTransactions = mockTransactions;
-
-  if (filters.status && filters.status !== "all") {
-    filteredTransactions = filteredTransactions.filter(
-      (t) => t.status === filters.status
-    );
-  }
-
-  if (filters.startDate) {
-    filteredTransactions = filteredTransactions.filter(
-      (t) => new Date(t.created_at) >= new Date(filters.startDate)
-    );
-  }
-
-  return {
-    success: true,
-    data: filteredTransactions,
-    error: null,
-  };
-};
-
-const mockPrintReceipt = async (transactionId) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  console.log(`🖨️ Printing receipt for transaction ${transactionId}`);
-  return {
-    success: true,
-    message: "Receipt printed successfully",
-  };
-};
+import { 
+  getTransactionHistory, 
+  printReceipt, 
+  exportTransactionsToCSV 
+} from "../../services/transactionService.js";
 
 export function TransactionHistoryModal({ isOpen, onClose }) {
   const [transactions, setTransactions] = useState([]);
@@ -155,6 +40,7 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
     try {
       const filters = {
         status: statusFilter === "all" ? undefined : statusFilter,
+        searchTerm: searchTerm.trim() || undefined,
         limit: 50,
       };
 
@@ -176,7 +62,7 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
         filters.startDate = monthAgo.toISOString();
       }
 
-      const result = await mockGetTransactionHistory(filters);
+      const result = await getTransactionHistory(filters);
       if (result.success) {
         setTransactions(result.data || []);
       } else {
@@ -188,18 +74,18 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, dateFilter, addNotification]);
+  }, [statusFilter, dateFilter, searchTerm, addNotification]);
 
   // Load transactions when modal opens or filters change
   useEffect(() => {
     if (isOpen) {
       loadTransactions();
     }
-  }, [isOpen, dateFilter, statusFilter, loadTransactions]);
+  }, [isOpen, dateFilter, statusFilter, searchTerm, loadTransactions]);
 
   const handlePrintReceipt = async (transactionId) => {
     try {
-      const result = await mockPrintReceipt(transactionId);
+      const result = await printReceipt(transactionId);
       if (result.success) {
         addNotification("Receipt printed successfully", "success");
       } else {
@@ -216,19 +102,27 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
     setShowTransactionDetails(true);
   };
 
-  const handleExportTransactions = () => {
-    // Mock export functionality
-    addNotification("Export functionality coming soon", "info");
+  const handleExportTransactions = async () => {
+    try {
+      if (transactions.length === 0) {
+        addNotification("No transactions to export", "warning");
+        return;
+      }
+
+      const result = await exportTransactionsToCSV(transactions, 'transaction_history');
+      if (result.success) {
+        addNotification("Transactions exported successfully", "success");
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      addNotification("Failed to export transactions", "error");
+      console.error("Error exporting transactions:", error);
+    }
   };
 
-  // Filter transactions
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.transaction_number
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-
-    return matchesSearch;
-  });
+  // Since filtering is now done in the service, we just display the transactions
+  const filteredTransactions = transactions;
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -404,7 +298,7 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <DollarSign size={14} />
+                            <CreditCard size={14} />
                             <span>
                               ₱{(transaction.total_amount || 0).toFixed(2)}
                             </span>

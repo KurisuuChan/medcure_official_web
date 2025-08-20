@@ -5,7 +5,7 @@ import {
   Download,
   Package,
   AlertTriangle,
-  DollarSign,
+  TrendingUp,
   List,
   Calendar,
   BarChart3,
@@ -190,7 +190,7 @@ export function ExportModal({
         title: "Inventory Valuation",
         description:
           "Financial overview with inventory values and profit analysis",
-        icon: <DollarSign size={20} className="text-green-600" />,
+        icon: <TrendingUp size={20} className="text-green-600" />,
         color: "green",
         count: data.length,
       },

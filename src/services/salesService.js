@@ -238,29 +238,148 @@ export async function getSalesByCategory(filters = {}) {
 }
 
 /**
- * Get hourly sales data for analytics
- * @param {string} date - Date to get hourly data for (ISO string)
- * @returns {Promise<Array>} Hourly sales data
+ * Get recent sales for dashboard
+ * @param {number} limit - Number of recent sales to fetch
+ * @returns {Promise<Array>} Recent sales with product info
  */
-export async function getSalesByHour(date) {
+export async function getRecentSales(limit = 10) {
   try {
-    const startDate = new Date(date);
-    const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+    const { data, error } = await supabase
+      .from("sales")
+      .select(
+        `
+        id,
+        total,
+        created_at,
+        sale_items (
+          quantity,
+          unit_price,
+          subtotal,
+          products (
+            name
+          )
+        )
+      `
+      )
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    // Transform the data to flatten for easier display
+    const recentSales = [];
+    data.forEach((sale) => {
+      sale.sale_items.forEach((item) => {
+        recentSales.push({
+          id: `${sale.id}-${item.products.name}`,
+          product: item.products.name,
+          qty: item.quantity,
+          price: item.unit_price,
+          time: new Date(sale.created_at).toLocaleTimeString(),
+          total: item.subtotal,
+        });
+      });
+    });
+
+    return recentSales.slice(0, limit);
+  } catch (error) {
+    console.error("Error fetching recent sales:", error);
+    throw new Error("Failed to fetch recent sales");
+  }
+}
+
+/**
+ * Get best selling products
+ * @param {number} limit - Number of top products to return
+ * @param {Object} filters - Date filters
+ * @returns {Promise<Array>} Best selling products
+ */
+export async function getBestSellers(limit = 5, filters = {}) {
+  try {
+    let query = supabase.from("sale_items").select(`
+        quantity,
+        products!inner (
+          name,
+          category
+        ),
+        sales!inner (
+          created_at
+        )
+      `);
+
+    if (filters.startDate) {
+      query = query.gte("sales.created_at", filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte("sales.created_at", filters.endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Group by product and sum quantities
+    const productSales = {};
+    data.forEach((item) => {
+      const productName = item.products.name;
+      if (!productSales[productName]) {
+        productSales[productName] = {
+          name: productName,
+          category: item.products.category,
+          totalQuantity: 0,
+        };
+      }
+      productSales[productName].totalQuantity += item.quantity;
+    });
+
+    // Sort by total quantity and return top products
+    return Object.values(productSales)
+      .sort((a, b) => b.totalQuantity - a.totalQuantity)
+      .slice(0, limit)
+      .map((product) => ({
+        name: product.name,
+        category: product.category,
+        quantity: product.totalQuantity,
+      }));
+  } catch (error) {
+    console.error("Error fetching best sellers:", error);
+    throw new Error("Failed to fetch best sellers");
+  }
+}
+
+/**
+ * Get sales data grouped by hour for charts
+ * @param {Object} filters - Date filters
+ * @returns {Promise<Array>} Sales data grouped by hour
+ */
+export async function getSalesByHour(filters = {}) {
+  try {
+    const now = new Date();
+    const startDate =
+      filters.startDate ||
+      new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const endDate =
+      filters.endDate ||
+      new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1
+      ).toISOString();
 
     const { data, error } = await supabase
       .from("sales")
       .select("total, created_at")
-      .gte("created_at", startDate.toISOString())
-      .lt("created_at", endDate.toISOString());
+      .gte("created_at", startDate)
+      .lt("created_at", endDate)
+      .order("created_at");
 
     if (error) throw error;
 
-    // Group by hour
-    const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
-      hour: `${hour.toString().padStart(2, "0")}:00`,
-      sales: 0,
-      revenue: 0,
-    }));
+    // Group sales by hour
+    const hourlyData = {};
+    for (let i = 0; i < 24; i++) {
+      hourlyData[i] = { hour: i, sales: 0, revenue: 0 };
+    }
 
     data.forEach((sale) => {
       const hour = new Date(sale.created_at).getHours();
@@ -268,9 +387,9 @@ export async function getSalesByHour(date) {
       hourlyData[hour].revenue += sale.total;
     });
 
-    return hourlyData;
+    return Object.values(hourlyData);
   } catch (error) {
     console.error("Error fetching sales by hour:", error);
-    throw new Error("Failed to fetch hourly sales data");
+    throw new Error("Failed to fetch sales by hour");
   }
 }

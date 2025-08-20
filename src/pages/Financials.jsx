@@ -2,7 +2,7 @@ import React from "react";
 import {
   BarChart,
   TrendingUp,
-  DollarSign,
+  Banknote,
   ShoppingCart,
   Download,
   Filter,
@@ -144,7 +144,7 @@ export default function Financials() {
         <div className="flex-1 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-              <DollarSign size={20} className="text-white" />
+              <Banknote size={20} className="text-white" />
             </div>
             <div className="flex items-center gap-1 text-blue-600">
               {computedMetrics.profitGrowth >= 0 ? (

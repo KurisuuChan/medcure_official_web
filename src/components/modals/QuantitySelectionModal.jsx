@@ -107,10 +107,12 @@ export function QuantitySelectionModal({
       quantityMode.pieces
     );
 
-    onAddToCart({
-      ...product,
-      selectedQuantity: totalPieces,
-      quantityBreakdown: quantityMode,
+    // Call onAddToCart with product and quantityInfo as separate parameters
+    onAddToCart(product, {
+      boxes: quantityMode.boxes,
+      sheets: quantityMode.sheets,
+      pieces: quantityMode.pieces,
+      totalPieces: totalPieces,
     });
 
     onClose();

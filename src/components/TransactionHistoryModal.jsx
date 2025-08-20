@@ -4,7 +4,7 @@ import {
   Search,
   Filter,
   Calendar,
-  DollarSign,
+  Wallet,
   Package,
   FileText,
   Eye,
@@ -281,7 +281,7 @@ const TransactionHistoryModal = ({ isOpen, onClose }) => {
                             <span>{transaction.items.length} item(s)</span>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <DollarSign className="w-4 h-4 text-gray-400" />
+                            <Wallet className="w-4 h-4 text-gray-400" />
                             <span className="font-medium">
                               ₱{transaction.total.toFixed(2)}
                             </span>
