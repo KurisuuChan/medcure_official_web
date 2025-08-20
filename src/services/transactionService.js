@@ -19,7 +19,8 @@ export async function getTransactionHistory(filters = {}) {
   try {
     let query = supabase
       .from("sales")
-      .select(`
+      .select(
+        `
         id,
         total,
         payment_method,
@@ -38,7 +39,8 @@ export async function getTransactionHistory(filters = {}) {
             brand_name
           )
         )
-      `)
+      `
+      )
       .order("created_at", { ascending: false });
 
     // Apply date filters
@@ -65,34 +67,40 @@ export async function getTransactionHistory(filters = {}) {
     const transactions = (data || []).map((sale) => {
       // Calculate totals from sale items
       const salesItems = sale.sale_items || [];
-      const subtotal = salesItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
-      const totalItems = salesItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      const subtotal = salesItems.reduce(
+        (sum, item) => sum + (item.subtotal || 0),
+        0
+      );
+      const totalItems = salesItems.reduce(
+        (sum, item) => sum + (item.quantity || 0),
+        0
+      );
 
       // Generate transaction number if not present
-      const transactionNumber = `TXN-${sale.id.toString().padStart(6, '0')}`;
+      const transactionNumber = `TXN-${sale.id.toString().padStart(6, "0")}`;
 
       // Transform sale items to match expected format
       const transformedItems = salesItems.map((item) => ({
         id: item.id,
         product_id: item.products?.id,
         product: {
-          name: item.products?.name || 'Unknown Product',
-          category: item.products?.category || 'Unknown',
-          manufacturer: item.products?.manufacturer || '',
-          brand_name: item.products?.brand_name || ''
+          name: item.products?.name || "Unknown Product",
+          category: item.products?.category || "Unknown",
+          manufacturer: item.products?.manufacturer || "",
+          brand_name: item.products?.brand_name || "",
         },
         total_pieces: item.quantity || 0,
         unit_price: item.unit_price || 0,
         line_total: item.subtotal || 0,
-        variant_info: item.variant_info || {}
+        variant_info: item.variant_info || {},
       }));
 
       return {
         id: sale.id,
         transaction_number: transactionNumber,
         total_amount: sale.total || 0,
-        payment_method: sale.payment_method || 'cash',
-        status: 'completed', // Assuming all saved sales are completed
+        payment_method: sale.payment_method || "cash",
+        status: "completed", // Assuming all saved sales are completed
         is_pwd_senior: false, // This would need to be added to your sales table if needed
         created_at: sale.created_at,
         sales_items: transformedItems,
@@ -101,7 +109,7 @@ export async function getTransactionHistory(filters = {}) {
         pwd_senior_discount: 0,
         amount_paid: sale.total || 0, // Assuming full payment for now
         change_amount: 0, // Would need to calculate based on actual payment data
-        total_items: totalItems
+        total_items: totalItems,
       };
     });
 
@@ -109,11 +117,12 @@ export async function getTransactionHistory(filters = {}) {
     let filteredTransactions = transactions;
     if (filters.searchTerm && filters.searchTerm.trim()) {
       const searchLower = filters.searchTerm.toLowerCase();
-      filteredTransactions = transactions.filter(transaction => 
-        transaction.transaction_number.toLowerCase().includes(searchLower) ||
-        transaction.sales_items.some(item => 
-          item.product.name.toLowerCase().includes(searchLower)
-        )
+      filteredTransactions = transactions.filter(
+        (transaction) =>
+          transaction.transaction_number.toLowerCase().includes(searchLower) ||
+          transaction.sales_items.some((item) =>
+            item.product.name.toLowerCase().includes(searchLower)
+          )
       );
     }
 
@@ -123,7 +132,6 @@ export async function getTransactionHistory(filters = {}) {
       total: filteredTransactions.length,
       error: null,
     };
-
   } catch (error) {
     console.error("Error fetching transaction history:", error);
     return {
@@ -144,7 +152,8 @@ export async function getTransactionDetails(transactionId) {
   try {
     const { data, error } = await supabase
       .from("sales")
-      .select(`
+      .select(
+        `
         id,
         total,
         payment_method,
@@ -166,7 +175,8 @@ export async function getTransactionDetails(transactionId) {
             sheets_per_box
           )
         )
-      `)
+      `
+      )
       .eq("id", transactionId)
       .single();
 
@@ -181,33 +191,36 @@ export async function getTransactionDetails(transactionId) {
 
     // Transform to expected format (same as in getTransactionHistory)
     const salesItems = data.sale_items || [];
-    const subtotal = salesItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
-    const transactionNumber = `TXN-${data.id.toString().padStart(6, '0')}`;
+    const subtotal = salesItems.reduce(
+      (sum, item) => sum + (item.subtotal || 0),
+      0
+    );
+    const transactionNumber = `TXN-${data.id.toString().padStart(6, "0")}`;
 
     const transformedItems = salesItems.map((item) => ({
       id: item.id,
       product_id: item.products?.id,
       product: {
-        name: item.products?.name || 'Unknown Product',
-        category: item.products?.category || 'Unknown',
-        manufacturer: item.products?.manufacturer || '',
-        brand_name: item.products?.brand_name || '',
+        name: item.products?.name || "Unknown Product",
+        category: item.products?.category || "Unknown",
+        manufacturer: item.products?.manufacturer || "",
+        brand_name: item.products?.brand_name || "",
         price: item.products?.price || 0,
         pieces_per_sheet: item.products?.pieces_per_sheet || 1,
-        sheets_per_box: item.products?.sheets_per_box || 1
+        sheets_per_box: item.products?.sheets_per_box || 1,
       },
       total_pieces: item.quantity || 0,
       unit_price: item.unit_price || 0,
       line_total: item.subtotal || 0,
-      variant_info: item.variant_info || {}
+      variant_info: item.variant_info || {},
     }));
 
     const transaction = {
       id: data.id,
       transaction_number: transactionNumber,
       total_amount: data.total || 0,
-      payment_method: data.payment_method || 'cash',
-      status: 'completed',
+      payment_method: data.payment_method || "cash",
+      status: "completed",
       is_pwd_senior: false,
       created_at: data.created_at,
       sales_items: transformedItems,
@@ -215,7 +228,7 @@ export async function getTransactionDetails(transactionId) {
       discount_amount: 0,
       pwd_senior_discount: 0,
       amount_paid: data.total || 0,
-      change_amount: 0
+      change_amount: 0,
     };
 
     return {
@@ -223,7 +236,6 @@ export async function getTransactionDetails(transactionId) {
       data: transaction,
       error: null,
     };
-
   } catch (error) {
     console.error("Error fetching transaction details:", error);
     return {
@@ -258,12 +270,15 @@ export async function getTransactionStats(filters = {}) {
     if (error) throw error;
 
     const transactions = data || [];
-    const totalRevenue = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
+    const totalRevenue = transactions.reduce(
+      (sum, t) => sum + (t.total || 0),
+      0
+    );
     const totalTransactions = transactions.length;
 
     // Group by payment method
     const paymentMethods = transactions.reduce((acc, t) => {
-      const method = t.payment_method || 'cash';
+      const method = t.payment_method || "cash";
       acc[method] = (acc[method] || 0) + 1;
       return acc;
     }, {});
@@ -273,13 +288,13 @@ export async function getTransactionStats(filters = {}) {
       data: {
         totalRevenue,
         totalTransactions,
-        averageTransaction: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
+        averageTransaction:
+          totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
         paymentMethods,
-        transactions
+        transactions,
       },
       error: null,
     };
-
   } catch (error) {
     console.error("Error fetching transaction stats:", error);
     return {
@@ -289,7 +304,7 @@ export async function getTransactionStats(filters = {}) {
         totalTransactions: 0,
         averageTransaction: 0,
         paymentMethods: {},
-        transactions: []
+        transactions: [],
       },
       error: error.message || "Failed to fetch transaction statistics",
     };
@@ -308,11 +323,10 @@ export async function searchTransactions(searchTerm, filters = {}) {
     const result = await getTransactionHistory({
       ...filters,
       searchTerm,
-      limit: filters.limit || 100
+      limit: filters.limit || 100,
     });
 
     return result;
-
   } catch (error) {
     console.error("Error searching transactions:", error);
     return {
@@ -334,16 +348,15 @@ export async function printReceipt(transactionId) {
     // This would integrate with your actual receipt printer
     // For now, just log the action
     console.log(`🖨️ Printing receipt for transaction ${transactionId}`);
-    
+
     // Simulate printing delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     return {
       success: true,
       message: "Receipt printed successfully",
       error: null,
     };
-    
   } catch (error) {
     console.error("Error printing receipt:", error);
     return {
@@ -360,7 +373,10 @@ export async function printReceipt(transactionId) {
  * @param {string} filename - Output filename
  * @returns {Promise<Object>} Export result
  */
-export async function exportTransactionsToCSV(transactions, filename = 'transactions') {
+export async function exportTransactionsToCSV(
+  transactions,
+  filename = "transactions"
+) {
   try {
     if (!transactions || transactions.length === 0) {
       throw new Error("No transactions to export");
@@ -368,22 +384,22 @@ export async function exportTransactionsToCSV(transactions, filename = 'transact
 
     // Prepare CSV headers
     const headers = [
-      'Transaction Number',
-      'Date',
-      'Time',
-      'Total Amount',
-      'Payment Method',
-      'Status',
-      'Items Count',
-      'Product Names'
+      "Transaction Number",
+      "Date",
+      "Time",
+      "Total Amount",
+      "Payment Method",
+      "Status",
+      "Items Count",
+      "Product Names",
     ];
 
     // Prepare CSV rows
-    const rows = transactions.map(transaction => {
+    const rows = transactions.map((transaction) => {
       const date = new Date(transaction.created_at);
-      const productNames = transaction.sales_items
-        ?.map(item => item.product.name)
-        .join('; ') || '';
+      const productNames =
+        transaction.sales_items?.map((item) => item.product.name).join("; ") ||
+        "";
 
       return [
         transaction.transaction_number,
@@ -393,24 +409,27 @@ export async function exportTransactionsToCSV(transactions, filename = 'transact
         transaction.payment_method,
         transaction.status,
         transaction.sales_items?.length || 0,
-        `"${productNames}"`
+        `"${productNames}"`,
       ];
     });
 
     // Create CSV content
     const csvContent = [headers, ...rows]
-      .map(row => row.join(','))
-      .join('\n');
+      .map((row) => row.join(","))
+      .join("\n");
 
     // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
+
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${filename}_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -420,7 +439,6 @@ export async function exportTransactionsToCSV(transactions, filename = 'transact
       message: "Transactions exported successfully",
       error: null,
     };
-
   } catch (error) {
     console.error("Error exporting transactions:", error);
     return {

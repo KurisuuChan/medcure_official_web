@@ -20,7 +20,7 @@ import {
 // Import real backend hooks
 import { useProducts, useSearchProducts } from "../hooks/useProducts.js";
 import { useCreateSale } from "../hooks/useSales.js";
-import QuantitySelectionModal from "../components/modals/QuantitySelectionModal.jsx";
+import QuantitySelectionModal from "../components/modals/QuantitySelectionModalV2.jsx";
 import PaymentModal from "../components/modals/PaymentModal.jsx";
 import TransactionHistoryModal from "../components/modals/TransactionHistoryModal.jsx";
 import { formatCurrency } from "../utils/formatters.js";

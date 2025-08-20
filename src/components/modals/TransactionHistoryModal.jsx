@@ -18,10 +18,10 @@ import {
   Download,
 } from "lucide-react";
 import { useNotification } from "../../hooks/useNotification.js";
-import { 
-  getTransactionHistory, 
-  printReceipt, 
-  exportTransactionsToCSV 
+import {
+  getTransactionHistory,
+  printReceipt,
+  exportTransactionsToCSV,
 } from "../../services/transactionService.js";
 
 export function TransactionHistoryModal({ isOpen, onClose }) {
@@ -109,7 +109,10 @@ export function TransactionHistoryModal({ isOpen, onClose }) {
         return;
       }
 
-      const result = await exportTransactionsToCSV(transactions, 'transaction_history');
+      const result = await exportTransactionsToCSV(
+        transactions,
+        "transaction_history"
+      );
       if (result.success) {
         addNotification("Transactions exported successfully", "success");
       } else {
