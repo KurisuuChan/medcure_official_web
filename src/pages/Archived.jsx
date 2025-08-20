@@ -404,9 +404,9 @@ export default function Archived() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-6 py-6">
+      <div className="bg-white p-8 rounded-2xl shadow-lg m-6">
+        {/* Header */}
+        <div className="border-b border-gray-200 pb-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center">
@@ -437,24 +437,32 @@ export default function Archived() {
           </div>
 
           {/* Stats Bar */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Package size={20} className="text-gray-600" />
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
+                  <Package size={20} className="text-white" />
+                </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Archived</p>
-                  <p className="text-xl font-semibold text-gray-900">
+                  <p className="text-sm text-indigo-600 font-medium">
+                    Total Archived
+                  </p>
+                  <p className="text-2xl font-bold text-indigo-900">
                     {filteredItems.length}
                   </p>
                 </div>
               </div>
             </div>
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Calendar size={20} className="text-blue-600" />
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Calendar size={20} className="text-white" />
+                </div>
                 <div>
-                  <p className="text-sm text-blue-600">This Month</p>
-                  <p className="text-xl font-semibold text-blue-900">
+                  <p className="text-sm text-blue-600 font-medium">
+                    This Month
+                  </p>
+                  <p className="text-2xl font-bold text-blue-900">
                     {
                       filteredItems.filter((item) => {
                         const archiveDate = new Date(item.archived_date);
@@ -466,12 +474,16 @@ export default function Archived() {
                 </div>
               </div>
             </div>
-            <div className="bg-red-50 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Clock size={20} className="text-red-600" />
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center">
+                  <Clock size={20} className="text-white" />
+                </div>
                 <div>
-                  <p className="text-sm text-red-600">Expired Items</p>
-                  <p className="text-xl font-semibold text-red-900">
+                  <p className="text-sm text-amber-600 font-medium">
+                    Expired Items
+                  </p>
+                  <p className="text-2xl font-bold text-amber-900">
                     {
                       archivedItems.filter((item) => {
                         const reason = item.reason?.toLowerCase() || "";

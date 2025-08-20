@@ -217,149 +217,151 @@ export default function Contacts() {
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-blue-100">
-            <Users size={32} className="text-blue-600" />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-lg bg-blue-100">
+              <Users size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                Contacts Directory
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Manage suppliers and employee information
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">
-              Contacts Directory
-            </h1>
-            <p className="text-gray-500 mt-1">
-              Manage suppliers and employee information
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-full">
+            <button
+              onClick={() => setActiveTab("Suppliers")}
+              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+                activeTab === "Suppliers"
+                  ? "bg-blue-600 text-white shadow"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              <Building2 size={16} className="inline mr-2" />
+              Suppliers
+            </button>
+            <button
+              onClick={() => setActiveTab("Employees")}
+              className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+                activeTab === "Employees"
+                  ? "bg-blue-600 text-white shadow"
+                  : "text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              <Users size={16} className="inline mr-2" />
+              Employees
+            </button>
+          </div>
+
+          {/* Search and Actions */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search contacts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <Filter size={16} />
+              Filters
+            </button>
+            <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow">
+              <Plus size={18} />
+              {addButtonText}
+            </button>
+          </div>
+        </div>
+
+        {/* Statistics Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Building2 size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-blue-600">Total Suppliers</p>
+                <p className="text-2xl font-bold text-blue-800">
+                  {suppliers.length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Users size={20} className="text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-green-600">Total Employees</p>
+                <p className="text-2xl font-bold text-green-800">
+                  {employees.length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Phone size={20} className="text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-purple-600">Active Contacts</p>
+                <p className="text-2xl font-bold text-purple-800">
+                  {suppliers.length + employees.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Cards Grid */}
+        {filteredData.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+              {filteredData.map((contact, index) => (
+                <ContactCard key={`${activeTab}-${index}`} contact={contact} />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="mt-8 flex justify-center">
+              <Pagination />
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <Users size={48} className="mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              No contacts found
+            </h3>
+            <p className="text-gray-500 mb-6">
+              Try adjusting your search or add a new contact
             </p>
+            <button className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <Plus size={16} />
+              {addButtonText}
+            </button>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* Controls */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-8">
-        {/* Tabs */}
-        <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-full">
-          <button
-            onClick={() => setActiveTab("Suppliers")}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-              activeTab === "Suppliers"
-                ? "bg-blue-600 text-white shadow"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            <Building2 size={16} className="inline mr-2" />
-            Suppliers
-          </button>
-          <button
-            onClick={() => setActiveTab("Employees")}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-              activeTab === "Employees"
-                ? "bg-blue-600 text-white shadow"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            <Users size={16} className="inline mr-2" />
-            Employees
-          </button>
-        </div>
-
-        {/* Search and Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={16}
-            />
-            <input
-              type="text"
-              placeholder="Search contacts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <button className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            <Filter size={16} />
-            Filters
-          </button>
-          <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow">
-            <Plus size={18} />
-            {addButtonText}
-          </button>
-        </div>
-      </div>
-
-      {/* Statistics Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Building2 size={20} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-blue-600">Total Suppliers</p>
-              <p className="text-2xl font-bold text-blue-800">
-                {suppliers.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Users size={20} className="text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-green-600">Total Employees</p>
-              <p className="text-2xl font-bold text-green-800">
-                {employees.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Phone size={20} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-purple-600">Active Contacts</p>
-              <p className="text-2xl font-bold text-purple-800">
-                {suppliers.length + employees.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contact Cards Grid */}
-      {filteredData.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-            {filteredData.map((contact, index) => (
-              <ContactCard key={`${activeTab}-${index}`} contact={contact} />
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <div className="mt-8 flex justify-center">
-            <Pagination />
-          </div>
-        </>
-      ) : (
-        <div className="text-center py-12">
-          <Users size={48} className="mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">
-            No contacts found
-          </h3>
-          <p className="text-gray-500 mb-6">
-            Try adjusting your search or add a new contact
-          </p>
-          <button className="flex items-center gap-2 mx-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Plus size={16} />
-            {addButtonText}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
