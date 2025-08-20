@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Loader,
   Eye,
+  ShoppingCart,
+  RotateCcw,
 } from "lucide-react";
 
 // Import real backend hooks and components
@@ -30,6 +32,8 @@ import ImportModal from "../components/modals/ImportModal.jsx";
 import ExportModal from "../components/ExportModal.jsx";
 import ArchiveReasonModal from "../components/modals/ArchiveReasonModal.jsx";
 import ViewProductModal from "../components/modals/ViewProductModal.jsx";
+import BulkStockUpdateModal from "../components/modals/BulkStockUpdateModal.jsx";
+import StockReorderSuggestions from "../components/modals/StockReorderSuggestions.jsx";
 import { formatCurrency, formatStockStatus } from "../utils/formatters.js";
 import { useNotification } from "../hooks/useNotification.js";
 
@@ -46,6 +50,8 @@ export default function Management() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingProduct, setViewingProduct] = useState(null);
+  const [showBulkStockModal, setShowBulkStockModal] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
   // Handle viewing product
   const handleViewProduct = (product) => {
     setViewingProduct(product);
@@ -183,6 +189,29 @@ export default function Management() {
     }
   };
 
+  // Handle bulk stock update
+  const handleBulkStockUpdate = () => {
+    if (selectedItems.length === 0) {
+      addNotification("Please select products to update stock", "warning");
+      return;
+    }
+    setShowBulkStockModal(true);
+  };
+
+  // Handle reorder suggestions
+  const handleReorderSuggestions = () => {
+    const lowStockProducts = products.filter(
+      (product) => product.total_stock <= (product.low_stock_threshold || 10)
+    );
+
+    if (lowStockProducts.length === 0) {
+      addNotification("All products have adequate stock levels", "info");
+      return;
+    }
+
+    setShowReorderModal(true);
+  };
+
   // Handle export - open export modal
   const handleExport = () => {
     setShowExportModal(true);
@@ -226,6 +255,15 @@ export default function Management() {
               </p>
             </div>
           </div>
+
+          {/* Smart Analytics Button */}
+          <button
+            onClick={handleReorderSuggestions}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors"
+          >
+            <ShoppingCart size={18} />
+            <span className="font-medium">Smart Reorder</span>
+          </button>
         </div>
 
         {/* Action Bar */}
@@ -234,6 +272,13 @@ export default function Management() {
             <p className="font-semibold text-blue-800 flex-grow">
               {selectedItems.length} selected
             </p>
+            <button
+              onClick={handleBulkStockUpdate}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 text-sm"
+            >
+              <RotateCcw size={16} />
+              Update Stock
+            </button>
             <button
               onClick={handleBulkArchive}
               disabled={archiveProduct.isPending}
@@ -623,6 +668,24 @@ export default function Management() {
             category: "Multiple Categories",
           }}
           isLoading={archiveProduct.isPending}
+        />
+
+        {/* New Bulk Stock Features */}
+        <BulkStockUpdateModal
+          isOpen={showBulkStockModal}
+          onClose={() => setShowBulkStockModal(false)}
+          products={products.filter((p) => selectedItems.includes(p.id))}
+          onUpdateSuccess={() => {
+            // Refresh products data
+            refetch();
+            setSelectedItems([]);
+          }}
+        />
+
+        <StockReorderSuggestions
+          isOpen={showReorderModal}
+          onClose={() => setShowReorderModal(false)}
+          products={products}
         />
       </div>
     </div>

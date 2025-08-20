@@ -666,45 +666,187 @@ export default function Settings() {
                         </option>
                       </select>
                     </div>
+                  </div>
 
-                    {/* Low Stock Threshold */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Low Stock Threshold
-                      </label>
-                      <input
-                        type="number"
-                        value={appSettings.low_stock_threshold}
-                        onChange={(e) =>
-                          handleAppSettingUpdate(
-                            "low_stock_threshold",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        min="1"
-                        max="100"
-                      />
+                  {/* Inventory Alert Settings */}
+                  <div className="mt-8">
+                    <h3 className="text-lg font-medium text-gray-800 mb-4">
+                      📦 Inventory Alert Settings
+                    </h3>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle
+                          size={20}
+                          className="text-blue-600 mt-1 flex-shrink-0"
+                        />
+                        <div>
+                          <h4 className="font-medium text-blue-800 mb-1">
+                            Smart Threshold Management
+                          </h4>
+                          <p className="text-sm text-blue-700">
+                            Configure when to receive low stock alerts. Lower
+                            thresholds reduce false alerts for smaller
+                            pharmacies.
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Expiry Warning Days */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expiry Warning (Days)
-                      </label>
-                      <input
-                        type="number"
-                        value={appSettings.expiry_warning_days}
-                        onChange={(e) =>
-                          handleAppSettingUpdate(
-                            "expiry_warning_days",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        min="1"
-                        max="365"
-                      />
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Low Stock Threshold */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Low Stock Alert Threshold
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={appSettings.low_stock_threshold}
+                            onChange={(e) =>
+                              handleAppSettingUpdate(
+                                "low_stock_threshold",
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            min="1"
+                            max="100"
+                          />
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                            units
+                          </span>
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-gray-600">
+                            Alert when stock falls to or below this level
+                          </p>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-orange-600">
+                              💡 Recommendation:
+                            </span>
+                            <span className="text-gray-600">
+                              {appSettings.low_stock_threshold <= 3
+                                ? "Good for small pharmacy"
+                                : appSettings.low_stock_threshold <= 7
+                                ? "Balanced for medium pharmacy"
+                                : "High threshold - may cause frequent alerts"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expiry Warning Days */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Expiry Warning Period
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={appSettings.expiry_warning_days}
+                            onChange={(e) =>
+                              handleAppSettingUpdate(
+                                "expiry_warning_days",
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            min="1"
+                            max="365"
+                          />
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                            days
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          Alert when products expire within this timeframe
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Options */}
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">
+                        Quick Presets for Different Pharmacy Sizes:
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button
+                          onClick={() => {
+                            handleAppSettingUpdate("low_stock_threshold", 2);
+                            handleAppSettingUpdate("expiry_warning_days", 14);
+                          }}
+                          className="p-3 text-left border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+                        >
+                          <div className="font-medium text-green-800 text-sm">
+                            Small Pharmacy
+                          </div>
+                          <div className="text-xs text-green-600 mt-1">
+                            2 units threshold • 14 days expiry warning
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            handleAppSettingUpdate("low_stock_threshold", 5);
+                            handleAppSettingUpdate("expiry_warning_days", 30);
+                          }}
+                          className="p-3 text-left border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          <div className="font-medium text-blue-800 text-sm">
+                            Medium Pharmacy
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            5 units threshold • 30 days expiry warning
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            handleAppSettingUpdate("low_stock_threshold", 10);
+                            handleAppSettingUpdate("expiry_warning_days", 60);
+                          }}
+                          className="p-3 text-left border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                        >
+                          <div className="font-medium text-purple-800 text-sm">
+                            Large Pharmacy
+                          </div>
+                          <div className="text-xs text-purple-600 mt-1">
+                            10 units threshold • 60 days expiry warning
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Impact Preview */}
+                    <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Current Settings Impact:
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">
+                            Low Stock Alerts:
+                          </span>
+                          <span
+                            className={`ml-2 font-medium ${
+                              appSettings.low_stock_threshold <= 3
+                                ? "text-green-600"
+                                : appSettings.low_stock_threshold <= 7
+                                ? "text-blue-600"
+                                : "text-orange-600"
+                            }`}
+                          >
+                            When ≤ {appSettings.low_stock_threshold} units
+                            remaining
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Expiry Alerts:</span>
+                          <span className="ml-2 font-medium text-purple-600">
+                            {appSettings.expiry_warning_days} days before expiry
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
