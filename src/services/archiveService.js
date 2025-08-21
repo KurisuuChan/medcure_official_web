@@ -154,7 +154,15 @@ export async function getArchivedProducts() {
       (product) => product.is_archived === true || product.archived_at !== null
     );
 
-    return validArchivedProducts;
+    // Map archive_reason to reason for compatibility with frontend
+    const mappedProducts = validArchivedProducts.map(product => ({
+      ...product,
+      reason: product.archive_reason || product.reason, // Map archive_reason to reason
+      archivedBy: product.archived_by, // Also map archived_by for consistency
+      archivedDate: product.archived_date // Map archived_date for consistency
+    }));
+
+    return mappedProducts;
   } catch (error) {
     console.error("Error fetching archived products:", error);
     throw new Error(`Failed to fetch archived products: ${error.message}`);
@@ -365,7 +373,15 @@ export async function searchArchivedProducts(searchTerm) {
       throw new Error(`Failed to search archived products: ${error.message}`);
     }
 
-    return results || [];
+    // Map archive_reason to reason for consistency with frontend
+    const mappedResults = (results || []).map(product => ({
+      ...product,
+      reason: product.archive_reason || product.reason, // Map archive_reason to reason
+      archivedBy: product.archived_by, // Also map archived_by for consistency
+      archivedDate: product.archived_date // Map archived_date for consistency
+    }));
+
+    return mappedResults;
   } catch (error) {
     console.error("Error searching archived products:", error);
     throw new Error(`Failed to search archived products: ${error.message}`);
