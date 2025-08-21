@@ -32,6 +32,18 @@ export function QuantitySelectionModal({
   // Reset when product changes or modal opens
   useEffect(() => {
     if (isOpen && product) {
+      console.log("=== QUANTITY MODAL DEBUG ===");
+      console.log("Modal opened with product:", product);
+      console.log("Product fields:");
+      console.log("- name:", product.name);
+      console.log("- pieces_per_sheet:", product.pieces_per_sheet);
+      console.log("- sheets_per_box:", product.sheets_per_box);
+      console.log("- total_stock:", product.total_stock);
+      console.log("- stock:", product.stock);
+      console.log("- price:", product.price);
+      console.log("- selling_price:", product.selling_price);
+      console.log("=== END MODAL DEBUG ===");
+
       // Use initial quantity if provided, otherwise start fresh
       if (initialQuantity) {
         setQuantityMode({

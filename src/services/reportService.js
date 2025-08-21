@@ -216,21 +216,40 @@ export async function generateSalesReport(options = {}) {
 
     // Add hourly data if requested
     if (includeHourlyData && sales.length > 0) {
-      // Get hourly data for the most recent day with sales
-      const latestSaleDate = new Date(
-        Math.max(...sales.map((s) => new Date(s.created_at)))
-      );
-      const hourlyData = await getSalesByHour(latestSaleDate.toISOString());
-      reportData.hourlyData = {
-        date: latestSaleDate.toDateString(),
-        breakdown: hourlyData,
-      };
+      try {
+        // Get hourly data for the most recent day with sales
+        const latestSaleDate = new Date(
+          Math.max(...sales.map((s) => new Date(s.created_at)))
+        );
+        const hourlyData = await getSalesByHour(latestSaleDate.toISOString());
+        reportData.hourlyData = {
+          date: latestSaleDate.toDateString(),
+          breakdown: hourlyData,
+        };
+      } catch (hourlyError) {
+        console.warn(
+          "Failed to get hourly data, skipping:",
+          hourlyError.message
+        );
+        reportData.hourlyData = {
+          date: new Date().toDateString(),
+          breakdown: [],
+        };
+      }
     }
 
     // Add category breakdown if requested
     if (includeCategoryData) {
-      const categoryData = await getSalesByCategory(filters);
-      reportData.categoryBreakdown = categoryData;
+      try {
+        const categoryData = await getSalesByCategory(filters);
+        reportData.categoryBreakdown = categoryData;
+      } catch (categoryError) {
+        console.warn(
+          "Failed to get category data, skipping:",
+          categoryError.message
+        );
+        reportData.categoryBreakdown = [];
+      }
     }
 
     // Add top products if requested

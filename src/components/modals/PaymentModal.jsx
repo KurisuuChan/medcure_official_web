@@ -156,15 +156,15 @@ export function PaymentModal({
                 <span className="font-medium">Cash</span>
               </button>
               <button
-                onClick={() => setPaymentMethod("card")}
+                onClick={() => setPaymentMethod("gcash")}
                 className={`p-3 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                  paymentMethod === "card"
+                  paymentMethod === "gcash"
                     ? "border-blue-500 bg-blue-50 text-blue-700"
                     : "border-gray-300 hover:bg-gray-50"
                 }`}
               >
                 <CreditCard size={20} />
-                <span className="font-medium">Card</span>
+                <span className="font-medium">GCash</span>
               </button>
             </div>
           </div>

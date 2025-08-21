@@ -49,6 +49,17 @@ export default function POS() {
   // Use search results if searching, otherwise use all products
   const displayProducts = searchTerm.length >= 2 ? searchResults : allProducts;
 
+  // Debug logging for data fetching issues
+  console.log("=== POS DEBUG INFO ===");
+  console.log("Products loading:", productsLoading);
+  console.log("Products error:", productsError);
+  console.log("All products count:", allProducts?.length || 0);
+  console.log("Search results count:", searchResults?.length || 0);
+  console.log("Display products count:", displayProducts?.length || 0);
+  console.log("Search term:", searchTerm);
+  console.log("Sample product data:", allProducts?.[0]);
+  console.log("=== END DEBUG ===");
+
   // Add missing quantity state for modal
   const [quantityMode, setQuantityMode] = useState({
     boxes: 0,
@@ -661,19 +672,21 @@ export default function POS() {
               </div>
             </div>
 
-            {/* Checkout Button */}
-            <button
-              onClick={handleCheckout}
-              disabled={cart.length === 0}
-              className={`w-full flex items-center justify-center gap-2 py-4 rounded-lg font-semibold text-lg transition-all ${
-                cart.length > 0
-                  ? "bg-green-600 text-white hover:bg-green-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              <CheckCircle size={20} />
-              Complete Sale - {formatCurrency(total)}
-            </button>
+            {/* Checkout Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={handleCheckout}
+                disabled={cart.length === 0}
+                className={`w-full flex items-center justify-center gap-2 py-4 rounded-lg font-semibold text-lg transition-all ${
+                  cart.length > 0
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                <CheckCircle size={20} />
+                Proceed to Checkout - {formatCurrency(total)}
+              </button>
+            </div>
 
             {cart.length > 0 && (
               <div className="space-y-2">

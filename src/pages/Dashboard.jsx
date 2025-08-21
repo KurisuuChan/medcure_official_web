@@ -281,17 +281,19 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <div className="font-semibold text-gray-800 text-sm">
-                          {sale.product}
+                          Sale #{sale.id} ({sale.payment_method || "Cash"})
                         </div>
-                        <div className="text-xs text-gray-500">{sale.time}</div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(sale.created_at).toLocaleString()}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-gray-800">
-                        ₱{sale.price.toFixed(2)}
+                        ₱{(sale.total || 0).toFixed(2)}
                       </div>
                       <div className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-md">
-                        Qty: {sale.qty}
+                        Items: {sale.itemCount || 0}
                       </div>
                     </div>
                   </div>

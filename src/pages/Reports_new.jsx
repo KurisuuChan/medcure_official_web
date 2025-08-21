@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useReports } from "../hooks/useReports.js";
 import ReportViewer from "../components/ReportViewer.jsx";
+
 import {
   exportInventoryCSV,
   exportSalesCSV,
@@ -172,6 +173,8 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {/* Connection Test Panel */}
 
       {/* Controls Panel */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

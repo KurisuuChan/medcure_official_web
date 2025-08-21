@@ -54,7 +54,7 @@ const TransactionHistoryModal = ({ isOpen, onClose }) => {
               { name: "Cough Syrup", quantity: 1, price: 35.0 },
             ],
             total: 47.0,
-            paymentMethod: "Card",
+            paymentMethod: "GCash",
             cashier: "Jane Smith",
             customer: "Maria Santos",
             status: "completed",

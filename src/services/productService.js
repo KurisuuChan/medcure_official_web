@@ -6,17 +6,54 @@ import { supabase } from "../config/supabase.js";
  */
 
 /**
- * Fetch all products using enhanced database view
+ * Fetch all products using enhanced database view with fallback
  * @returns {Promise<Array>} Array of enhanced product objects
  */
 export async function getProducts() {
   try {
-    const { data, error } = await supabase
+    // Try to use products_enhanced view first
+    let { data, error } = await supabase
       .from("products_enhanced")
       .select("*")
       .order("name", { ascending: true });
 
-    if (error) throw error;
+    // If products_enhanced doesn't exist, fallback to products table
+    if (error && error.message?.includes("products_enhanced")) {
+      console.warn(
+        "products_enhanced view not found, falling back to products table"
+      );
+
+      const fallbackResult = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (fallbackResult.error) throw fallbackResult.error;
+
+      // Add calculated fields that would normally come from products_enhanced view
+      data = (fallbackResult.data || []).map((product) => ({
+        ...product,
+        stock_status:
+          product.stock <= 0
+            ? "Out of Stock"
+            : product.stock <= (product.reorder_level || 10)
+            ? "Low Stock"
+            : "In Stock",
+        current_stock: product.stock || product.total_stock || 0,
+        total_stock: product.total_stock || product.stock || 0,
+        expiry_status: !product.expiry_date
+          ? "No Expiry Data"
+          : new Date(product.expiry_date) <= new Date()
+          ? "Expired"
+          : new Date(product.expiry_date) <=
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          ? "Expiring Soon"
+          : "Good",
+      }));
+    } else if (error) {
+      throw error;
+    }
 
     // Products now come with calculated fields from the database view
     // No need for frontend manipulation - data integrity handled by DB
@@ -438,3 +475,41 @@ export const SORT_OPTIONS = {
   PRICE_DESC: "price_desc",
   STOCK: "stock",
 };
+
+// Get total product count
+export async function getProductCount() {
+  try {
+    const { count, error } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true);
+
+    if (error) throw error;
+    return count || 0;
+  } catch (error) {
+    console.error("Error fetching product count:", error);
+    throw error;
+  }
+}
+
+// Get products expiring soon (within 30 days)
+export async function getExpiringSoonProducts(days = 30) {
+  try {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + days);
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, expiry_date, stock, total_stock, reorder_level")
+      .eq("is_active", true)
+      .not("expiry_date", "is", null)
+      .lte("expiry_date", futureDate.toISOString())
+      .order("expiry_date", { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching expiring products:", error);
+    throw error;
+  }
+}

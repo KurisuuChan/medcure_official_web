@@ -22,9 +22,7 @@ export const PRODUCT_CATEGORIES = [
 // Payment methods
 export const PAYMENT_METHODS = [
   { value: "cash", label: "Cash" },
-  { value: "card", label: "Credit/Debit Card" },
-  { value: "digital", label: "Digital Payment" },
-  { value: "check", label: "Check" },
+  { value: "gcash", label: "GCash" },
 ];
 
 // Stock thresholds
