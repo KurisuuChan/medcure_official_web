@@ -155,11 +155,11 @@ export async function getArchivedProducts() {
     );
 
     // Map archive_reason to reason for compatibility with frontend
-    const mappedProducts = validArchivedProducts.map(product => ({
+    const mappedProducts = validArchivedProducts.map((product) => ({
       ...product,
       reason: product.archive_reason || product.reason, // Map archive_reason to reason
       archivedBy: product.archived_by, // Also map archived_by for consistency
-      archivedDate: product.archived_date // Map archived_date for consistency
+      archivedDate: product.archived_date, // Map archived_date for consistency
     }));
 
     return mappedProducts;
@@ -374,11 +374,11 @@ export async function searchArchivedProducts(searchTerm) {
     }
 
     // Map archive_reason to reason for consistency with frontend
-    const mappedResults = (results || []).map(product => ({
+    const mappedResults = (results || []).map((product) => ({
       ...product,
       reason: product.archive_reason || product.reason, // Map archive_reason to reason
       archivedBy: product.archived_by, // Also map archived_by for consistency
-      archivedDate: product.archived_date // Map archived_date for consistency
+      archivedDate: product.archived_date, // Map archived_date for consistency
     }));
 
     return mappedResults;
