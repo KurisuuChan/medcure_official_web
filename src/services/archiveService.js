@@ -142,7 +142,7 @@ export async function getArchivedProducts() {
     const { data: archivedProducts, error } = await supabase
       .from("products")
       .select("*")
-      .or("is_archived.eq.true,archived_at.not.is.null")
+      .eq("is_archived", true)
       .order("archived_date", { ascending: false, nullsLast: true });
 
     if (error) {
@@ -151,7 +151,7 @@ export async function getArchivedProducts() {
 
     // Filter and ensure we only return actually archived products
     const validArchivedProducts = (archivedProducts || []).filter(
-      (product) => product.is_archived === true || product.archived_at !== null
+      (product) => product.is_archived === true
     );
 
     // Map archive_reason to reason for compatibility with frontend
@@ -180,12 +180,12 @@ export async function permanentlyDeleteProduct(
   deletedBy = "System"
 ) {
   try {
-    // Check if product exists and is archived (using both conditions for compatibility)
+    // Check if product exists and is archived
     const { data: existingProduct, error: checkError } = await supabase
       .from("products")
       .select("*")
       .eq("id", productId)
-      .or("is_archived.eq.true,archived_at.not.is.null")
+      .eq("is_archived", true)
       .single();
 
     if (checkError) {
@@ -255,9 +255,9 @@ export async function bulkPermanentlyDeleteProducts(
     // First, fetch all products to be deleted for validation and logging
     const { data: productsToDelete, error: fetchError } = await supabase
       .from("products")
-      .select("id, name, category, archived_date, is_archived, archived_at")
+      .select("id, name, category, archived_date, is_archived")
       .in("id", productIds)
-      .or("is_archived.eq.true,archived_at.not.is.null");
+      .eq("is_archived", true);
 
     if (fetchError) {
       throw new Error(

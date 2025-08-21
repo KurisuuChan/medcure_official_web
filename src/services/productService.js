@@ -11,10 +11,11 @@ import { supabase } from "../config/supabase.js";
  */
 export async function getProducts() {
   try {
-    // Try to use products_enhanced view first
+    // Try to use products_enhanced view first (should already filter non-archived)
     let { data, error } = await supabase
       .from("products_enhanced")
       .select("*")
+      .eq("is_archived", false)
       .order("name", { ascending: true });
 
     // If products_enhanced doesn't exist, fallback to products table
@@ -26,7 +27,7 @@ export async function getProducts() {
       const fallbackResult = await supabase
         .from("products")
         .select("*")
-        .eq("is_active", true)
+        .eq("is_archived", false)
         .order("name", { ascending: true });
 
       if (fallbackResult.error) throw fallbackResult.error;
@@ -482,7 +483,7 @@ export async function getProductCount() {
     const { count, error } = await supabase
       .from("products")
       .select("*", { count: "exact", head: true })
-      .eq("is_active", true);
+      .eq("is_archived", false);
 
     if (error) throw error;
     return count || 0;
@@ -501,7 +502,7 @@ export async function getExpiringSoonProducts(days = 30) {
     const { data, error } = await supabase
       .from("products")
       .select("id, name, expiry_date, stock, total_stock, reorder_level")
-      .eq("is_active", true)
+      .eq("is_archived", false)
       .not("expiry_date", "is", null)
       .lte("expiry_date", futureDate.toISOString())
       .order("expiry_date", { ascending: true });
