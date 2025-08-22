@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import PropTypes from "prop-types";
 import { useNotification } from "@/hooks/useNotification";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useSimpleNotifications as useNotifications } from "@/hooks/useSimpleNotifications";
 
 export default function Header({ onLogout, user }) {
   const navigate = useNavigate();
