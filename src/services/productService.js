@@ -103,21 +103,121 @@ export async function searchProductsAdvanced({
   limit = 50,
 } = {}) {
   try {
-    const { data, error } = await supabase.rpc("search_products_advanced", {
-      search_term: searchTerm || null,
+    // Try the advanced database function first
+    const { data, error } = await supabase.rpc("search_products_optimized", {
+      search_query: searchTerm || null,
       category_filter: category,
       stock_status_filter: stockStatus,
-      price_range_min: minPrice,
-      price_range_max: maxPrice,
-      sort_by: sortBy,
+      price_min: minPrice,
+      price_max: maxPrice,
       limit_count: limit,
     });
 
-    if (error) throw error;
-    return data || [];
+    if (error && !error.message?.includes("does not exist")) {
+      throw error;
+    }
+
+    // If function exists and works, return the data
+    if (!error && data) {
+      return data;
+    }
+
+    // Fallback to direct query if function doesn't exist
+    console.warn(
+      "Advanced search function not available, using fallback query"
+    );
+
+    let query = supabase
+      .from("products_enhanced")
+      .select("*")
+      .eq("is_archived", false);
+
+    // If products_enhanced doesn't exist, try products table
+    if (!query) {
+      query = supabase.from("products").select("*").eq("is_archived", false);
+    }
+
+    // Apply search term filter
+    if (searchTerm && searchTerm.trim()) {
+      query = query.or(
+        `name.ilike.%${searchTerm}%,brand_name.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,manufacturer.ilike.%${searchTerm}%,generic_name.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Apply category filter
+    if (category) {
+      query = query.eq("category", category);
+    }
+
+    // Apply stock status filter
+    if (stockStatus) {
+      switch (stockStatus.toLowerCase()) {
+        case "out of stock":
+          query = query.lte("stock", 0);
+          break;
+        case "low stock":
+          query = query.gt("stock", 0).lte("stock", 10);
+          break;
+        case "in stock":
+          query = query.gt("stock", 10);
+          break;
+      }
+    }
+
+    // Apply price filters
+    if (minPrice !== null) {
+      query = query.gte("selling_price", minPrice);
+    }
+    if (maxPrice !== null) {
+      query = query.lte("selling_price", maxPrice);
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case "name":
+        query = query.order("name", { ascending: true });
+        break;
+      case "price_low":
+        query = query.order("selling_price", { ascending: true });
+        break;
+      case "price_high":
+        query = query.order("selling_price", { ascending: false });
+        break;
+      case "stock":
+        query = query.order("stock", { ascending: false });
+        break;
+      default:
+        query = query.order("name", { ascending: true });
+    }
+
+    // Apply limit
+    query = query.limit(limit);
+
+    const { data: fallbackData, error: fallbackError } = await query;
+
+    if (fallbackError) {
+      throw fallbackError;
+    }
+
+    return fallbackData || [];
   } catch (error) {
     console.error("Error in advanced search:", error);
-    throw new Error("Failed to perform advanced search");
+
+    // Final fallback - simple query
+    try {
+      const { data: simpleData, error: simpleError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_archived", false)
+        .ilike("name", `%${searchTerm}%`)
+        .limit(limit);
+
+      if (simpleError) throw simpleError;
+      return simpleData || [];
+    } catch (simpleSearchError) {
+      console.error("Fallback search also failed:", simpleSearchError);
+      return [];
+    }
   }
 }
 

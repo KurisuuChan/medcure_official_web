@@ -1,0 +1,102 @@
+name,category,price,cost_price,stock,pieces_per_sheet,sheets_per_box,description,manufacturer
+Solmux Carbocisteine 500mg,Respiratory,9.50,7.20,180,10,10,For cough with phlegm,Unilab
+Bioflu Tablet,Respiratory,6.75,5.10,300,10,10,For flu and common cold symptoms,Unilab
+Medicol Advance 400mg,Analgesic,12.00,9.50,150,10,10,For strong pain relief,Unilab
+Tuseran Forte,Respiratory,8.25,6.50,220,10,10,For cough and cold,Unilab
+Enervon C Tablet,Supplement,5.50,4.20,500,10,10,Multivitamins for energy and immunity,Unilab
+Myra E 400IU,Supplement,14.00,11.50,180,10,10,Vitamin E supplement for skin health,Unilab
+Ceelin Plus Syrup 120ml,Supplement,135.00,110.00,80,1,1,Vitamin C with Zinc for kids,Unilab
+Advil Softgel Capsule,Analgesic,15.00,12.00,120,10,5,Fast-acting pain reliever,Pfizer
+Robitussin DM Syrup 60ml,Respiratory,150.00,125.00,70,1,1,Cough suppressant and expectorant,Pfizer
+Caltrate Plus Tablet,Supplement,8.00,6.50,250,10,10,Calcium supplement with Vitamin D,Pfizer
+Stresstabs Multivitamins,Supplement,7.50,6.00,300,10,10,For stress and immunity,Pfizer
+Ponstan 500mg,Analgesic,25.00,20.00,100,10,10,For menstrual pain and other aches,Pfizer
+Mucosolvan 30mg,Respiratory,11.00,8.80,160,10,10,Ambroxol for cough relief,Sanofi
+Dulcolax Tablet,Digestive,15.00,12.50,90,10,3,For constipation relief,Sanofi
+Essentiale Forte N,Digestive,22.00,18.00,110,10,5,For liver health,Sanofi
+Buscopan Venus,Analgesic,18.00,15.00,130,10,10,For abdominal pain and cramps,Sanofi
+Pharmaton Capsules,Supplement,16.00,13.50,140,10,10,Multivitamins with Ginseng,Sanofi
+Berocca Performance,Supplement,20.00,17.00,150,1,15,Effervescent multivitamin for energy,Bayer
+Saridon Triple Action,Analgesic,5.00,3.80,400,10,10,For headache and pain relief,Bayer
+Canesten Cream 10g,Dermatological,250.00,210.00,60,1,1,Antifungal cream,Bayer
+Claritin 10mg,Antihistamine,35.00,28.00,100,10,10,Non-drowsy allergy relief,Bayer
+Restor-F,Supplement,9.00,7.20,200,10,10,Iron supplement for anemia,Pascual Laboratories
+Poten-Cee Forte 1000mg,Supplement,10.00,8.00,300,10,10,High-dose Vitamin C,Pascual Laboratories
+OraCare Mouthwash 250ml,Dental,120.00,95.00,90,1,1,Alcohol-free mouthwash,Pascual Laboratories
+Cataflam 50mg,Anti-inflammatory,28.00,22.50,80,10,10,For pain and inflammation,Novartis
+Volfenac Gel 20g,Anti-inflammatory,180.00,150.00,70,1,1,Topical pain relief gel,Novartis
+Diovan 80mg,Cardiovascular,45.00,38.00,60,10,10,For hypertension,Novartis
+Tempra Syrup 120ml,Analgesic,110.00,90.00,100,1,1,Paracetamol for kids,United Laboratories
+Ambroxol 30mg Tablet,Respiratory,7.50,5.80,250,10,10,Expectorant for cough,United Laboratories
+Loperamide 2mg Capsule,Digestive,6.00,4.50,180,10,10,Anti-diarrhea medication,United Laboratories
+Mefenamic Acid 500mg,Analgesic,4.50,3.20,300,10,10,Generic pain reliever,United Laboratories
+Naproxen Sodium 550mg,Anti-inflammatory,15.00,12.00,100,10,10,For arthritis and pain,United Laboratories
+Gaviscon Double Action,Digestive,25.00,20.00,120,1,10,For heartburn and indigestion,Reckitt
+Strepsils Lozenges,Respiratory,10.00,7.50,500,8,2,Sore throat lozenges,Reckitt
+Bonamin (Meclizine) 25mg,Antihistamine,12.00,9.50,150,10,10,For motion sickness and dizziness,Johnson & Johnson
+Sinutab Extra Strength,Respiratory,9.00,7.00,200,10,10,For sinus congestion and pain,Johnson & Johnson
+Benadryl AH Syrup 60ml,Antihistamine,160.00,130.00,80,1,1,For allergy and itch relief,Johnson & Johnson
+Calpol 250mg/5ml Syrup,Analgesic,125.00,100.00,90,1,1,Paracetamol syrup for children,GlaxoSmithKline
+Sensodyne Toothpaste Fresh Mint,Dental,150.00,120.00,100,1,1,Toothpaste for sensitive teeth,GlaxoSmithKline
+Polident Denture Cleanser,Dental,200.00,160.00,70,1,1,For cleaning dentures,GlaxoSmithKline
+Co-Amoxiclav 625mg,Antibiotic,25.00,20.00,120,7,2,Broad-spectrum antibiotic with clavulanate,Generic
+Azithromycin 500mg,Antibiotic,40.00,32.00,100,3,1,Antibiotic for bacterial infections,Generic
+Ciprofloxacin 500mg,Antibiotic,15.00,12.00,150,10,10,Antibiotic for various infections,Generic
+Simvastatin 20mg,Cardiovascular,10.00,7.50,200,10,10,For lowering cholesterol,Generic
+Omeprazole 20mg,Digestive,8.00,6.00,180,14,2,For acid reflux and ulcers,Generic
+Salbutamol Nebule 2.5mg,Respiratory,15.00,12.00,300,5,6,For nebulizers in asthma treatment,Generic
+Cetaphil Gentle Skin Cleanser,Dermatological,350.00,280.00,80,1,1,Mild cleanser for sensitive skin,Galderma
+Betnovate Cream 5g,Dermatological,180.00,150.00,60,1,1,Topical steroid for skin inflammation,GlaxoSmithKline
+Efficascent Oil 100ml,First Aid,80.00,65.00,200,1,1,Liniment for muscle pain and gas pains,International Pharmaceuticals
+Omega Pain Killer Liniment,First Aid,65.00,50.00,250,1,1,Topical analgesic for pain relief,International Pharmaceuticals
+Green Cross Isopropyl Alcohol,First Aid,75.00,60.00,300,1,1,70% Isopropyl Alcohol disinfectant,Green Cross
+Bactidol Mouthwash 120ml,Dental,150.00,120.00,100,1,1,Antiseptic mouthwash,Johnson & Johnson
+Neurobion Forte Tablet,Supplement,12.00,9.50,280,10,10,B-complex vitamins for nerve health,Merck
+Sangobion Iron Capsule,Supplement,9.00,7.00,250,10,10,Iron plus vitamins for anemia,Merck
+Appebon with Iron Syrup,Supplement,140.00,115.00,90,1,1,Appetite stimulant for kids,Pascual Laboratories
+Tiki-Tiki Star Syrup,Supplement,130.00,105.00,100,1,1,Multivitamin syrup for children,Unilab
+Neobloc 100mg,Cardiovascular,11.00,8.80,180,10,10,Metoprolol for hypertension,Unilab
+Life-G Cee Sodium Ascorbate,Supplement,6.50,5.00,400,10,10,Non-acidic Vitamin C,Unilab
+Kattialis Ointment 15g,Dermatological,50.00,40.00,200,1,1,For skin irritations and infections,Kattialis
+Cherifer PGM 10-22,Supplement,25.00,20.00,150,10,10,Growth supplement for teenagers,Interphil
+Clusivol Plus,Supplement,8.00,6.50,300,10,10,Multivitamins with minerals,Pfizer
+Fern-C Sodium Ascorbate,Supplement,7.00,5.50,450,10,10,Alkaline-based Vitamin C,Fern-C
+Vicks VapoRub 25g,Respiratory,100.00,80.00,200,1,1,Topical ointment for cough and colds,Procter & Gamble
+Salonpas Medicated Patch,First Aid,15.00,12.00,300,2,1,Pain relieving patch,Hisamitsu
+White Flower Embrocation,First Aid,85.00,70.00,180,1,1,Analgesic oil for dizziness and pain,White Flower
+Katinko Ointment 10g,First Aid,45.00,35.00,250,1,1,Topical analgesic and itch reliever,Greenstone
+Lactacyd Feminine Wash,Personal Care,120.00,95.00,100,1,1,Gentle feminine hygiene wash,Sanofi
+pH Care Feminine Wash,Personal Care,110.00,90.00,120,1,1,Hypoallergenic feminine wash,Unilab
+Hydrite Granules,Digestive,20.00,16.00,200,1,1,Oral rehydration salts,Unilab
+Rowagel Capsules,Digestive,28.00,22.00,90,10,10,For gallstones and liver support,Rowa
+Rowachol Capsules,Digestive,26.00,21.00,100,10,10,For liver and biliary disorders,Rowa
+Rowatinex Capsules,Other,30.00,24.00,80,10,10,For kidney and urinary tract disorders,Rowa
+Celebrex 200mg,Anti-inflammatory,35.00,28.00,70,10,10,Celecoxib for arthritis pain,Pfizer
+Arcoxia 120mg,Anti-inflammatory,45.00,36.00,60,7,2,Etoricoxib for acute pain,Merck
+Lyrica 75mg,Other,50.00,40.00,50,14,4,Pregabalin for neuropathic pain,Pfizer
+Plavix 75mg,Cardiovascular,55.00,45.00,80,14,2,Clopidogrel to prevent heart attack/stroke,Sanofi
+Crestor 10mg,Cardiovascular,60.00,48.00,70,14,2,Rosuvastatin for high cholesterol,AstraZeneca
+Lipitor 20mg,Cardiovascular,58.00,46.00,75,10,10,Atorvastatin for cholesterol management,Pfizer
+Januvia 100mg,Other,70.00,56.00,40,14,2,Sitagliptin for type 2 diabetes,Merck
+Forxiga 10mg,Other,75.00,60.00,35,14,2,Dapagliflozin for type 2 diabetes,AstraZeneca
+Xanax 250mcg,Other,25.00,20.00,100,10,10,Alprazolam for anxiety (requires prescription),Pfizer
+Valium 5mg,Other,20.00,16.00,120,10,10,Diazepam for anxiety/seizures (requires prescription),Roche
+Dormicum 7.5mg,Other,30.00,24.00,90,10,10,Midazolam for insomnia (requires prescription),Roche
+Augmentin 625mg,Antibiotic,32.00,25.00,110,7,2,Co-amoxiclav antibiotic,GlaxoSmithKline
+Zinnat 500mg,Antibiotic,45.00,36.00,80,10,1,Cefuroxime antibiotic,GlaxoSmithKline
+Zithromax 500mg,Antibiotic,55.00,44.00,70,3,1,Azithromycin antibiotic,Pfizer
+Difflam Lozenges,Respiratory,12.00,9.50,300,8,2,For sore throat and mouth sores,iNova
+Dequadin Lozenges,Respiratory,10.00,8.00,350,8,2,Antiseptic lozenges for throat infection,iNova
+Kamillosan M Spray,Respiratory,350.00,280.00,50,1,1,Herbal throat spray,A. Menarini
+Sinecod Forte,Respiratory,18.00,14.50,150,10,10,Butamirate citrate for dry cough,GlaxoSmithKline
+Allerkid Syrup 60ml,Antihistamine,180.00,145.00,60,1,1,Cetirizine for kids' allergies,Unilab
+Disudrin Syrup 60ml,Respiratory,140.00,110.00,70,1,1,Decongestant syrup for children,Unilab
+Calmoseptine Ointment,Dermatological,150.00,120.00,100,1,1,Protective ointment for skin irritations,Calmoseptine Inc.
+Fissan Prickly Heat Powder,Dermatological,80.00,65.00,200,1,1,Powder for prickly heat and rashes,Unilever
+Eskinol Facial Cleanser,Personal Care,90.00,72.00,150,1,1,Classic facial cleanser,Unilever
+Master Facial Cleanser,Personal Care,85.00,68.00,160,1,1,Facial cleanser for men,Unilever
+Off! Overtime Insect Repellent,Personal Care,130.00,105.00,120,1,1,Insect repellent lotion,SC Johnson
+Gardian Angel Loperamide,Digestive,7.50,6.00,220,10,10,For diarrhea relief,Pascual Laboratories
+RiteMed Paracetamol,Analgesic,1.50,1.00,1000,10,10,Affordable generic paracetamol,RiteMed
+RiteMed Ascorbic Acid,Supplement,2.00,1.50,1200,10,10,Affordable Vitamin C,RiteMed
+RiteMed Carbocisteine,Respiratory,5.00,3.80,500,10,10,Affordable cough medicine,RiteMed

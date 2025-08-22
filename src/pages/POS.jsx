@@ -43,22 +43,15 @@ export default function POS() {
     isLoading: productsLoading,
     error: productsError,
   } = useProducts();
-  const { data: searchResults = [] } = useSearchProducts(searchTerm);
+  const {
+    data: searchResults = [],
+    isLoading: searchLoading,
+    error: searchError,
+  } = useSearchProducts(searchTerm);
   const createSale = useCreateSale();
 
   // Use search results if searching, otherwise use all products
   const displayProducts = searchTerm.length >= 2 ? searchResults : allProducts;
-
-  // Debug logging for data fetching issues
-  console.log("=== POS DEBUG INFO ===");
-  console.log("Products loading:", productsLoading);
-  console.log("Products error:", productsError);
-  console.log("All products count:", allProducts?.length || 0);
-  console.log("Search results count:", searchResults?.length || 0);
-  console.log("Display products count:", displayProducts?.length || 0);
-  console.log("Search term:", searchTerm);
-  console.log("Sample product data:", allProducts?.[0]);
-  console.log("=== END DEBUG ===");
 
   // Add missing quantity state for modal
   const [quantityMode, setQuantityMode] = useState({
@@ -73,14 +66,44 @@ export default function POS() {
     ...new Set(allProducts.map((product) => product.category).filter(Boolean)),
   ];
 
+  // Fixed filtering logic - don't double-filter search results
   const filteredProducts = displayProducts.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    // If we're using search results (searchTerm.length >= 2),
+    // the search filtering is already done by useSearchProducts hook
+    // So we only need to apply category filter
+    if (searchTerm.length >= 2) {
+      // Only apply category filter for search results
+      const matchesCategory =
+        selectedCategory === "all" || product.category === selectedCategory;
+      return matchesCategory;
+    } else {
+      // For non-search results (all products), apply both filters
+      const matchesSearch = product.name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        selectedCategory === "all" || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    }
   });
+
+  // Debug logging for data fetching issues
+  console.log("=== POS DEBUG INFO ===");
+  console.log("Products loading:", productsLoading);
+  console.log("Products error:", productsError);
+  console.log("Search loading:", searchLoading);
+  console.log("Search error:", searchError);
+  console.log("All products count:", allProducts?.length || 0);
+  console.log("Search results count:", searchResults?.length || 0);
+  console.log("Display products count:", displayProducts?.length || 0);
+  console.log("Filtered products count:", filteredProducts?.length || 0);
+  console.log("Search term:", searchTerm);
+  console.log("Selected category:", selectedCategory);
+  console.log("Sample product data:", allProducts?.[0]);
+  if (searchTerm.length >= 2) {
+    console.log("Using search results:", searchResults);
+  }
+  console.log("=== END DEBUG ===");
 
   const openQuantityModal = (product) => {
     setSelectedProduct(product);
@@ -402,9 +425,13 @@ export default function POS() {
             </div>
 
             {/* Loading and Error States */}
-            {productsLoading && (
+            {(productsLoading || (searchLoading && searchTerm.length >= 2)) && (
               <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">Loading products...</div>
+                <div className="text-gray-500">
+                  {searchTerm.length >= 2
+                    ? "Searching products..."
+                    : "Loading products..."}
+                </div>
               </div>
             )}
 
@@ -414,98 +441,108 @@ export default function POS() {
               </div>
             )}
 
-            {/* Product Grid */}
-            {!productsLoading && !productsError && (
-              <>
-                {filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                    {filteredProducts.map((product) => {
-                      const stockValue =
-                        product.stock || product.total_stock || 0;
-                      const stockStatus = getStockStatus(stockValue);
-                      const inCart = cart.find(
-                        (item) => item.id === product.id
-                      );
-
-                      return (
-                        <div
-                          key={product.id}
-                          className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <Package size={24} className="text-gray-400" />
-                            </div>
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${stockStatus.bg} ${stockStatus.color}`}
-                            >
-                              {stockStatus.text}
-                            </span>
-                          </div>
-
-                          <h3 className="font-semibold text-gray-900 mb-1">
-                            {product.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 mb-2">
-                            Stock: {stockValue} pieces
-                          </p>
-
-                          {/* Packaging Info */}
-                          {product.packaging && (
-                            <div className="text-xs text-gray-400 mb-3 space-y-1">
-                              <p>
-                                📦 {product.packaging.totalPieces || 1} pcs/box
-                              </p>
-                              <p>
-                                📄 {product.packaging.piecesPerSheet || 1}{" "}
-                                pcs/sheet
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-lg font-bold text-blue-600">
-                              {formatCurrency(
-                                product.price || product.selling_price || 0
-                              )}
-                            </span>
-                            {inCart && (
-                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                                {inCart.quantity} in cart
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Action Button */}
-                          <button
-                            onClick={() => openQuantityModal(product)}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
-                          >
-                            <Settings size={16} />
-                            Select Quantity
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center min-h-96 w-full">
-                    <div className="text-center py-12">
-                      <Package
-                        size={48}
-                        className="mx-auto mb-4 text-gray-400"
-                      />
-                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
-                        No products found
-                      </h3>
-                      <p className="text-gray-500">
-                        Try adjusting your search or category filter
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </>
+            {searchError && searchTerm.length >= 2 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700">
+                Search error: {searchError.message}. Showing all products
+                instead.
+              </div>
             )}
+
+            {/* Product Grid */}
+            {!productsLoading &&
+              !productsError &&
+              !(searchLoading && searchTerm.length >= 2) && (
+                <>
+                  {filteredProducts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                      {filteredProducts.map((product) => {
+                        const stockValue =
+                          product.stock || product.total_stock || 0;
+                        const stockStatus = getStockStatus(stockValue);
+                        const inCart = cart.find(
+                          (item) => item.id === product.id
+                        );
+
+                        return (
+                          <div
+                            key={product.id}
+                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <Package size={24} className="text-gray-400" />
+                              </div>
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${stockStatus.bg} ${stockStatus.color}`}
+                              >
+                                {stockStatus.text}
+                              </span>
+                            </div>
+
+                            <h3 className="font-semibold text-gray-900 mb-1">
+                              {product.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-2">
+                              Stock: {stockValue} pieces
+                            </p>
+
+                            {/* Packaging Info */}
+                            {product.packaging && (
+                              <div className="text-xs text-gray-400 mb-3 space-y-1">
+                                <p>
+                                  📦 {product.packaging.totalPieces || 1}{" "}
+                                  pcs/box
+                                </p>
+                                <p>
+                                  📄 {product.packaging.piecesPerSheet || 1}{" "}
+                                  pcs/sheet
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-lg font-bold text-blue-600">
+                                {formatCurrency(
+                                  product.price || product.selling_price || 0
+                                )}
+                              </span>
+                              {inCart && (
+                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                                  {inCart.quantity} in cart
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Action Button */}
+                            <button
+                              onClick={() => openQuantityModal(product)}
+                              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold"
+                            >
+                              <Settings size={16} />
+                              Select Quantity
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center min-h-96 w-full">
+                      <div className="text-center py-12">
+                        <Package
+                          size={48}
+                          className="mx-auto mb-4 text-gray-400"
+                        />
+                        <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                          No products found
+                        </h3>
+                        <p className="text-gray-500">
+                          Try adjusting your search or category filter
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
           </div>
 
           {/* Cart & Checkout */}

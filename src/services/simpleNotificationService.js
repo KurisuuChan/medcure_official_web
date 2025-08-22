@@ -108,36 +108,37 @@ class SimpleNotificationService {
   async getNotificationStats(userId = null) {
     try {
       // Get basic counts in parallel
+      let totalQuery = supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true });
+
+      let unreadQuery = supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+
+      let archivedQuery = supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("is_archived", true);
+
+      // Apply user filtering if userId is provided
+      if (userId) {
+        totalQuery = totalQuery.or(`user_id.eq.${userId},user_id.is.null`);
+        unreadQuery = unreadQuery.or(`user_id.eq.${userId},user_id.is.null`);
+        archivedQuery = archivedQuery.or(
+          `user_id.eq.${userId},user_id.is.null`
+        );
+      } else {
+        totalQuery = totalQuery.is("user_id", null);
+        unreadQuery = unreadQuery.is("user_id", null);
+        archivedQuery = archivedQuery.is("user_id", null);
+      }
+
       const [totalResult, unreadResult, archivedResult] = await Promise.all([
-        supabase
-          .from("notifications")
-          .select("*", { count: "exact", head: true })
-          .apply((query) =>
-            userId
-              ? query.or(`user_id.eq.${userId},user_id.is.null`)
-              : query.is("user_id", null)
-          ),
-
-        supabase
-          .from("notifications")
-          .select("*", { count: "exact", head: true })
-          .eq("is_read", false)
-          .eq("is_archived", false)
-          .apply((query) =>
-            userId
-              ? query.or(`user_id.eq.${userId},user_id.is.null`)
-              : query.is("user_id", null)
-          ),
-
-        supabase
-          .from("notifications")
-          .select("*", { count: "exact", head: true })
-          .eq("is_archived", true)
-          .apply((query) =>
-            userId
-              ? query.or(`user_id.eq.${userId},user_id.is.null`)
-              : query.is("user_id", null)
-          ),
+        totalQuery,
+        unreadQuery,
+        archivedQuery,
       ]);
 
       return {
