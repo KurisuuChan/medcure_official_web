@@ -48,14 +48,17 @@ export function useRestoreArchivedProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: restoreArchivedProduct,
-    onSuccess: () => {
-      // Invalidate both products and archived items queries
+    mutationFn: ({ productId, restoredBy }) => restoreArchivedProduct(productId, restoredBy),
+    onSuccess: async () => {
+      // Force refetch archived items to ensure immediate UI update
+      await queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+      await queryClient.refetchQueries({ queryKey: ["archived-items"] });
+      // Also invalidate products to refresh main inventory
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+      console.log("✅ Product restored successfully, cache refreshed");
     },
     onError: (error) => {
-      console.error("Failed to restore archived product:", error);
+      console.error("❌ Failed to restore archived product:", error);
     },
   });
 }
@@ -69,12 +72,14 @@ export function usePermanentlyDeleteArchivedItem() {
   return useMutation({
     mutationFn: ({ productId, deletedBy }) =>
       permanentlyDeleteProduct(productId, deletedBy),
-    onSuccess: () => {
-      // Invalidate archived items query
-      queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+    onSuccess: async () => {
+      // Invalidate and refetch archived items query
+      await queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+      await queryClient.refetchQueries({ queryKey: ["archived-items"] });
+      console.log("✅ Product permanently deleted, cache refreshed");
     },
     onError: (error) => {
-      console.error("Failed to permanently delete archived item:", error);
+      console.error("❌ Failed to permanently delete archived item:", error);
     },
   });
 }
@@ -88,15 +93,16 @@ export function useBulkPermanentlyDeleteArchivedItems() {
   return useMutation({
     mutationFn: ({ productIds, deletedBy }) =>
       bulkPermanentlyDeleteProducts(productIds, deletedBy),
-    onSuccess: (result) => {
-      // Invalidate archived items query
-      queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+    onSuccess: async (result) => {
+      // Invalidate and refetch archived items query
+      await queryClient.invalidateQueries({ queryKey: ["archived-items"] });
+      await queryClient.refetchQueries({ queryKey: ["archived-items"] });
       console.log(
-        `Bulk deletion completed: ${result.totalDeleted} products deleted`
+        `✅ Bulk deletion completed: ${result.totalDeleted} products deleted`
       );
     },
     onError: (error) => {
-      console.error("Failed to bulk delete archived items:", error);
+      console.error("❌ Failed to bulk delete archived items:", error);
     },
   });
 }
@@ -126,7 +132,7 @@ export function useBulkArchiveProducts() {
  */
 export function useArchivedProducts() {
   return useQuery({
-    queryKey: ["archived-products"],
+    queryKey: ["archived-items"],
     queryFn: getArchivedProducts,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

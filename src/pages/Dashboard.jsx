@@ -13,7 +13,7 @@ import {
   RefreshCw,
   CreditCard,
 } from "lucide-react";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardDataBasic } from "@/hooks/useDashboardDataBasic";
 import SalesByHourChart from "@/components/charts/SalesByHourChart";
 
 // Main summary cards with navigation
@@ -140,7 +140,7 @@ SummaryCard.propTypes = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: dashboardData, isLoading } = useDashboardData();
+  const { data: dashboardData, isLoading } = useDashboardDataBasic();
 
   // Extract data with fallbacks for loading state
   const {

@@ -332,13 +332,44 @@ export async function bulkAddProducts(products) {
  */
 export async function getLowStockProducts() {
   try {
-    const { data, error } = await supabase
+    // Try to use products_enhanced view first
+    let { data, error } = await supabase
       .from("products_enhanced")
       .select("*")
       .or(`stock_status.eq.Low Stock,stock_status.eq.Out of Stock`)
       .order("total_stock", { ascending: true });
 
-    if (error) throw error;
+    // If products_enhanced doesn't exist, fallback to products table
+    if (error && error.message?.includes("products_enhanced")) {
+      console.warn(
+        "products_enhanced view not found for low stock, falling back to products table"
+      );
+
+      const fallbackResult = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_archived", false)
+        .lte("stock", 10) // Consider anything <= 10 as low stock
+        .order("stock", { ascending: true });
+
+      if (fallbackResult.error) throw fallbackResult.error;
+
+      // Add calculated fields that would normally come from products_enhanced view
+      data = (fallbackResult.data || []).map((product) => ({
+        ...product,
+        stock_status:
+          product.stock <= 0
+            ? "Out of Stock"
+            : product.stock <= (product.reorder_level || 10)
+            ? "Low Stock"
+            : "In Stock",
+        current_stock: product.stock || product.total_stock || 0,
+        total_stock: product.total_stock || product.stock || 0,
+      }));
+    } else if (error) {
+      throw error;
+    }
+
     return data || [];
   } catch (error) {
     console.error("Error fetching low stock products:", error);
@@ -501,11 +532,11 @@ export async function getExpiringSoonProducts(days = 30) {
 
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, expiry_date, stock, total_stock, reorder_level")
+      .select("id, name, expiration_date, stock, total_stock, reorder_level")
       .eq("is_archived", false)
-      .not("expiry_date", "is", null)
-      .lte("expiry_date", futureDate.toISOString())
-      .order("expiry_date", { ascending: true });
+      .not("expiration_date", "is", null)
+      .lte("expiration_date", futureDate.toISOString())
+      .order("expiration_date", { ascending: true });
 
     if (error) throw error;
     return data || [];

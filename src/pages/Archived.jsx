@@ -25,6 +25,7 @@ import {
 } from "../hooks/useArchive.js";
 import { useNotification } from "../hooks/useNotification.js";
 import { formatCurrency, formatDate } from "../utils/formatters.js";
+import ArchiveConnectionTest from "../components/ArchiveConnectionTest.jsx";
 
 export default function Archived() {
   const { addNotification } = useNotification();
@@ -37,6 +38,15 @@ export default function Archived() {
   const restoreProduct = useRestoreArchivedProduct();
   const deleteProduct = usePermanentlyDeleteArchivedItem();
   const bulkDeleteProducts = useBulkPermanentlyDeleteArchivedItems();
+
+  // Debug logging
+  useEffect(() => {
+    console.log("🔄 Archive page mounted/updated");
+    console.log("📊 Archived items:", archivedItems?.length || 0);
+    console.log("⏳ Loading:", isLoading);
+    console.log("❌ Error:", error);
+    console.log("📋 Items data:", archivedItems);
+  }, [archivedItems, isLoading, error]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBy, setFilterBy] = useState("all"); // all, week, month, year
@@ -89,13 +99,17 @@ export default function Archived() {
   const handleRestore = async (item) => {
     if (window.confirm(`Are you sure you want to restore "${item.name}"?`)) {
       try {
-        await restoreProduct.mutateAsync(item.id);
+        await restoreProduct.mutateAsync({
+          productId: item.id,
+          restoredBy: "Admin" // You can modify this to use actual user info
+        });
         addNotification(
           `"${item.name}" has been restored successfully`,
           "success"
         );
         setSelectedItems((prev) => prev.filter((id) => id !== item.id));
       } catch (error) {
+        console.error("Restore error:", error);
         addNotification(error.message || "Failed to restore product", "error");
       }
     }
@@ -197,7 +211,10 @@ export default function Archived() {
     ) {
       try {
         await Promise.all(
-          selectedItems.map((id) => restoreProduct.mutateAsync(id))
+          selectedItems.map((id) => restoreProduct.mutateAsync({
+            productId: id,
+            restoredBy: "Admin"
+          }))
         );
         addNotification(
           `${selectedItems.length} products restored successfully`,
@@ -205,6 +222,7 @@ export default function Archived() {
         );
         setSelectedItems([]);
       } catch (error) {
+        console.error("Bulk restore error:", error);
         addNotification(
           error.message || "Failed to restore some products",
           "error"
@@ -328,9 +346,16 @@ export default function Archived() {
     );
   };
 
-  const handleRefresh = () => {
-    refetch();
-    addNotification("Archive data refreshed", "success");
+  const handleRefresh = async () => {
+    console.log("🔄 Manual refresh triggered");
+    try {
+      await refetch();
+      addNotification("Archive data refreshed", "success");
+      console.log("✅ Manual refresh completed");
+    } catch (error) {
+      console.error("❌ Manual refresh failed:", error);
+      addNotification("Failed to refresh data", "error");
+    }
   };
 
   const toggleExpanded = (id) => {
@@ -464,6 +489,38 @@ export default function Archived() {
                 />
                 Refresh
               </button>
+              {/* Debug button - Remove in production */}
+              <button
+                onClick={async () => {
+                  console.log("🐛 Force debugging archive functions...");
+                  console.log("📊 Current archived items:", archivedItems);
+                  console.log("⏳ Is loading:", isLoading);
+                  console.log("❌ Error:", error);
+                  
+                  // Force a direct database query
+                  try {
+                    const { supabase } = await import("../config/supabase.js");
+                    const { data, error: dbError } = await supabase
+                      .from("products")
+                      .select("*")
+                      .eq("is_archived", true);
+                    
+                    console.log("🔍 Direct DB query result:", { data, dbError });
+                    
+                    if (data && data.length > 0) {
+                      console.log("✅ Found archived products in DB:", data.length);
+                      await refetch();
+                    } else {
+                      console.log("⚠️ No archived products found in DB");
+                    }
+                  } catch (debugError) {
+                    console.error("❌ Debug query failed:", debugError);
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-purple-700 bg-purple-50 border border-purple-300 rounded-lg hover:bg-purple-100 transition-colors"
+              >
+                🐛 Debug
+              </button>
             </div>
           </div>
 
@@ -542,6 +599,9 @@ export default function Archived() {
           </div>
         </div>
       </div>
+
+      {/* Debug Component - Remove in production */}
+      <ArchiveConnectionTest />
 
       {/* Filters and Search */}
       <div className="bg-white border-b border-gray-200">

@@ -25,7 +25,63 @@ export function useDashboardData() {
     queryKey: ["dashboard", today],
     queryFn: async () => {
       try {
-        // Fetch all dashboard data in parallel
+        // Fetch all dashboard data in parallel with individual error handling
+        const results = await Promise.allSettled([
+          getSalesSummary("today").catch((err) => {
+            console.warn("Sales summary (today) failed:", err.message);
+            return {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            };
+          }),
+          getSalesSummary("week").catch((err) => {
+            console.warn("Sales summary (week) failed:", err.message);
+            return {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            };
+          }),
+          getSalesSummary("month").catch((err) => {
+            console.warn("Sales summary (month) failed:", err.message);
+            return {
+              totalRevenue: 0,
+              totalTransactions: 0,
+              averageTransaction: 0,
+            };
+          }),
+          getSalesByCategory().catch((err) => {
+            console.warn("Sales by category failed:", err.message);
+            return [];
+          }),
+          getLowStockProducts(10).catch((err) => {
+            console.warn("Low stock products failed:", err.message);
+            return [];
+          }),
+          getSalesByHour(today).catch((err) => {
+            console.warn("Sales by hour failed:", err.message);
+            return [];
+          }),
+          getRecentSales(10).catch((err) => {
+            console.warn("Recent sales failed:", err.message);
+            return [];
+          }),
+          getBestSellers(5).catch((err) => {
+            console.warn("Best sellers failed:", err.message);
+            return [];
+          }),
+          getProductCount().catch((err) => {
+            console.warn("Product count failed:", err.message);
+            return 0;
+          }),
+          getExpiringSoonProducts(30).catch((err) => {
+            console.warn("Expiring products failed:", err.message);
+            return [];
+          }),
+        ]);
+
+        // Extract results with fallbacks
         const [
           todaySummary,
           weekSummary,
@@ -37,18 +93,9 @@ export function useDashboardData() {
           bestSellers,
           totalProducts,
           expiringSoon,
-        ] = await Promise.all([
-          getSalesSummary("today"),
-          getSalesSummary("week"),
-          getSalesSummary("month"),
-          getSalesByCategory(),
-          getLowStockProducts(10),
-          getSalesByHour(today),
-          getRecentSales(10),
-          getBestSellers(5),
-          getProductCount(),
-          getExpiringSoonProducts(30), // 30 days
-        ]);
+        ] = results.map((result) =>
+          result.status === "fulfilled" ? result.value : null
+        );
 
         // Calculate additional metrics
         const criticalStockItems = lowStockProducts.filter((p) => p.stock <= 5);
@@ -120,17 +167,21 @@ export function useDashboardData() {
           },
         };
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("❌ Error fetching dashboard data:", error);
 
         // Return fallback data structure to prevent crashes
         return {
           loading: false,
           error: error.message,
           summaryCards: [
-            { title: "Total Products", value: 0, trend: "No data" },
-            { title: "Low Stock", value: 0, trend: "No data" },
-            { title: "Expiring Soon", value: 0, trend: "No data" },
-            { title: "Today Sales", value: "₱0", trend: "No data" },
+            {
+              title: "Total Products",
+              value: "Error",
+              trend: "Unable to load",
+            },
+            { title: "Low Stock", value: "Error", trend: "Unable to load" },
+            { title: "Expiring Soon", value: "Error", trend: "Unable to load" },
+            { title: "Today Sales", value: "Error", trend: "Unable to load" },
           ],
           salesByHourData: [],
           salesByCategory: [],
@@ -174,8 +225,14 @@ export function useDashboardData() {
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
-    retry: 3,
+    retry: (failureCount, error) => {
+      console.log(`Dashboard query retry ${failureCount}:`, error.message);
+      return failureCount < 2; // Only retry twice
+    },
     retryDelay: 1000,
+    onError: (error) => {
+      console.error("Dashboard query failed:", error);
+    },
   });
 }
 
