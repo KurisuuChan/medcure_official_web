@@ -48,7 +48,8 @@ export function useRestoreArchivedProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ productId, restoredBy }) => restoreArchivedProduct(productId, restoredBy),
+    mutationFn: ({ productId, restoredBy }) =>
+      restoreArchivedProduct(productId, restoredBy),
     onSuccess: async () => {
       // Force refetch archived items to ensure immediate UI update
       await queryClient.invalidateQueries({ queryKey: ["archived-items"] });

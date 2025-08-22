@@ -24,17 +24,19 @@ export default function ArchiveConnectionTest() {
         // Create a test product first
         const { data: newProduct, error: createError } = await supabase
           .from("products")
-          .insert([{
-            name: "Test Archive Product",
-            category: "Test",
-            price: 10.00,
-            cost_price: 5.00,
-            stock: 0,
-            total_stock: 0,
-            pieces_per_sheet: 1,
-            sheets_per_box: 1,
-            is_archived: false
-          }])
+          .insert([
+            {
+              name: "Test Archive Product",
+              category: "Test",
+              price: 10.0,
+              cost_price: 5.0,
+              stock: 0,
+              total_stock: 0,
+              pieces_per_sheet: 1,
+              sheets_per_box: 1,
+              is_archived: false,
+            },
+          ])
           .select()
           .single();
 
@@ -44,7 +46,7 @@ export default function ArchiveConnectionTest() {
         }
 
         console.log("✅ Created test product:", newProduct);
-        
+
         // Now archive it
         const { data: archivedProduct, error: archiveError } = await supabase
           .from("products")
@@ -52,7 +54,7 @@ export default function ArchiveConnectionTest() {
             is_archived: true,
             archived_date: new Date().toISOString(),
             archived_by: "Debug Test",
-            archive_reason: "Test archive for debugging"
+            archive_reason: "Test archive for debugging",
           })
           .eq("id", newProduct.id)
           .select()
@@ -73,7 +75,7 @@ export default function ArchiveConnectionTest() {
             is_archived: true,
             archived_date: new Date().toISOString(),
             archived_by: "Debug Test",
-            archive_reason: "Test archive for debugging"
+            archive_reason: "Test archive for debugging",
           })
           .eq("id", product.id)
           .select()
@@ -95,7 +97,7 @@ export default function ArchiveConnectionTest() {
     setIsLoading(true);
     const results = {
       timestamp: new Date().toISOString(),
-      tests: []
+      tests: [],
     };
 
     try {
@@ -109,10 +111,10 @@ export default function ArchiveConnectionTest() {
       results.tests.push({
         name: "Supabase Connection",
         status: connectionError ? "failed" : "passed",
-        message: connectionError 
+        message: connectionError
           ? `Connection failed: ${connectionError.message}`
           : "Connection successful",
-        details: connectionError ? connectionError : { count: connectionTest }
+        details: connectionError ? connectionError : { count: connectionTest },
       });
 
       // Test 2: Check Archived Products Count
@@ -125,27 +127,37 @@ export default function ArchiveConnectionTest() {
       results.tests.push({
         name: "Archived Products Query",
         status: archivedError ? "failed" : "passed",
-        message: archivedError 
+        message: archivedError
           ? `Query failed: ${archivedError.message}`
           : `Found ${archivedCount?.length || 0} archived products`,
-        details: archivedError ? archivedError : { 
-          count: archivedCount?.length || 0,
-          products: archivedCount?.slice(0, 3).map(p => ({ id: p.id, name: p.name, archived_date: p.archived_date }))
-        }
+        details: archivedError
+          ? archivedError
+          : {
+              count: archivedCount?.length || 0,
+              products: archivedCount
+                ?.slice(0, 3)
+                .map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  archived_date: p.archived_date,
+                })),
+            },
       });
 
       // Test 3: Check Safe Delete Function
       console.log("🔍 Testing safe delete function...");
-      const { data: functionTest, error: functionError } = await supabase
-        .rpc("safe_delete_archived_products", { product_ids: [] });
+      const { data: functionTest, error: functionError } = await supabase.rpc(
+        "safe_delete_archived_products",
+        { product_ids: [] }
+      );
 
       results.tests.push({
         name: "Safe Delete Function",
         status: functionError ? "failed" : "passed",
-        message: functionError 
+        message: functionError
           ? `Function failed: ${functionError.message}`
           : "Function available",
-        details: functionError ? functionError : functionTest
+        details: functionError ? functionError : functionTest,
       });
 
       // Test 4: Check Product Structure
@@ -159,27 +171,30 @@ export default function ArchiveConnectionTest() {
       results.tests.push({
         name: "Product Table Structure",
         status: structureError ? "failed" : "passed",
-        message: structureError 
+        message: structureError
           ? `Structure check failed: ${structureError.message}`
           : "Table structure valid",
-        details: structureError ? structureError : {
-          columns: sampleProduct ? Object.keys(sampleProduct) : [],
-          hasArchiveFields: sampleProduct ? {
-            is_archived: 'is_archived' in sampleProduct,
-            archived_date: 'archived_date' in sampleProduct,
-            archived_by: 'archived_by' in sampleProduct,
-            archive_reason: 'archive_reason' in sampleProduct
-          } : {}
-        }
+        details: structureError
+          ? structureError
+          : {
+              columns: sampleProduct ? Object.keys(sampleProduct) : [],
+              hasArchiveFields: sampleProduct
+                ? {
+                    is_archived: "is_archived" in sampleProduct,
+                    archived_date: "archived_date" in sampleProduct,
+                    archived_by: "archived_by" in sampleProduct,
+                    archive_reason: "archive_reason" in sampleProduct,
+                  }
+                : {},
+            },
       });
-
     } catch (error) {
       console.error("❌ Connection test failed:", error);
       results.tests.push({
         name: "General Error",
         status: "failed",
         message: `Unexpected error: ${error.message}`,
-        details: error
+        details: error,
       });
     }
 
@@ -241,7 +256,7 @@ export default function ArchiveConnectionTest() {
           <div className="text-xs text-gray-500 mb-3">
             Last tested: {new Date(testResults.timestamp).toLocaleString()}
           </div>
-          
+
           {testResults.tests.map((test, index) => (
             <div
               key={index}

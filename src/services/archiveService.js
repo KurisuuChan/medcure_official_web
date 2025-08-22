@@ -78,7 +78,7 @@ export async function archiveProduct(product, reason, archivedBy = "System") {
 export async function restoreArchivedProduct(productId, restoredBy = "System") {
   try {
     console.log(`🔄 Restoring product ID: ${productId} by: ${restoredBy}`);
-    
+
     // Check if product exists and is archived
     const { data: existingProduct, error: checkError } = await supabase
       .from("products")
@@ -104,7 +104,7 @@ export async function restoreArchivedProduct(productId, restoredBy = "System") {
 
     console.log("✅ Product found and is archived, proceeding with restore...");
 
-    // Restore product by removing archive flags
+    // Restore product by removing archive flags (only use existing columns)
     const { data: restoredProduct, error: restoreError } = await supabase
       .from("products")
       .update({
@@ -112,8 +112,6 @@ export async function restoreArchivedProduct(productId, restoredBy = "System") {
         archived_date: null,
         archived_by: null,
         archive_reason: null,
-        restored_date: new Date().toISOString(),
-        restored_by: restoredBy,
         updated_at: new Date().toISOString(),
       })
       .eq("id", productId)
@@ -161,7 +159,7 @@ export async function restoreArchivedProduct(productId, restoredBy = "System") {
 export async function getArchivedProducts() {
   try {
     console.log("🔍 Fetching archived products from database...");
-    
+
     const { data: archivedProducts, error } = await supabase
       .from("products")
       .select("*")
@@ -173,14 +171,20 @@ export async function getArchivedProducts() {
       throw new Error(`Failed to fetch archived products: ${error.message}`);
     }
 
-    console.log("📊 Raw archived products from DB:", archivedProducts?.length || 0);
-    
+    console.log(
+      "📊 Raw archived products from DB:",
+      archivedProducts?.length || 0
+    );
+
     // Filter and ensure we only return actually archived products
     const validArchivedProducts = (archivedProducts || []).filter(
       (product) => product.is_archived === true
     );
 
-    console.log("✅ Valid archived products after filtering:", validArchivedProducts.length);
+    console.log(
+      "✅ Valid archived products after filtering:",
+      validArchivedProducts.length
+    );
 
     // Map archive_reason to reason for compatibility with frontend
     const mappedProducts = validArchivedProducts.map((product) => ({
@@ -209,8 +213,10 @@ export async function permanentlyDeleteProduct(
   deletedBy = "System"
 ) {
   try {
-    console.log(`🗑️ Permanently deleting product ID: ${productId} by: ${deletedBy}`);
-    
+    console.log(
+      `🗑️ Permanently deleting product ID: ${productId} by: ${deletedBy}`
+    );
+
     // Check if product exists and is archived
     const { data: existingProduct, error: checkError } = await supabase
       .from("products")
@@ -219,7 +225,10 @@ export async function permanentlyDeleteProduct(
       .eq("is_archived", true)
       .single();
 
-    console.log("📋 Product check for deletion:", { existingProduct, checkError });
+    console.log("📋 Product check for deletion:", {
+      existingProduct,
+      checkError,
+    });
 
     if (checkError) {
       console.error("❌ Product check failed:", checkError);
@@ -233,7 +242,9 @@ export async function permanentlyDeleteProduct(
       throw new Error("Product not found or not archived");
     }
 
-    console.log("✅ Product found and is archived, proceeding with deletion...");
+    console.log(
+      "✅ Product found and is archived, proceeding with deletion..."
+    );
 
     // Create deletion log before deleting
     try {
@@ -289,9 +300,11 @@ export async function bulkPermanentlyDeleteProducts(
   deletedBy = "System"
 ) {
   try {
-    console.log(`🗑️ Bulk deleting ${productIds.length} products by: ${deletedBy}`);
+    console.log(
+      `🗑️ Bulk deleting ${productIds.length} products by: ${deletedBy}`
+    );
     console.log("📋 Product IDs to delete:", productIds);
-    
+
     if (!Array.isArray(productIds) || productIds.length === 0) {
       throw new Error("Product IDs array is required and must not be empty");
     }

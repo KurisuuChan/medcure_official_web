@@ -101,7 +101,7 @@ export default function Archived() {
       try {
         await restoreProduct.mutateAsync({
           productId: item.id,
-          restoredBy: "Admin" // You can modify this to use actual user info
+          restoredBy: "Admin", // You can modify this to use actual user info
         });
         addNotification(
           `"${item.name}" has been restored successfully`,
@@ -211,10 +211,12 @@ export default function Archived() {
     ) {
       try {
         await Promise.all(
-          selectedItems.map((id) => restoreProduct.mutateAsync({
-            productId: id,
-            restoredBy: "Admin"
-          }))
+          selectedItems.map((id) =>
+            restoreProduct.mutateAsync({
+              productId: id,
+              restoredBy: "Admin",
+            })
+          )
         );
         addNotification(
           `${selectedItems.length} products restored successfully`,
@@ -496,7 +498,7 @@ export default function Archived() {
                   console.log("📊 Current archived items:", archivedItems);
                   console.log("⏳ Is loading:", isLoading);
                   console.log("❌ Error:", error);
-                  
+
                   // Force a direct database query
                   try {
                     const { supabase } = await import("../config/supabase.js");
@@ -504,11 +506,17 @@ export default function Archived() {
                       .from("products")
                       .select("*")
                       .eq("is_archived", true);
-                    
-                    console.log("🔍 Direct DB query result:", { data, dbError });
-                    
+
+                    console.log("🔍 Direct DB query result:", {
+                      data,
+                      dbError,
+                    });
+
                     if (data && data.length > 0) {
-                      console.log("✅ Found archived products in DB:", data.length);
+                      console.log(
+                        "✅ Found archived products in DB:",
+                        data.length
+                      );
                       await refetch();
                     } else {
                       console.log("⚠️ No archived products found in DB");

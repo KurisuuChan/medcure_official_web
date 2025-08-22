@@ -27,7 +27,9 @@ export default function ArchiveDebugger() {
         .eq("is_archived", true);
 
       if (archivedError) {
-        throw new Error(`Archived products query failed: ${archivedError.message}`);
+        throw new Error(
+          `Archived products query failed: ${archivedError.message}`
+        );
       }
 
       // Check for products with archived data but is_archived = false
@@ -53,7 +55,6 @@ export default function ArchiveDebugger() {
 
       setDebugData(debugResult);
       console.log("📊 Debug Results:", debugResult);
-
     } catch (error) {
       console.error("❌ Debug check failed:", error);
       setDebugData({
@@ -69,7 +70,9 @@ export default function ArchiveDebugger() {
     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
       <div className="flex items-center gap-3 mb-4">
         <Database size={20} className="text-blue-600" />
-        <h3 className="text-lg font-semibold text-gray-900">Archive Debug Tool</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Archive Debug Tool
+        </h3>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -98,22 +101,36 @@ export default function ArchiveDebugger() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-medium text-blue-800 mb-1">Total Products</h4>
-                  <p className="text-2xl font-bold text-blue-900">{debugData.totalProducts}</p>
+                  <h4 className="font-medium text-blue-800 mb-1">
+                    Total Products
+                  </h4>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {debugData.totalProducts}
+                  </p>
                 </div>
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <h4 className="font-medium text-green-800 mb-1">Archived Products</h4>
-                  <p className="text-2xl font-bold text-green-900">{debugData.archivedProducts}</p>
+                  <h4 className="font-medium text-green-800 mb-1">
+                    Archived Products
+                  </h4>
+                  <p className="text-2xl font-bold text-green-900">
+                    {debugData.archivedProducts}
+                  </p>
                 </div>
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h4 className="font-medium text-yellow-800 mb-1">Inconsistent Data</h4>
-                  <p className="text-2xl font-bold text-yellow-900">{debugData.inconsistentProducts}</p>
+                  <h4 className="font-medium text-yellow-800 mb-1">
+                    Inconsistent Data
+                  </h4>
+                  <p className="text-2xl font-bold text-yellow-900">
+                    {debugData.inconsistentProducts}
+                  </p>
                 </div>
               </div>
 
               {debugData.archivedProductsData?.length > 0 && (
                 <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                  <h4 className="font-medium text-gray-800 mb-2">Archived Products Details</h4>
+                  <h4 className="font-medium text-gray-800 mb-2">
+                    Archived Products Details
+                  </h4>
                   <div className="max-h-64 overflow-y-auto">
                     <pre className="text-xs text-gray-700 whitespace-pre-wrap">
                       {JSON.stringify(debugData.archivedProductsData, null, 2)}
@@ -124,7 +141,9 @@ export default function ArchiveDebugger() {
 
               {debugData.inconsistentData?.length > 0 && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h4 className="font-medium text-yellow-800 mb-2">Inconsistent Data (has archived_date but is_archived=false)</h4>
+                  <h4 className="font-medium text-yellow-800 mb-2">
+                    Inconsistent Data (has archived_date but is_archived=false)
+                  </h4>
                   <div className="max-h-64 overflow-y-auto">
                     <pre className="text-xs text-yellow-700 whitespace-pre-wrap">
                       {JSON.stringify(debugData.inconsistentData, null, 2)}
