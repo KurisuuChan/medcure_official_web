@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, LogIn, Shield, User, Lock, Cross } from "lucide-react";
 import { signIn, getCurrentUser } from "../services/roleAuthService.js";
+import PropTypes from "prop-types";
 import "./login-animations.css";
 
 export default function Login({ onLoginSuccess }) {
@@ -31,9 +32,14 @@ export default function Login({ onLoginSuccess }) {
   // Check if already logged in
   useEffect(() => {
     const checkCurrentUser = async () => {
-      const userInfo = await getCurrentUser();
-      if (userInfo) {
-        onLoginSuccess(userInfo);
+      try {
+        const userInfo = await getCurrentUser();
+        if (userInfo) {
+          onLoginSuccess(userInfo);
+        }
+      } catch (error) {
+        console.log("ℹ️ No existing session found:", error.message);
+        // This is normal for users who aren't logged in yet
       }
     };
     checkCurrentUser();
@@ -191,7 +197,10 @@ export default function Login({ onLoginSuccess }) {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Email Field */}
                 <div className="form-field group">
-                  <label className="block text-sm font-bold text-slate-700 mb-3 tracking-wide">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-bold text-slate-700 mb-3 tracking-wide"
+                  >
                     EMAIL ADDRESS
                   </label>
                   <div className="relative">
@@ -199,6 +208,7 @@ export default function Login({ onLoginSuccess }) {
                       <User className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     </div>
                     <input
+                      id="email"
                       type="email"
                       name="email"
                       value={formData.email}
@@ -212,7 +222,10 @@ export default function Login({ onLoginSuccess }) {
 
                 {/* Password Field */}
                 <div className="form-field group">
-                  <label className="block text-sm font-bold text-slate-700 mb-3 tracking-wide">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-bold text-slate-700 mb-3 tracking-wide"
+                  >
                     PASSWORD
                   </label>
                   <div className="relative">
@@ -220,6 +233,7 @@ export default function Login({ onLoginSuccess }) {
                       <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     </div>
                     <input
+                      id="password"
                       type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
@@ -309,3 +323,8 @@ export default function Login({ onLoginSuccess }) {
     </div>
   );
 }
+
+// PropTypes validation
+Login.propTypes = {
+  onLoginSuccess: PropTypes.func.isRequired,
+};

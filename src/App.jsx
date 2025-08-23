@@ -21,11 +21,14 @@ import { initializeAuth } from "@/services/authService.js";
 const branding = { name: "MedCure Admin" };
 
 export default function App({ userInfo, onLogout }) {
-  // Initialize authentication on app startup
+  // Initialize authentication on app startup (non-blocking)
   useEffect(() => {
     console.log("🚀 Initializing MedCure App...");
+    
+    // Initialize storage auth in background without blocking app startup
     initializeAuth().catch((error) => {
-      console.warn("Auth initialization failed:", error);
+      console.log("⚠️ Storage auth skipped:", error.message);
+      // This is OK - the app will still work with role-based auth
     });
   }, []);
 

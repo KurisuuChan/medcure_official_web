@@ -19,7 +19,8 @@ export default function ProtectedRoute({ children }) {
         setRole(userInfo.role);
       }
     } catch (error) {
-      console.error("Auth check failed:", error);
+      console.log("ℹ️ No existing authentication session:", error.message);
+      // This is normal for users who need to log in
     } finally {
       setLoading(false);
     }

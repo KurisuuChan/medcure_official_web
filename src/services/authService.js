@@ -3,50 +3,35 @@ import { supabase } from "../config/supabase.js";
 /**
  * Authentication Service for MedCure
  * Handles authentication for storage uploads and database operations
+ * Compatible with role-based authentication system
  */
 
 let currentSession = null;
 
 /**
  * Initialize session for storage uploads
- * Handles both anonymous auth and fallback modes
+ * Uses existing authentication session if available
  */
 export async function initializeAnonymousSession() {
   try {
-    console.log("🔐 Initializing session for storage...");
+    console.log("🔐 Checking existing authentication session...");
 
-    // Check if we already have a session
+    // Check if we already have a session from role-based auth
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (session) {
-      console.log("✅ Existing session found:", session.user.id);
+    if (session && session.user) {
+      console.log("✅ Existing authenticated session found:", session.user.email || session.user.id);
       currentSession = session;
       return session;
     }
 
-    // Try to create anonymous user session (if enabled in Supabase)
-    try {
-      const { data, error } = await supabase.auth.signInAnonymously();
-
-      if (error) {
-        if (error.message.includes("Anonymous sign-ins are disabled")) {
-          console.log("ℹ️ Anonymous auth disabled - using fallback mode");
-          return null; // This is OK - we'll use permissive policies
-        }
-        throw error;
-      }
-
-      console.log("✅ Anonymous session created:", data.user.id);
-      currentSession = data.session;
-      return data.session;
-    } catch {
-      console.log("ℹ️ Anonymous auth not available - using fallback mode");
-      return null; // Continue without auth if policies are permissive
-    }
+    // Don't try to create anonymous sessions - just use permissive policies
+    console.log("ℹ️ No existing session - using permissive storage policies");
+    return null;
   } catch (error) {
-    console.log("ℹ️ Auth initialization skipped:", error.message);
+    console.log("ℹ️ Auth check skipped:", error.message);
     return null;
   }
 }
@@ -127,6 +112,3 @@ export async function initializeAuth() {
 
   console.log("✅ Auth initialization complete");
 }
-
-// Auto-initialize when service is imported
-initializeAuth().catch(console.error);

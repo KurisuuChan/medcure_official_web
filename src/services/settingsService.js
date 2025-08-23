@@ -258,17 +258,27 @@ export async function updateUserProfile(profileData) {
       if (user) {
         console.log("Updating profile in database for user:", user.id);
 
-        // Update database
-        const { error } = await supabase.from("user_profiles").upsert({
-          user_id: user.id,
-          full_name: updatedProfile.full_name,
-          avatar_url: updatedProfile.avatar_url,
-          phone: updatedProfile.phone || "",
-          address: updatedProfile.address || "",
-        });
+        // Update database using upsert with conflict resolution
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .upsert(
+            {
+              user_id: user.id,
+              full_name: updatedProfile.full_name,
+              avatar_url: updatedProfile.avatar_url,
+              phone: updatedProfile.phone || "",
+              address: updatedProfile.address || "",
+            },
+            {
+              onConflict: "user_id",
+              ignoreDuplicates: false,
+            }
+          )
+          .select()
+          .single();
 
         if (!error) {
-          console.log("Profile updated successfully in database");
+          console.log("Profile updated successfully in database:", data);
 
           // Also update auth metadata if needed
           if (updatedProfile.full_name || updatedProfile.avatar_url) {
@@ -559,11 +569,21 @@ export async function updateBusinessSettings(businessData) {
           user.id
         );
 
-        // Update database
-        const { error } = await supabase.from("business_settings").upsert({
-          user_id: user.id,
-          ...updatedSettings,
-        });
+        // Update database using upsert with conflict resolution
+        const { data, error } = await supabase
+          .from("business_settings")
+          .upsert(
+            {
+              user_id: user.id,
+              ...updatedSettings,
+            },
+            {
+              onConflict: "user_id",
+              ignoreDuplicates: false,
+            }
+          )
+          .select()
+          .single();
 
         if (error) {
           console.warn(
@@ -571,7 +591,7 @@ export async function updateBusinessSettings(businessData) {
             error
           );
         } else {
-          console.log("Business settings updated successfully in database");
+          console.log("Business settings updated successfully in database:", data);
         }
       } else {
         console.log("No authenticated user, updating localStorage only");

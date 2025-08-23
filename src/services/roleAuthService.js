@@ -101,6 +101,14 @@ export async function signOut() {
  */
 export async function getCurrentUser() {
   try {
+    // First check if we have an active session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.log("ℹ️ No active session found");
+      return null;
+    }
+
     const {
       data: { user },
       error,
