@@ -20,6 +20,7 @@ import {
   Eye,
   RefreshCw,
   Bug,
+  Users,
 } from "lucide-react";
 import {
   getUserProfile,
@@ -38,6 +39,9 @@ import {
   uploadProfilePicture as debugUploadProfile,
   uploadBusinessLogo as debugUploadLogo,
 } from "../services/storageDebugService.js";
+import RoleProfileManager from "../components/RoleProfileManager.jsx";
+import RoleProfileDemo from "../components/RoleProfileDemo.jsx";
+import { getCurrentRole, isAdmin } from "../services/roleAuthService.js";
 import {
   testAdminUpload,
   adminUploadProfilePicture,
@@ -596,15 +600,21 @@ export default function Settings() {
     }
   };
 
-  const tabs = [
+  // Dynamic tabs based on user role
+  const baseTabs = [
     { id: "profile", label: "Profile", icon: User },
+    { id: "roles", label: "Role Profiles", icon: Users },
     { id: "business", label: "Business", icon: Building },
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "system", label: "System", icon: Monitor },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
-    { id: "debug", label: "Storage Debug", icon: Bug },
   ];
+
+  // Add admin-only tabs
+  const adminTabs = [{ id: "debug", label: "Storage Debug", icon: Bug }];
+
+  const tabs = isAdmin() ? [...baseTabs, ...adminTabs] : baseTabs;
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -759,6 +769,19 @@ export default function Settings() {
                       {loading ? "Saving..." : "Save Profile"}
                     </button>
                   </div>
+                </div>
+              )}
+
+              {activeTab === "roles" && (
+                <div className="space-y-6">
+                  <RoleProfileDemo />
+                  <RoleProfileManager
+                    currentUser={profile}
+                    currentRole={getCurrentRole() || "admin"}
+                    onProfileUpdate={(updatedProfile) => {
+                      setProfile((prev) => ({ ...prev, ...updatedProfile }));
+                    }}
+                  />
                 </div>
               )}
 
@@ -1459,63 +1482,68 @@ export default function Settings() {
                       </div>
                     </div>
 
-                    {/* Admin Testing Section */}
-                    <div className="p-4 border-2 border-red-200 bg-red-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Shield size={20} className="text-red-600" />
-                          <span className="text-sm font-medium text-red-700">
-                            🔧 Admin Storage Testing
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <button
-                          onClick={handleAdminTest}
-                          disabled={loading}
-                          className="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 disabled:opacity-50 font-semibold"
-                        >
-                          {loading ? "Testing..." : "🔧 Test Admin Upload"}
-                        </button>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleAdminProfileUpload}
-                              disabled={loading}
-                              className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                            />
-                            <p className="text-xs text-red-600 mt-1">
-                              Admin Profile Upload
-                            </p>
+                    {/* Admin Testing Section - Admin Only */}
+                    {isAdmin() && (
+                      <div className="p-4 border-2 border-red-200 bg-red-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <Shield size={20} className="text-red-600" />
+                            <span className="text-sm font-medium text-red-700">
+                              🔧 Admin Storage Testing
+                            </span>
                           </div>
-                          <div>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleAdminBusinessUpload}
-                              disabled={loading}
-                              className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                            />
-                            <p className="text-xs text-red-600 mt-1">
-                              Admin Business Upload
-                            </p>
+                          <div className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-semibold">
+                            ADMIN ONLY
                           </div>
                         </div>
-                        <button
-                          onClick={handleListStorageFiles}
-                          disabled={loading}
-                          className="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                        >
-                          {loading ? "Listing..." : "📋 List Storage Files"}
-                        </button>
-                        <p className="text-xs text-red-600">
-                          ⚡ Uses service role key for direct uploads (bypasses
-                          auth & policies)
-                        </p>
+                        <div className="space-y-3">
+                          <button
+                            onClick={handleAdminTest}
+                            disabled={loading}
+                            className="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 disabled:opacity-50 font-semibold"
+                          >
+                            {loading ? "Testing..." : "🔧 Test Admin Upload"}
+                          </button>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAdminProfileUpload}
+                                disabled={loading}
+                                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                              />
+                              <p className="text-xs text-red-600 mt-1">
+                                Admin Profile Upload
+                              </p>
+                            </div>
+                            <div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAdminBusinessUpload}
+                                disabled={loading}
+                                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                              />
+                              <p className="text-xs text-red-600 mt-1">
+                                Admin Business Upload
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={handleListStorageFiles}
+                            disabled={loading}
+                            className="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                          >
+                            {loading ? "Listing..." : "📋 List Storage Files"}
+                          </button>
+                          <p className="text-xs text-red-600">
+                            ⚡ Uses service role key for direct uploads
+                            (bypasses auth & policies)
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Console Instructions */}
                     <div className="p-4 bg-gray-50 border rounded-lg">

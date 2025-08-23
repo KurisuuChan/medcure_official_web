@@ -35,30 +35,64 @@ export async function signIn(email, password) {
 
     console.log("✅ Login successful:", data.user.email);
 
-    // Get user role from metadata or email
-    const role = getUserRole(data.user);
+    // Fetch user profile from database
+    const userProfile = await fetchUserProfile(data.user.id);
+
+    // Determine role from profile or fallback
+    const role = userProfile?.role || getUserRole(data.user);
 
     // Store current user info
     currentUser = data.user;
     userRole = role;
 
+    // Create complete user profile for the frontend
+    const completeProfile = {
+      id: data.user.id,
+      email: data.user.email,
+      role: role,
+      full_name:
+        userProfile?.full_name ||
+        data.user.user_metadata?.full_name ||
+        getDefaultName(role),
+      display_name:
+        userProfile?.full_name ||
+        data.user.user_metadata?.full_name ||
+        getDefaultName(role),
+      avatar_url: userProfile?.profile_image_url || null,
+      role_color: getRoleColor(role),
+      login_time: new Date().toISOString(),
+    };
+
     // Store in localStorage for persistence
     localStorage.setItem(
       "medcure_current_user",
-      JSON.stringify({
-        id: data.user.id,
-        email: data.user.email,
-        role: role,
-        login_time: new Date().toISOString(),
-      })
+      JSON.stringify(completeProfile)
+    );
+    localStorage.setItem(
+      "medcure_user_profile",
+      JSON.stringify(completeProfile)
     );
 
-    console.log("👤 User role determined:", role);
+    console.log("👤 User profile loaded:", completeProfile);
+
+    // Dispatch auth state change event for immediate UI updates
+    window.dispatchEvent(
+      new CustomEvent("authStateChanged", {
+        detail: {
+          user: data.user,
+          role: role,
+          profile: completeProfile,
+          action: "SIGNED_IN",
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
 
     return {
       success: true,
       user: data.user,
       role: role,
+      profile: completeProfile,
       session: data.session,
     };
   } catch (error) {
@@ -102,8 +136,10 @@ export async function signOut() {
 export async function getCurrentUser() {
   try {
     // First check if we have an active session
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       console.log("ℹ️ No active session found");
       return null;
@@ -121,10 +157,43 @@ export async function getCurrentUser() {
 
     if (user) {
       currentUser = user;
-      userRole = getUserRole(user);
+
+      // Fetch user profile from database
+      const userProfile = await fetchUserProfile(user.id);
+      const role = userProfile?.role || getUserRole(user);
+      userRole = role;
+
+      // Create complete profile
+      const completeProfile = {
+        id: user.id,
+        email: user.email,
+        role: role,
+        full_name:
+          userProfile?.full_name ||
+          user.user_metadata?.full_name ||
+          getDefaultName(role),
+        display_name:
+          userProfile?.full_name ||
+          user.user_metadata?.full_name ||
+          getDefaultName(role),
+        avatar_url: userProfile?.profile_image_url || null,
+        role_color: getRoleColor(role),
+      };
+
+      // Update localStorage
+      localStorage.setItem(
+        "medcure_current_user",
+        JSON.stringify(completeProfile)
+      );
+      localStorage.setItem(
+        "medcure_user_profile",
+        JSON.stringify(completeProfile)
+      );
+
       return {
         user,
-        role: userRole,
+        role: role,
+        profile: completeProfile,
       };
     }
 
@@ -136,6 +205,7 @@ export async function getCurrentUser() {
         return {
           user: userData,
           role: userData.role,
+          profile: userData,
         };
       } catch {
         localStorage.removeItem("medcure_current_user");
@@ -178,6 +248,75 @@ function getUserRole(user) {
 
   // Default to employee for safety
   return "employee";
+}
+
+/**
+ * Fetch user profile from database
+ * @param {string} userId - User ID
+ * @returns {Promise<Object|null>} User profile data
+ */
+async function fetchUserProfile(userId) {
+  try {
+    console.log("📋 Fetching user profile for:", userId);
+
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      console.warn("⚠️ User profile not found in database:", error.message);
+      
+      // If it's a missing table error, return null gracefully
+      if (error.message.includes("relation") && error.message.includes("does not exist")) {
+        console.warn("⚠️ user_profiles table doesn't exist - using fallback profile");
+        return null;
+      }
+      
+      return null;
+    }
+
+    console.log("✅ User profile fetched:", data);
+    return data;
+  } catch (error) {
+    console.warn("⚠️ Failed to fetch user profile:", error);
+    return null;
+  }
+}
+
+/**
+ * Get default name for role
+ * @param {string} role - User role
+ * @returns {string} Default display name
+ */
+function getDefaultName(role) {
+  switch (role) {
+    case "admin":
+      return "Admin User";
+    case "employee":
+    case "cashier":
+      return "Cashier User";
+    default:
+      return "MedCure User";
+  }
+}
+
+/**
+ * Get role color for UI theming
+ * @param {string} role - User role
+ * @returns {string} CSS color value
+ */
+function getRoleColor(role) {
+  switch (role) {
+    case "admin":
+      return "#dc2626"; // red-600
+    case "employee":
+    case "cashier":
+      return "#059669"; // emerald-600
+    default:
+      return "#3b82f6"; // blue-600
+  }
 }
 
 /**
@@ -245,31 +384,78 @@ export async function createAdminUser() {
 /**
  * Auth state change listener
  */
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange(async (event, session) => {
   console.log("🔄 Auth state changed:", event);
 
   if (event === "SIGNED_IN" && session?.user) {
     currentUser = session.user;
-    userRole = getUserRole(session.user);
+
+    // Fetch complete user profile
+    const userProfile = await fetchUserProfile(session.user.id);
+    const role = userProfile?.role || getUserRole(session.user);
+    userRole = role;
+
+    const completeProfile = {
+      id: session.user.id,
+      email: session.user.email,
+      role: role,
+      full_name:
+        userProfile?.full_name ||
+        session.user.user_metadata?.full_name ||
+        getDefaultName(role),
+      display_name:
+        userProfile?.full_name ||
+        session.user.user_metadata?.full_name ||
+        getDefaultName(role),
+      avatar_url: userProfile?.profile_image_url || null,
+      role_color: getRoleColor(role),
+      login_time: new Date().toISOString(),
+    };
 
     localStorage.setItem(
       "medcure_current_user",
-      JSON.stringify({
-        id: session.user.id,
-        email: session.user.email,
-        role: userRole,
-        login_time: new Date().toISOString(),
-      })
+      JSON.stringify(completeProfile)
+    );
+    localStorage.setItem(
+      "medcure_user_profile",
+      JSON.stringify(completeProfile)
     );
 
-    console.log("👤 User signed in:", session.user.email, "Role:", userRole);
+    console.log("👤 User signed in:", session.user.email, "Role:", role);
+
+    // Dispatch detailed auth state change event
+    window.dispatchEvent(
+      new CustomEvent("authStateChanged", {
+        detail: {
+          user: session.user,
+          role: role,
+          profile: completeProfile,
+          action: "SIGNED_IN",
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
   }
 
   if (event === "SIGNED_OUT") {
     currentUser = null;
     userRole = null;
     localStorage.removeItem("medcure_current_user");
+    localStorage.removeItem("medcure_user_profile");
     console.log("🚪 User signed out");
+
+    // Dispatch sign out event
+    window.dispatchEvent(
+      new CustomEvent("authStateChanged", {
+        detail: {
+          user: null,
+          role: null,
+          profile: null,
+          action: "SIGNED_OUT",
+          timestamp: new Date().toISOString(),
+        },
+      })
+    );
   }
 });
 

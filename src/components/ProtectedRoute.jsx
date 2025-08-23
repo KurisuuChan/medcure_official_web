@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Login from "./Login.jsx";
-import { getCurrentUser, signOut } from "../services/roleAuthService.js";
+import { simpleGetCurrentUser, simpleSignOut } from "../services/simpleAuthService.js";
 
 export default function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
@@ -13,16 +13,29 @@ export default function ProtectedRoute({ children }) {
 
   const checkAuth = async () => {
     try {
-      const userInfo = await getCurrentUser();
-      if (userInfo) {
+      console.log("🔍 Checking authentication...");
+      setLoading(true);
+      
+      // Use simple auth service that doesn't require database tables
+      const userInfo = await simpleGetCurrentUser();
+      console.log("🔍 Auth check result:", userInfo);
+      
+      if (userInfo && userInfo.user) {
         setUser(userInfo.user);
         setRole(userInfo.role);
+        console.log("✅ User authenticated:", userInfo.user.email, "Role:", userInfo.role);
+      } else {
+        console.log("ℹ️ No authenticated user found");
+        setUser(null);
+        setRole(null);
       }
     } catch (error) {
-      console.log("ℹ️ No existing authentication session:", error.message);
-      // This is normal for users who need to log in
+      console.error("❌ Authentication check failed:", error);
+      setUser(null);
+      setRole(null);
     } finally {
       setLoading(false);
+      console.log("✅ Authentication check completed");
     }
   };
 
@@ -40,7 +53,7 @@ export default function ProtectedRoute({ children }) {
   const handleLogout = async () => {
     try {
       console.log("🔓 Starting logout process...");
-      const result = await signOut();
+      const result = await simpleSignOut();
 
       if (result.success) {
         setUser(null);

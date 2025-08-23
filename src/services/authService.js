@@ -22,7 +22,10 @@ export async function initializeAnonymousSession() {
     } = await supabase.auth.getSession();
 
     if (session && session.user) {
-      console.log("✅ Existing authenticated session found:", session.user.email || session.user.id);
+      console.log(
+        "✅ Existing authenticated session found:",
+        session.user.email || session.user.id
+      );
       currentSession = session;
       return session;
     }

@@ -23,6 +23,11 @@ import {
 import PropTypes from "prop-types";
 import { useNotification } from "@/hooks/useNotification";
 import { useSimpleNotifications as useNotifications } from "@/hooks/useSimpleNotifications";
+import {
+  getCurrentRoleProfile,
+  getRoleDisplayInfo,
+} from "../../utils/roleUtils.js";
+import { getCurrentRole } from "../../services/roleAuthService.js";
 
 export default function Header({ onLogout, user }) {
   const navigate = useNavigate();
@@ -51,13 +56,34 @@ export default function Header({ onLogout, user }) {
 
   // Load initial user profile from localStorage and listen for settings updates
   useEffect(() => {
-    // Load initial profile from localStorage
+    // Load initial profile from localStorage with role-based profiles
     const loadInitialProfile = async () => {
       try {
+        // First try to get current user from auth service
+        const { getCurrentUser } = await import(
+          "@/services/roleAuthService.js"
+        );
+        const currentUserData = await getCurrentUser();
+
+        if (currentUserData?.profile) {
+          console.log(
+            "✅ Loaded user profile from auth service:",
+            currentUserData.profile
+          );
+          setUserProfile(currentUserData.profile);
+          return;
+        }
+
+        // Fallback to localStorage
         const stored = localStorage.getItem("medcure_user_profile");
         if (stored && stored !== "[object Object]") {
-          const profile = JSON.parse(stored);
-          setUserProfile(profile);
+          try {
+            const profile = JSON.parse(stored);
+            console.log("✅ Loaded user profile from localStorage:", profile);
+            setUserProfile(profile);
+          } catch (error) {
+            console.warn("Failed to parse stored profile:", error);
+          }
         }
       } catch (error) {
         console.warn("Failed to load initial profile:", error);
@@ -66,16 +92,50 @@ export default function Header({ onLogout, user }) {
 
     loadInitialProfile();
 
+    // Listen for authentication state changes (login/logout/role changes)
+    const handleAuthStateChange = (event) => {
+      console.log("🔄 Auth state changed in Header:", event.detail);
+
+      const { profile, action } = event.detail;
+
+      if (action === "SIGNED_OUT") {
+        setUserProfile(null);
+        return;
+      }
+
+      if (action === "SIGNED_IN" && profile) {
+        console.log("✅ Profile updated from auth state change:", profile);
+        setUserProfile(profile);
+      }
+    };
+
     // Listen for real-time updates
     const handleSettingsUpdate = (event) => {
       if (event.detail?.profile) {
+        console.log("🔄 Profile updated from settings:", event.detail.profile);
         setUserProfile(event.detail.profile);
       }
     };
 
+    // Listen for role profile updates
+    const handleRoleProfileUpdate = (event) => {
+      const currentRole = getCurrentRole();
+      if (event.detail?.role === currentRole) {
+        const roleProfile = getCurrentRoleProfile(currentRole);
+        console.log("🔄 Profile updated from role change:", roleProfile);
+        setUserProfile(roleProfile);
+      }
+    };
+
+    window.addEventListener("authStateChanged", handleAuthStateChange);
     window.addEventListener("settingsUpdated", handleSettingsUpdate);
-    return () =>
+    window.addEventListener("roleProfileUpdated", handleRoleProfileUpdate);
+
+    return () => {
+      window.removeEventListener("authStateChanged", handleAuthStateChange);
       window.removeEventListener("settingsUpdated", handleSettingsUpdate);
+      window.removeEventListener("roleProfileUpdated", handleRoleProfileUpdate);
+    };
   }, []);
 
   // Load recent notifications when dropdown opens
@@ -620,7 +680,14 @@ export default function Header({ onLogout, user }) {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-semibold shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+            <div
+              className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg sm:rounded-xl text-white flex items-center justify-center text-sm font-semibold shadow-sm group-hover:shadow-md transition-shadow overflow-hidden"
+              style={{
+                background: userProfile?.role_color
+                  ? `linear-gradient(135deg, ${userProfile.role_color}, ${userProfile.role_color}dd)`
+                  : "linear-gradient(135deg, #3b82f6, #2563eb)",
+              }}
+            >
               {userProfile?.avatar_url ? (
                 <img
                   src={userProfile.avatar_url}
@@ -629,7 +696,9 @@ export default function Header({ onLogout, user }) {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  {user?.name
+                  {userProfile?.display_name
+                    ? userProfile.display_name.charAt(0).toUpperCase()
+                    : user?.name
                     ? user.name.charAt(0).toUpperCase()
                     : user?.initials || "A"}
                 </div>
@@ -637,10 +706,19 @@ export default function Header({ onLogout, user }) {
             </div>
             <div className="hidden sm:block text-left">
               <div className="text-sm font-semibold text-gray-900">
-                {userProfile?.full_name || user?.name || "Admin User"}
+                {userProfile?.display_name ||
+                  userProfile?.full_name ||
+                  user?.name ||
+                  "Admin User"}
               </div>
               <div className="text-xs text-gray-500 font-medium">
-                {user?.role || "Administrator"}
+                {(() => {
+                  const currentRole = getCurrentRole();
+                  const roleInfo = getRoleDisplayInfo(
+                    currentRole || user?.role || "admin"
+                  );
+                  return `${roleInfo.icon} ${roleInfo.label}`;
+                })()}
               </div>
             </div>
             <ChevronDown

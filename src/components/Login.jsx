@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, LogIn, Shield, User, Lock, Cross } from "lucide-react";
-import { signIn, getCurrentUser } from "../services/roleAuthService.js";
+import { simpleSignIn, simpleGetCurrentUser } from "../services/simpleAuthService.js";
 import PropTypes from "prop-types";
 import "./login-animations.css";
 
@@ -33,7 +33,7 @@ export default function Login({ onLoginSuccess }) {
   useEffect(() => {
     const checkCurrentUser = async () => {
       try {
-        const userInfo = await getCurrentUser();
+        const userInfo = await simpleGetCurrentUser();
         if (userInfo) {
           onLoginSuccess(userInfo);
         }
@@ -60,7 +60,7 @@ export default function Login({ onLoginSuccess }) {
     setError("");
 
     try {
-      const result = await signIn(formData.email, formData.password);
+      const result = await simpleSignIn(formData.email, formData.password);
 
       if (result.success) {
         console.log("✅ Login successful:", result.role);

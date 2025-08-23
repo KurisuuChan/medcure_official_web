@@ -164,10 +164,22 @@ export async function testAdminUpload() {
   try {
     console.log("🧪 Testing admin upload capabilities...");
 
-    // Create test file
-    const testContent = "Admin test upload from MedCure";
-    const testFile = new File([testContent], "admin-test.txt", {
-      type: "text/plain",
+    // Create a small test image file (1x1 pixel PNG)
+    const testImageData =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+    // Convert base64 to blob
+    const response = await fetch(testImageData);
+    const blob = await response.blob();
+
+    const testFile = new File([blob], "admin-test.png", {
+      type: "image/png",
+    });
+
+    console.log("📄 Admin test file details:", {
+      name: testFile.name,
+      size: testFile.size,
+      type: testFile.type,
     });
 
     const result = await adminUploadFile(testFile, "avatars", "test");

@@ -419,9 +419,11 @@ export async function getSalesSummary(period = "today") {
     switch (period) {
       case "today":
         // FIXED: Proper today calculation with timezone awareness
-        startDate = createDateBoundary(now, true);   // Today at 00:00:00
-        endDate = createDateBoundary(now, false);    // Today at 23:59:59
-        console.log(`🎯 Today's date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+        startDate = createDateBoundary(now, true); // Today at 00:00:00
+        endDate = createDateBoundary(now, false); // Today at 23:59:59
+        console.log(
+          `🎯 Today's date range: ${startDate.toISOString()} to ${endDate.toISOString()}`
+        );
         break;
       case "week":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -762,47 +764,56 @@ export function validateSaleItem(item) {
  * Call this from console to see what's happening with today's sales
  */
 export async function debugTodaySales() {
-  console.log('🔍 DEBUGGING TODAY\'S SALES...');
-  
+  console.log("🔍 DEBUGGING TODAY'S SALES...");
+
   const now = new Date();
-  console.log('Current time:', now.toString());
-  console.log('Current ISO:', now.toISOString());
-  console.log('Current local:', now.toLocaleString());
-  
+  console.log("Current time:", now.toString());
+  console.log("Current ISO:", now.toISOString());
+  console.log("Current local:", now.toLocaleString());
+
   // Test the fixed date calculation
   const startDate = new Date(now);
   startDate.setHours(0, 0, 0, 0);
   const endDate = new Date(now);
   endDate.setHours(23, 59, 59, 999);
-  
-  console.log(`Start: ${startDate.toISOString()} (${startDate.toLocaleString()})`);
+
+  console.log(
+    `Start: ${startDate.toISOString()} (${startDate.toLocaleString()})`
+  );
   console.log(`End: ${endDate.toISOString()} (${endDate.toLocaleString()})`);
-  
+
   try {
     const sales = await getSales({
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     });
-    
+
     const total = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
-    console.log(`✅ Found ${sales.length} transactions with total revenue: $${total.toFixed(2)}`);
-    
+    console.log(
+      `✅ Found ${
+        sales.length
+      } transactions with total revenue: $${total.toFixed(2)}`
+    );
+
     if (sales.length > 0) {
-      console.log('Sample sales:', sales.slice(0, 3).map(s => ({
-        id: s.id,
-        total: s.total,
-        created_at: s.created_at,
-        local_time: new Date(s.created_at).toLocaleString()
-      })));
+      console.log(
+        "Sample sales:",
+        sales.slice(0, 3).map((s) => ({
+          id: s.id,
+          total: s.total,
+          created_at: s.created_at,
+          local_time: new Date(s.created_at).toLocaleString(),
+        }))
+      );
     }
-    
+
     // Test the getSalesSummary function
-    const summary = await getSalesSummary('today');
-    console.log('Summary result:', summary);
-    
+    const summary = await getSalesSummary("today");
+    console.log("Summary result:", summary);
+
     return { sales, summary, total };
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error("❌ Error:", error);
     return { error: error.message };
   }
 }

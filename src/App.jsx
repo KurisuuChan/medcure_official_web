@@ -11,6 +11,7 @@ import NotificationHistory from "@/pages/NotificationHistory";
 import Financials from "@/pages/Financials";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import AuthTest from "@/test/AuthTest";
 
 // Import localStorage utilities for development
 import "@/utils/clearLocalStorage.js";
@@ -24,7 +25,7 @@ export default function App({ userInfo, onLogout }) {
   // Initialize authentication on app startup (non-blocking)
   useEffect(() => {
     console.log("🚀 Initializing MedCure App...");
-    
+
     // Initialize storage auth in background without blocking app startup
     initializeAuth().catch((error) => {
       console.log("⚠️ Storage auth skipped:", error.message);
@@ -59,6 +60,7 @@ export default function App({ userInfo, onLogout }) {
           <Route path="financials" element={<Financials />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="test" element={<AuthTest />} />
           <Route path="*" element={<Dashboard />} />
         </Route>
       </Routes>

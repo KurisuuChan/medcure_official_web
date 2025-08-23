@@ -591,7 +591,10 @@ export async function updateBusinessSettings(businessData) {
             error
           );
         } else {
-          console.log("Business settings updated successfully in database:", data);
+          console.log(
+            "Business settings updated successfully in database:",
+            data
+          );
         }
       } else {
         console.log("No authenticated user, updating localStorage only");

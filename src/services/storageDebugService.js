@@ -185,16 +185,29 @@ export async function testStorageUpload() {
   console.log("🧪 Testing storage upload...");
 
   try {
-    // Create a small test file
-    const testContent = "test upload from medcure";
-    const testFile = new File([testContent], "test.txt", {
-      type: "text/plain",
+    // Create a small test image file (1x1 pixel PNG)
+    const testImageData =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+    // Convert base64 to blob
+    const response = await fetch(testImageData);
+    const blob = await response.blob();
+
+    const testFile = new File([blob], "test-upload.png", {
+      type: "image/png",
+    });
+
+    console.log("📄 Test file details:", {
+      name: testFile.name,
+      size: testFile.size,
+      type: testFile.type,
     });
 
     const result = await uploadFileToStorage(testFile, "avatars", "test");
 
     if (result.success) {
       console.log("✅ Test upload successful! Your storage is working.");
+      console.log("🔗 Test file URL:", result.url);
       return true;
     } else {
       console.error("❌ Test upload failed:", result.error);
