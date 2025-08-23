@@ -10,23 +10,42 @@ const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 // Use service_role key for admin operations in development
 const effectiveKey = serviceRoleKey || supabaseKey;
 
-// Create single Supabase client instance to avoid multiple GoTrueClient warnings
-export const supabase = createClient(supabaseUrl, effectiveKey, {
+// Create Supabase client with authentication enabled for storage uploads
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-    detectSessionInUrl: false,
-    storageKey: "medcure-auth", // Unique storage key to avoid conflicts
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: "medcure-auth",
   },
   db: {
     schema: "public",
   },
   global: {
     headers: {
-      "x-client-info": "medcure-admin",
+      "x-client-info": "medcure-web",
     },
   },
 });
+
+// Create admin client with service role for admin operations (if available)
+export const adminClient = serviceRoleKey
+  ? createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      db: {
+        schema: "public",
+      },
+      global: {
+        headers: {
+          "x-client-info": "medcure-admin",
+        },
+      },
+    })
+  : supabase;
 
 // Log configuration status
 if (serviceRoleKey) {
@@ -48,6 +67,3 @@ if (!effectiveKey || effectiveKey === "your-supabase-key") {
 
 // Export for testing purposes
 export { supabaseUrl, supabaseKey };
-
-// Use the same client instance for admin operations to avoid multiple instances
-export const adminClient = supabase;

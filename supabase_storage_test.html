@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Supabase Storage Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-result {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+      .file-input {
+        margin: 10px 0;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔍 Supabase Storage Debug Tool</h1>
+    <p>Use this tool to debug your Supabase Storage configuration issues.</p>
+
+    <div id="results"></div>
+
+    <div class="test-section">
+      <h3>🧪 Storage Tests</h3>
+      <button onclick="testConfig()">Test Configuration</button>
+      <button onclick="testBuckets()">Test Buckets</button>
+      <button onclick="testUpload()">Test Upload</button>
+      <button onclick="listFiles()">List Files</button>
+    </div>
+
+    <div class="test-section">
+      <h3>📁 File Upload Test</h3>
+      <input type="file" id="testFile" class="file-input" accept="image/*" />
+      <button onclick="uploadTestFile()">Upload Test File</button>
+    </div>
+
+    <script>
+      // Replace these with your actual Supabase credentials
+      const SUPABASE_URL = "YOUR_SUPABASE_URL";
+      const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+      function log(message, type = "info") {
+        const results = document.getElementById("results");
+        const div = document.createElement("div");
+        div.className = `test-result ${type}`;
+        div.innerHTML = message;
+        results.appendChild(div);
+        console.log(message);
+      }
+
+      function clearResults() {
+        document.getElementById("results").innerHTML = "";
+      }
+
+      async function testConfig() {
+        clearResults();
+        log("🔍 Testing Supabase Configuration...", "info");
+
+        if (
+          SUPABASE_URL === "YOUR_SUPABASE_URL" ||
+          SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY"
+        ) {
+          log(
+            "❌ Please update the SUPABASE_URL and SUPABASE_ANON_KEY variables in this file",
+            "error"
+          );
+          return;
+        }
+
+        log(`✅ Supabase URL: ${SUPABASE_URL}`, "success");
+        log(`✅ Anon Key: ${SUPABASE_ANON_KEY.substring(0, 20)}...`, "success");
+
+        try {
+          const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          });
+
+          if (response.ok) {
+            log("✅ Supabase API is accessible", "success");
+          } else {
+            log(
+              `❌ Supabase API error: ${response.status} ${response.statusText}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          log(`❌ Connection error: ${error.message}`, "error");
+        }
+      }
+
+      async function testBuckets() {
+        log("📁 Testing Storage Buckets...", "info");
+
+        try {
+          const response = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          });
+
+          if (response.ok) {
+            const buckets = await response.json();
+            log(`✅ Found ${buckets.length} buckets:`, "success");
+            buckets.forEach((bucket) => {
+              log(
+                `  - ${bucket.name} (${bucket.public ? "public" : "private"})`,
+                "info"
+              );
+            });
+
+            const requiredBuckets = ["avatars", "business-assets"];
+            const existingBuckets = buckets.map((b) => b.name);
+            const missingBuckets = requiredBuckets.filter(
+              (name) => !existingBuckets.includes(name)
+            );
+
+            if (missingBuckets.length > 0) {
+              log(
+                `❌ Missing required buckets: ${missingBuckets.join(", ")}`,
+                "error"
+              );
+            } else {
+              log("✅ All required buckets exist", "success");
+            }
+          } else {
+            log(
+              `❌ Bucket list error: ${response.status} ${response.statusText}`,
+              "error"
+            );
+          }
+        } catch (error) {
+          log(`❌ Bucket test error: ${error.message}`, "error");
+        }
+      }
+
+      async function testUpload() {
+        log("⬆️ Testing Upload Permissions...", "info");
+
+        // Create a small test file
+        const testContent = `Test file from Supabase debug tool - ${new Date().toISOString()}`;
+        const testFile = new Blob([testContent], { type: "text/plain" });
+        const fileName = `test/debug-${Date.now()}.txt`;
+
+        try {
+          const formData = new FormData();
+          formData.append("file", testFile, fileName);
+
+          const response = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/avatars/${fileName}`,
+            {
+              method: "POST",
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+              body: testFile,
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            log("✅ Upload test successful!", "success");
+            log(`File path: ${result.Key || fileName}`, "info");
+
+            // Test public URL
+            const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
+            log(`✅ Public URL: ${publicUrl}`, "success");
+          } else {
+            const error = await response.text();
+            log(
+              `❌ Upload failed: ${response.status} ${response.statusText}`,
+              "error"
+            );
+            log(`Error details: ${error}`, "error");
+          }
+        } catch (error) {
+          log(`❌ Upload test error: ${error.message}`, "error");
+        }
+      }
+
+      async function listFiles() {
+        log("📋 Listing Files in Avatars Bucket...", "info");
+
+        try {
+          const response = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/list/avatars`,
+            {
+              method: "POST",
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                limit: 10,
+                offset: 0,
+              }),
+            }
+          );
+
+          if (response.ok) {
+            const files = await response.json();
+            if (files.length > 0) {
+              log(
+                `✅ Found ${files.length} files in avatars bucket:`,
+                "success"
+              );
+              files.forEach((file) => {
+                log(
+                  `  - ${file.name} (${file.metadata?.size || "unknown size"})`,
+                  "info"
+                );
+              });
+            } else {
+              log("ℹ️ Avatars bucket is empty", "info");
+            }
+          } else {
+            const error = await response.text();
+            log(
+              `❌ List files failed: ${response.status} ${response.statusText}`,
+              "error"
+            );
+            log(`Error details: ${error}`, "error");
+          }
+        } catch (error) {
+          log(`❌ List files error: ${error.message}`, "error");
+        }
+      }
+
+      async function uploadTestFile() {
+        const fileInput = document.getElementById("testFile");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          log("❌ Please select a file first", "error");
+          return;
+        }
+
+        log(`📁 Uploading file: ${file.name} (${file.size} bytes)`, "info");
+
+        const fileName = `test-uploads/${Date.now()}-${file.name}`;
+
+        try {
+          const response = await fetch(
+            `${SUPABASE_URL}/storage/v1/object/avatars/${fileName}`,
+            {
+              method: "POST",
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+              body: file,
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            log("✅ File uploaded successfully!", "success");
+
+            const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
+            log(
+              `✅ Public URL: <a href="${publicUrl}" target="_blank">${publicUrl}</a>`,
+              "success"
+            );
+          } else {
+            const error = await response.text();
+            log(
+              `❌ Upload failed: ${response.status} ${response.statusText}`,
+              "error"
+            );
+            log(`Error details: <pre>${error}</pre>`, "error");
+          }
+        } catch (error) {
+          log(`❌ Upload error: ${error.message}`, "error");
+        }
+      }
+
+      // Auto-run configuration test on page load
+      window.onload = function () {
+        log("🚀 Supabase Storage Debug Tool Loaded", "info");
+        log('👆 Click "Test Configuration" to start debugging', "info");
+      };
+    </script>
+  </body>
+</html>

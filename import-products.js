@@ -9,8 +9,6 @@ async function importProducts() {
     // Read and parse CSV file
     const csvData = fs.readFileSync("./products_import.csv", "utf8");
 
-    const products = [];
-
     // Parse CSV
     parse(
       csvData,

@@ -265,11 +265,12 @@ export const useSimpleNotifications = (userId = null) => {
         retryCount++;
         if (retryCount < maxRetries) {
           console.warn(
-            `Retrying notification load (${retryCount}/${maxRetries})`
+            `Retrying notification load (${retryCount}/${maxRetries}):`,
+            err
           );
           setTimeout(loadWithRetry, 1000 * retryCount); // Exponential backoff
         } else {
-          console.error("Failed to load notifications after retries");
+          console.error("Failed to load notifications after retries:", err);
         }
       }
     };

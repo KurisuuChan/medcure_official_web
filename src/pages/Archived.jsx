@@ -25,7 +25,6 @@ import {
 } from "../hooks/useArchive.js";
 import { useNotification } from "../hooks/useNotification.js";
 import { formatCurrency, formatDate } from "../utils/formatters.js";
-import ArchiveConnectionTest from "../components/ArchiveConnectionTest.jsx";
 
 export default function Archived() {
   const { addNotification } = useNotification();
@@ -607,9 +606,6 @@ export default function Archived() {
           </div>
         </div>
       </div>
-
-      {/* Debug Component - Remove in production */}
-      <ArchiveConnectionTest />
 
       {/* Filters and Search */}
       <div className="bg-white border-b border-gray-200">

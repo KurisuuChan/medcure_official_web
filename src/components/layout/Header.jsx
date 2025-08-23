@@ -10,7 +10,6 @@ import {
   Package,
   X,
   Settings,
-  UserCircle,
   Coins,
   PackageX,
   BarChart3,
@@ -28,6 +27,11 @@ import { useSimpleNotifications as useNotifications } from "@/hooks/useSimpleNot
 export default function Header({ onLogout, user }) {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+
+  // Debug: Check if onLogout is received
+  useEffect(() => {
+    console.log("Header received onLogout:", typeof onLogout, onLogout);
+  }, [onLogout]);
   const {
     notifications,
     unreadCount,
@@ -163,18 +167,35 @@ export default function Header({ onLogout, user }) {
   };
 
   // Handle logout
-  const handleLogout = () => {
-    onLogout?.();
-    addNotification("Logged out successfully", "success");
-    setMenuOpen(false);
-  };
+  const handleLogout = async () => {
+    const confirmed = window.confirm("Are you sure you want to sign out?");
+    if (!confirmed) return;
 
-  // Handle marking all notifications as read
+    try {
+      setMenuOpen(false);
+      console.log("🔓 Initiating logout from Header...");
+      console.log("onLogout function:", onLogout);
+
+      if (onLogout) {
+        await onLogout();
+        // Don't add notification here since the page will reload
+      } else {
+        console.error("❌ No logout function provided");
+        // Fallback: direct logout using roleAuthService
+        const { signOut } = await import("@/services/roleAuthService.js");
+        await signOut();
+        window.location.reload(); // Force reload to go to login
+      }
+    } catch (error) {
+      console.error("❌ Logout failed:", error);
+      addNotification("Failed to log out: " + error.message, "error");
+    }
+  }; // Handle marking all notifications as read
   const handleMarkAllRead = async () => {
     try {
       await markAsRead(null, true);
       addNotification("All notifications marked as read", "success");
-    } catch (error) {
+    } catch {
       addNotification("Failed to mark notifications as read", "error");
     }
   };
