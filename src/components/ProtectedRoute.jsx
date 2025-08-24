@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Login from "./Login.jsx";
-import { simpleGetCurrentUser, simpleSignOut } from "../services/simpleAuthService.js";
+import {
+  simpleGetCurrentUser,
+  simpleSignOut,
+} from "../services/simpleAuthService.js";
 
 export default function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
@@ -15,15 +18,20 @@ export default function ProtectedRoute({ children }) {
     try {
       console.log("🔍 Checking authentication...");
       setLoading(true);
-      
+
       // Use simple auth service that doesn't require database tables
       const userInfo = await simpleGetCurrentUser();
       console.log("🔍 Auth check result:", userInfo);
-      
+
       if (userInfo && userInfo.user) {
         setUser(userInfo.user);
         setRole(userInfo.role);
-        console.log("✅ User authenticated:", userInfo.user.email, "Role:", userInfo.role);
+        console.log(
+          "✅ User authenticated:",
+          userInfo.user.email,
+          "Role:",
+          userInfo.role
+        );
       } else {
         console.log("ℹ️ No authenticated user found");
         setUser(null);

@@ -267,13 +267,18 @@ async function fetchUserProfile(userId) {
 
     if (error) {
       console.warn("⚠️ User profile not found in database:", error.message);
-      
+
       // If it's a missing table error, return null gracefully
-      if (error.message.includes("relation") && error.message.includes("does not exist")) {
-        console.warn("⚠️ user_profiles table doesn't exist - using fallback profile");
+      if (
+        error.message.includes("relation") &&
+        error.message.includes("does not exist")
+      ) {
+        console.warn(
+          "⚠️ user_profiles table doesn't exist - using fallback profile"
+        );
         return null;
       }
-      
+
       return null;
     }
 

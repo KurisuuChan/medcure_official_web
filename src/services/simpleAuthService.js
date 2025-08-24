@@ -32,7 +32,7 @@ export async function simpleSignIn(email, password) {
 
     // Determine role from email (simple fallback)
     const role = getSimpleRole(data.user.email);
-    
+
     currentUser = data.user;
     userRole = role;
 
@@ -92,14 +92,19 @@ export async function simpleSignOut() {
  */
 export async function simpleGetCurrentUser() {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       return null;
     }
 
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
     if (error || !user) {
       return null;
     }
@@ -134,15 +139,15 @@ export async function simpleGetCurrentUser() {
  */
 function getSimpleRole(email) {
   const lowerEmail = email?.toLowerCase();
-  
+
   if (lowerEmail === "admin@medcure.com" || lowerEmail?.includes("admin")) {
     return "admin";
   }
-  
+
   if (lowerEmail?.includes("cashier") || lowerEmail?.includes("employee")) {
     return "employee";
   }
-  
+
   return "employee"; // Default to employee
 }
 

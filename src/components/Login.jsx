@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, LogIn, Shield, User, Lock, Cross } from "lucide-react";
-import { simpleSignIn, simpleGetCurrentUser } from "../services/simpleAuthService.js";
+import {
+  simpleSignIn,
+  simpleGetCurrentUser,
+} from "../services/simpleAuthService.js";
 import PropTypes from "prop-types";
 import "./login-animations.css";
 
