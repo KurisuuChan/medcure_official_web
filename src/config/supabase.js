@@ -1,11 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "your-supabase-url";
-const supabaseKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "your-supabase-key";
+const getEnv = (key) => (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) || (typeof process !== 'undefined' && process.env[key]);
+
+const supabaseUrl = getEnv("VITE_SUPABASE_URL") || "your-supabase-url";
+const supabaseKey = getEnv("VITE_SUPABASE_ANON_KEY") || "your-supabase-key";
 
 // For development/admin use, we'll use service_role key if available
-const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const serviceRoleKey = getEnv("VITE_SUPABASE_SERVICE_ROLE_KEY");
 
 // Use service_role key for admin operations in development
 const effectiveKey = serviceRoleKey || supabaseKey;
@@ -13,9 +14,9 @@ const effectiveKey = serviceRoleKey || supabaseKey;
 // Create a SINGLE Supabase client with authentication enabled
 export const supabase = createClient(supabaseUrl, effectiveKey, {
   auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
+    autoRefreshToken: typeof import.meta !== 'undefined',
+    persistSession: typeof import.meta !== 'undefined',
+    detectSessionInUrl: typeof import.meta !== 'undefined',
     storageKey: "medcure-auth",
   },
   db: {

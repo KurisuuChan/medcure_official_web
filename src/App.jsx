@@ -11,6 +11,7 @@ import NotificationHistory from "@/pages/NotificationHistory";
 import Financials from "@/pages/Financials";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import UserManagement from "@/pages/UserManagement";
 import AuthTest from "@/test/AuthTest";
 
 // Import localStorage utilities for development
@@ -60,6 +61,7 @@ export default function App({ userInfo, onLogout }) {
           <Route path="financials" element={<Financials />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="users" element={<UserManagement />} />
           <Route path="test" element={<AuthTest />} />
           <Route path="*" element={<Dashboard />} />
         </Route>

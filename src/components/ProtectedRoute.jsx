@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Login from "./Login.jsx";
-import { simpleGetCurrentUser, simpleSignOut } from "../services/simpleAuthService.js";
+import { getCurrentUser, signOut } from "../services/roleAuthService.js";
 
 export default function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
@@ -8,36 +8,47 @@ export default function ProtectedRoute({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    const checkAuth = async () => {
+      try {
+        console.log("🔍 Checking authentication...");
+        setLoading(true);
+        const userInfo = await getCurrentUser();
+        console.log("🔍 Auth check result:", userInfo);
 
-  const checkAuth = async () => {
-    try {
-      console.log("🔍 Checking authentication...");
-      setLoading(true);
-      
-      // Use simple auth service that doesn't require database tables
-      const userInfo = await simpleGetCurrentUser();
-      console.log("🔍 Auth check result:", userInfo);
-      
-      if (userInfo && userInfo.user) {
-        setUser(userInfo.user);
-        setRole(userInfo.role);
-        console.log("✅ User authenticated:", userInfo.user.email, "Role:", userInfo.role);
-      } else {
-        console.log("ℹ️ No authenticated user found");
+        if (userInfo && userInfo.user) {
+          setUser(userInfo.user);
+          setRole(userInfo.role);
+          console.log("✅ User authenticated:", userInfo.user.email, "Role:", userInfo.role);
+        } else {
+          console.log("ℹ️ No authenticated user found");
+          setUser(null);
+          setRole(null);
+        }
+      } catch (error) {
+        console.error("❌ Authentication check failed:", error);
         setUser(null);
         setRole(null);
+      } finally {
+        setLoading(false);
+        console.log("✅ Authentication check completed");
       }
-    } catch (error) {
-      console.error("❌ Authentication check failed:", error);
-      setUser(null);
-      setRole(null);
-    } finally {
-      setLoading(false);
-      console.log("✅ Authentication check completed");
-    }
-  };
+    };
+
+    checkAuth();
+
+    const handleAuthChange = (e) => {
+      console.log("Auth state changed in ProtectedRoute:", e.detail);
+      const { user, role } = e.detail;
+      setUser(user);
+      setRole(role);
+    };
+
+    window.addEventListener("authStateChanged", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("authStateChanged", handleAuthChange);
+    };
+  }, []);
 
   const handleLoginSuccess = (userInfo) => {
     setUser(userInfo.user);
@@ -53,7 +64,7 @@ export default function ProtectedRoute({ children }) {
   const handleLogout = async () => {
     try {
       console.log("🔓 Starting logout process...");
-      const result = await simpleSignOut();
+      const result = await signOut();
 
       if (result.success) {
         setUser(null);

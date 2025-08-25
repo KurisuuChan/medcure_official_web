@@ -63,30 +63,34 @@ export async function signIn(email, password) {
       login_time: new Date().toISOString(),
     };
 
-    // Store in localStorage for persistence
-    localStorage.setItem(
-      "medcure_current_user",
-      JSON.stringify(completeProfile)
-    );
-    localStorage.setItem(
-      "medcure_user_profile",
-      JSON.stringify(completeProfile)
-    );
+    // Store in localStorage for persistence if in a browser environment
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(
+        "medcure_current_user",
+        JSON.stringify(completeProfile)
+      );
+      localStorage.setItem(
+        "medcure_user_profile",
+        JSON.stringify(completeProfile)
+      );
+    }
 
     console.log("👤 User profile loaded:", completeProfile);
 
     // Dispatch auth state change event for immediate UI updates
-    window.dispatchEvent(
-      new CustomEvent("authStateChanged", {
-        detail: {
-          user: data.user,
-          role: role,
-          profile: completeProfile,
-          action: "SIGNED_IN",
-          timestamp: new Date().toISOString(),
-        },
-      })
-    );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent("authStateChanged", {
+          detail: {
+            user: data.user,
+            role: role,
+            profile: completeProfile,
+            action: "SIGNED_IN",
+            timestamp: new Date().toISOString(),
+          },
+        })
+      );
+    }
 
     return {
       success: true,
@@ -120,7 +124,9 @@ export async function signOut() {
     // Clear local state
     currentUser = null;
     userRole = null;
-    localStorage.removeItem("medcure_current_user");
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem("medcure_current_user");
+    }
 
     console.log("✅ User signed out successfully");
     return { success: true };
@@ -181,14 +187,16 @@ export async function getCurrentUser() {
       };
 
       // Update localStorage
-      localStorage.setItem(
-        "medcure_current_user",
-        JSON.stringify(completeProfile)
-      );
-      localStorage.setItem(
-        "medcure_user_profile",
-        JSON.stringify(completeProfile)
-      );
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(
+          "medcure_current_user",
+          JSON.stringify(completeProfile)
+        );
+        localStorage.setItem(
+          "medcure_user_profile",
+          JSON.stringify(completeProfile)
+        );
+      }
 
       return {
         user,
@@ -198,17 +206,19 @@ export async function getCurrentUser() {
     }
 
     // Check localStorage for persisted user
-    const storedUser = localStorage.getItem("medcure_current_user");
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        return {
-          user: userData,
-          role: userData.role,
-          profile: userData,
-        };
-      } catch {
-        localStorage.removeItem("medcure_current_user");
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedUser = localStorage.getItem("medcure_current_user");
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          return {
+            user: userData,
+            role: userData.role,
+            profile: userData,
+          };
+        } catch {
+          localStorage.removeItem("medcure_current_user");
+        }
       }
     }
 
@@ -412,50 +422,58 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       login_time: new Date().toISOString(),
     };
 
-    localStorage.setItem(
-      "medcure_current_user",
-      JSON.stringify(completeProfile)
-    );
-    localStorage.setItem(
-      "medcure_user_profile",
-      JSON.stringify(completeProfile)
-    );
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(
+        "medcure_current_user",
+        JSON.stringify(completeProfile)
+      );
+      localStorage.setItem(
+        "medcure_user_profile",
+        JSON.stringify(completeProfile)
+      );
+    }
 
     console.log("👤 User signed in:", session.user.email, "Role:", role);
 
     // Dispatch detailed auth state change event
-    window.dispatchEvent(
-      new CustomEvent("authStateChanged", {
-        detail: {
-          user: session.user,
-          role: role,
-          profile: completeProfile,
-          action: "SIGNED_IN",
-          timestamp: new Date().toISOString(),
-        },
-      })
-    );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent("authStateChanged", {
+          detail: {
+            user: session.user,
+            role: role,
+            profile: completeProfile,
+            action: "SIGNED_IN",
+            timestamp: new Date().toISOString(),
+          },
+        })
+      );
+    }
   }
 
   if (event === "SIGNED_OUT") {
     currentUser = null;
     userRole = null;
-    localStorage.removeItem("medcure_current_user");
-    localStorage.removeItem("medcure_user_profile");
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem("medcure_current_user");
+      localStorage.removeItem("medcure_user_profile");
+    }
     console.log("🚪 User signed out");
 
     // Dispatch sign out event
-    window.dispatchEvent(
-      new CustomEvent("authStateChanged", {
-        detail: {
-          user: null,
-          role: null,
-          profile: null,
-          action: "SIGNED_OUT",
-          timestamp: new Date().toISOString(),
-        },
-      })
-    );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent("authStateChanged", {
+          detail: {
+            user: null,
+            role: null,
+            profile: null,
+            action: "SIGNED_OUT",
+            timestamp: new Date().toISOString(),
+          },
+        })
+      );
+    }
   }
 });
 
