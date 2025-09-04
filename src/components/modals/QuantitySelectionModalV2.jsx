@@ -260,14 +260,7 @@ export function QuantitySelectionModal({
               />
               <div className="text-base font-bold text-blue-800">1 Box</div>
               <div className="text-xs text-blue-600 mt-1">
-                Max:{" "}
-                {Math.max(
-                  0,
-                  Math.floor(
-                    (product.total_stock || 0) /
-                      (product.total_pieces_per_box || 1)
-                  )
-                )}
+                Max: {Math.max(0, Math.floor(product.available_boxes || 0))}
               </div>
             </button>
 
@@ -283,13 +276,7 @@ export function QuantitySelectionModal({
               />
               <div className="text-base font-bold text-green-800">1 Sheet</div>
               <div className="text-xs text-green-600 mt-1">
-                Max:{" "}
-                {Math.max(
-                  0,
-                  Math.floor(
-                    (product.total_stock || 0) / (product.pieces_per_sheet || 1)
-                  )
-                )}
+                Max: {Math.max(0, Math.floor(product.available_sheets || 0))}
               </div>
             </button>
 
@@ -305,7 +292,7 @@ export function QuantitySelectionModal({
               />
               <div className="text-base font-bold text-orange-800">1 Piece</div>
               <div className="text-xs text-orange-600 mt-1">
-                Max: {Math.max(0, product.total_stock || 0)}
+                Max: {Math.max(0, product.available_pieces || 0)}
               </div>
             </button>
           </div>
