@@ -10,26 +10,23 @@ const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 // Use service_role key for admin operations in development
 const effectiveKey = serviceRoleKey || supabaseKey;
 
-// Create a SINGLE Supabase client with authentication enabled
+// Create single Supabase client instance to avoid multiple GoTrueClient warnings
 export const supabase = createClient(supabaseUrl, effectiveKey, {
   auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storageKey: "medcure-auth",
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+    storageKey: "medcure-auth", // Unique storage key to avoid conflicts
   },
   db: {
     schema: "public",
   },
   global: {
     headers: {
-      "x-client-info": "medcure-web",
+      "x-client-info": "medcure-admin",
     },
   },
 });
-
-// Export the same client for admin operations to avoid multiple instances
-export const adminClient = supabase;
 
 // Log configuration status
 if (serviceRoleKey) {
@@ -51,3 +48,6 @@ if (!effectiveKey || effectiveKey === "your-supabase-key") {
 
 // Export for testing purposes
 export { supabaseUrl, supabaseKey };
+
+// Use the same client instance for admin operations to avoid multiple instances
+export const adminClient = supabase;

@@ -328,7 +328,7 @@ class SimpleNotificationService {
   }
 
   // Subscribe to real-time notifications
-  subscribeToNotifications(callback, userId = null) {
+  subscribeToNotifications(userId = null, callback) {
     try {
       let channel;
 

@@ -19,8 +19,6 @@ import {
   Volume2,
   Eye,
   RefreshCw,
-  Bug,
-  Users,
 } from "lucide-react";
 import {
   getUserProfile,
@@ -33,21 +31,6 @@ import {
   getAppSettings,
   updateAppSetting,
 } from "../services/settingsService.js";
-import {
-  debugStorageSetup,
-  testStorageUpload,
-  uploadProfilePicture as debugUploadProfile,
-  uploadBusinessLogo as debugUploadLogo,
-} from "../services/storageDebugService.js";
-import RoleProfileManager from "../components/RoleProfileManager.jsx";
-import RoleProfileDemo from "../components/RoleProfileDemo.jsx";
-import { getCurrentRole, isAdmin } from "../services/roleAuthService.js";
-import {
-  testAdminUpload,
-  adminUploadProfilePicture,
-  adminUploadBusinessLogo,
-  adminListFiles,
-} from "../services/adminStorageService.js";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -106,27 +89,13 @@ export default function Settings() {
 
     // Trigger custom event to update other components
     if (type === "success") {
-      // Use current state values directly from refs
-      const eventDetail = {
-        profile: profileRef.current,
-        business: businessRef.current,
-        appSettings: appSettingsRef.current,
-      };
-
-      console.log("Dispatching settingsUpdated event with data:", eventDetail);
-
       window.dispatchEvent(
         new CustomEvent("settingsUpdated", {
-          detail: eventDetail,
-        })
-      );
-
-      // Also trigger a custom storage event to ensure all components update
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "medcure_settings_updated",
-          newValue: JSON.stringify(eventDetail),
-          storageArea: localStorage,
+          detail: {
+            profile: profileRef.current,
+            business: businessRef.current,
+            appSettings: appSettingsRef.current,
+          },
         })
       );
     }
@@ -296,325 +265,14 @@ export default function Settings() {
     event.target.value = "";
   };
 
-  // Storage Debug Functions
-  const handleStorageDebug = async () => {
-    try {
-      setLoading(true);
-      console.log("🔍 Running storage debug...");
-      showMessage("info", "Running storage diagnostics...");
-
-      await debugStorageSetup();
-      showMessage(
-        "success",
-        "Storage debug completed - check console for details"
-      );
-    } catch (error) {
-      console.error("Storage debug failed:", error);
-      showMessage("error", "Storage debug failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStorageTest = async () => {
-    try {
-      setLoading(true);
-      console.log("🧪 Testing storage upload...");
-      showMessage("info", "Testing storage upload...");
-
-      const success = await testStorageUpload();
-      if (success) {
-        showMessage("success", "Storage test passed! ✅");
-      } else {
-        showMessage("error", "Storage test failed! ❌");
-      }
-    } catch (error) {
-      console.error("Storage test failed:", error);
-      showMessage("error", "Storage test failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDebugProfileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      setLoading(true);
-      console.log("🖼️ Testing profile picture upload with debug service...");
-      showMessage("info", "Testing profile upload...");
-
-      const imageUrl = await debugUploadProfile(file);
-      setProfile((prev) => ({ ...prev, avatar_url: imageUrl }));
-      showMessage("success", "Debug profile upload successful! ✅");
-    } catch (error) {
-      console.error("Debug profile upload failed:", error);
-      showMessage("error", "Debug profile upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDebugBusinessUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      setLoading(true);
-      console.log("🏢 Testing business logo upload with debug service...");
-      showMessage("info", "Testing business logo upload...");
-
-      const logoUrl = await debugUploadLogo(file);
-      setBusiness((prev) => ({ ...prev, logo_url: logoUrl }));
-      showMessage("success", "Debug logo upload successful! ✅");
-    } catch (error) {
-      console.error("Debug logo upload failed:", error);
-      showMessage("error", "Debug logo upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Admin Testing Functions
-  const handleAdminTest = async () => {
-    try {
-      setLoading(true);
-      console.log("🔧 Testing admin upload capabilities...");
-      showMessage("info", "Testing admin upload...");
-
-      const success = await testAdminUpload();
-      if (success) {
-        showMessage(
-          "success",
-          "Admin upload test passed! ✅ Check Supabase Storage"
-        );
-      } else {
-        showMessage("error", "Admin upload test failed! ❌");
-      }
-    } catch (error) {
-      console.error("Admin test failed:", error);
-      showMessage("error", "Admin test failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminProfileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      setLoading(true);
-      console.log("👤 Admin uploading profile picture...");
-      showMessage("info", "Admin uploading profile...");
-
-      const imageUrl = await adminUploadProfilePicture(file);
-      setProfile((prev) => ({ ...prev, avatar_url: imageUrl }));
-      showMessage(
-        "success",
-        "Admin profile upload successful! ✅ Check Supabase Storage"
-      );
-    } catch (error) {
-      console.error("Admin profile upload failed:", error);
-      showMessage("error", "Admin profile upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminBusinessUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      setLoading(true);
-      console.log("🏢 Admin uploading business logo...");
-      showMessage("info", "Admin uploading business logo...");
-
-      const logoUrl = await adminUploadBusinessLogo(file);
-      setBusiness((prev) => ({ ...prev, logo_url: logoUrl }));
-      showMessage(
-        "success",
-        "Admin business logo upload successful! ✅ Check Supabase Storage"
-      );
-    } catch (error) {
-      console.error("Admin business upload failed:", error);
-      showMessage("error", "Admin business upload failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleListStorageFiles = async () => {
-    try {
-      setLoading(true);
-      console.log("📋 Listing storage files with admin access...");
-      showMessage("info", "Listing storage files...");
-
-      const avatarFiles = await adminListFiles("avatars");
-      const businessFiles = await adminListFiles("business-assets");
-
-      console.log("📁 Avatar files:", avatarFiles);
-      console.log("📁 Business files:", businessFiles);
-
-      const totalFiles = avatarFiles.length + businessFiles.length;
-      showMessage("success", `Found ${totalFiles} files in Supabase Storage`);
-    } catch (error) {
-      console.error("List files failed:", error);
-      showMessage("error", "Failed to list storage files");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Find and display stored images
-  const handleFindStoredImages = () => {
-    try {
-      console.log("🔍 Finding stored images...");
-
-      const results = {
-        localStorage: {},
-        supabaseUrls: [],
-      };
-
-      // Check localStorage for images
-      try {
-        const userProfile = JSON.parse(
-          localStorage.getItem("medcure_user_profile") || "{}"
-        );
-        const businessSettings = JSON.parse(
-          localStorage.getItem("medcure_business_settings") || "{}"
-        );
-
-        if (userProfile.avatar_url) {
-          results.localStorage.profilePicture = userProfile.avatar_url;
-          console.log(
-            "✅ Profile picture found:",
-            userProfile.avatar_url.substring(0, 50) + "..."
-          );
-        }
-
-        if (businessSettings.logo_url) {
-          results.localStorage.businessLogo = businessSettings.logo_url;
-          console.log(
-            "✅ Business logo found:",
-            businessSettings.logo_url.substring(0, 50) + "..."
-          );
-        }
-
-        const imageCount = Object.keys(results.localStorage).length;
-        if (imageCount > 0) {
-          showMessage("success", `Found ${imageCount} images in localStorage`);
-          console.log("📊 Image storage locations:");
-          console.table(results.localStorage);
-        } else {
-          showMessage("info", "No images found in localStorage");
-        }
-      } catch (error) {
-        console.error("Error checking localStorage:", error);
-        showMessage("error", "Error checking stored images");
-      }
-    } catch (error) {
-      console.error("Find images failed:", error);
-      showMessage("error", "Failed to find stored images");
-    }
-  };
-
-  const handleViewStoredImages = () => {
-    try {
-      console.log("🖼️ Opening stored images...");
-
-      let imageCount = 0;
-
-      // Check localStorage for Base64 images
-      const userProfile = JSON.parse(
-        localStorage.getItem("medcure_user_profile") || "{}"
-      );
-      const businessSettings = JSON.parse(
-        localStorage.getItem("medcure_business_settings") || "{}"
-      );
-
-      if (
-        userProfile.avatar_url &&
-        userProfile.avatar_url.startsWith("data:")
-      ) {
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head><title>MedCure Profile Picture</title></head>
-              <body style="margin:0; padding:20px; text-align:center; background:#f5f5f5;">
-                <h2>Profile Picture</h2>
-                <img src="${userProfile.avatar_url}" style="max-width:100%; height:auto; border:1px solid #ddd; border-radius:8px;" />
-                <br><br>
-                <button onclick="window.close()" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer;">Close</button>
-              </body>
-            </html>
-          `);
-          imageCount++;
-        }
-      } else if (
-        userProfile.avatar_url &&
-        userProfile.avatar_url.startsWith("http")
-      ) {
-        window.open(userProfile.avatar_url, "_blank");
-        imageCount++;
-      }
-
-      if (
-        businessSettings.logo_url &&
-        businessSettings.logo_url.startsWith("data:")
-      ) {
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head><title>MedCure Business Logo</title></head>
-              <body style="margin:0; padding:20px; text-align:center; background:#f5f5f5;">
-                <h2>Business Logo</h2>
-                <img src="${businessSettings.logo_url}" style="max-width:100%; height:auto; border:1px solid #ddd; border-radius:8px;" />
-                <br><br>
-                <button onclick="window.close()" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer;">Close</button>
-              </body>
-            </html>
-          `);
-          imageCount++;
-        }
-      } else if (
-        businessSettings.logo_url &&
-        businessSettings.logo_url.startsWith("http")
-      ) {
-        window.open(businessSettings.logo_url, "_blank");
-        imageCount++;
-      }
-
-      if (imageCount > 0) {
-        showMessage("success", `Opened ${imageCount} images in new tabs`);
-      } else {
-        showMessage("info", "No images found to display");
-      }
-    } catch (error) {
-      console.error("View images failed:", error);
-      showMessage("error", "Failed to open stored images");
-    }
-  };
-
-  // Dynamic tabs based on user role
-  const baseTabs = [
+  const tabs = [
     { id: "profile", label: "Profile", icon: User },
-    { id: "roles", label: "Role Profiles", icon: Users },
     { id: "business", label: "Business", icon: Building },
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "system", label: "System", icon: Monitor },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
   ];
-
-  // Add admin-only tabs
-  const adminTabs = [{ id: "debug", label: "Storage Debug", icon: Bug }];
-
-  const tabs = isAdmin() ? [...baseTabs, ...adminTabs] : baseTabs;
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -626,8 +284,8 @@ export default function Settings() {
               <SettingsIcon size={24} className="text-blue-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Settings</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1 leading-relaxed">
                 Manage your profile, business information, and app preferences
               </p>
             </div>
@@ -769,19 +427,6 @@ export default function Settings() {
                       {loading ? "Saving..." : "Save Profile"}
                     </button>
                   </div>
-                </div>
-              )}
-
-              {activeTab === "roles" && (
-                <div className="space-y-6">
-                  <RoleProfileDemo />
-                  <RoleProfileManager
-                    currentUser={profile}
-                    currentRole={getCurrentRole() || "admin"}
-                    onProfileUpdate={(updatedProfile) => {
-                      setProfile((prev) => ({ ...prev, ...updatedProfile }));
-                    }}
-                  />
                 </div>
               )}
 
@@ -1334,232 +979,6 @@ export default function Settings() {
                       <p className="text-xs text-gray-500">
                         Last backup: {new Date().toLocaleDateString()}
                       </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "debug" && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-800 mb-1">
-                      Storage Debug
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      Debug file upload issues and test Supabase Storage
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Storage Diagnostics */}
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Bug size={20} className="text-blue-600" />
-                          <span className="text-sm font-medium text-gray-700">
-                            Storage Diagnostics
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <button
-                          onClick={handleStorageDebug}
-                          disabled={loading}
-                          className="w-full px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-50"
-                        >
-                          {loading ? "Running..." : "Run Storage Diagnostics"}
-                        </button>
-                        <p className="text-xs text-gray-500">
-                          Check bucket access, policies, and authentication
-                          status
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Storage Test */}
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Upload size={20} className="text-green-600" />
-                          <span className="text-sm font-medium text-gray-700">
-                            Upload Test
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <button
-                          onClick={handleStorageTest}
-                          disabled={loading}
-                          className="w-full px-4 py-2 text-sm text-green-600 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-50"
-                        >
-                          {loading ? "Testing..." : "Test Upload"}
-                        </button>
-                        <p className="text-xs text-gray-500">
-                          Test file upload with a small test file
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Debug Profile Upload */}
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Camera size={20} className="text-purple-600" />
-                          <span className="text-sm font-medium text-gray-700">
-                            Debug Profile Upload
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleDebugProfileUpload}
-                          disabled={loading}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-                        />
-                        <p className="text-xs text-gray-500">
-                          Test profile picture upload with enhanced debugging
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Debug Business Logo Upload */}
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Building size={20} className="text-orange-600" />
-                          <span className="text-sm font-medium text-gray-700">
-                            Debug Logo Upload
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleDebugBusinessUpload}
-                          disabled={loading}
-                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                        />
-                        <p className="text-xs text-gray-500">
-                          Test business logo upload with enhanced debugging
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Image Finder */}
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Eye size={20} className="text-teal-600" />
-                          <span className="text-sm font-medium text-gray-700">
-                            Find Stored Images
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            onClick={handleFindStoredImages}
-                            disabled={loading}
-                            className="px-4 py-2 text-sm text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 disabled:opacity-50"
-                          >
-                            Find Images
-                          </button>
-                          <button
-                            onClick={handleViewStoredImages}
-                            disabled={loading}
-                            className="px-4 py-2 text-sm text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 disabled:opacity-50"
-                          >
-                            View Images
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Find and view images stored in localStorage or
-                          Supabase
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Admin Testing Section - Admin Only */}
-                    {isAdmin() && (
-                      <div className="p-4 border-2 border-red-200 bg-red-50 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <Shield size={20} className="text-red-600" />
-                            <span className="text-sm font-medium text-red-700">
-                              🔧 Admin Storage Testing
-                            </span>
-                          </div>
-                          <div className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-semibold">
-                            ADMIN ONLY
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          <button
-                            onClick={handleAdminTest}
-                            disabled={loading}
-                            className="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 disabled:opacity-50 font-semibold"
-                          >
-                            {loading ? "Testing..." : "🔧 Test Admin Upload"}
-                          </button>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleAdminProfileUpload}
-                                disabled={loading}
-                                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                              />
-                              <p className="text-xs text-red-600 mt-1">
-                                Admin Profile Upload
-                              </p>
-                            </div>
-                            <div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleAdminBusinessUpload}
-                                disabled={loading}
-                                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                              />
-                              <p className="text-xs text-red-600 mt-1">
-                                Admin Business Upload
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={handleListStorageFiles}
-                            disabled={loading}
-                            className="w-full px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                          >
-                            {loading ? "Listing..." : "📋 List Storage Files"}
-                          </button>
-                          <p className="text-xs text-red-600">
-                            ⚡ Uses service role key for direct uploads
-                            (bypasses auth & policies)
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Console Instructions */}
-                    <div className="p-4 bg-gray-50 border rounded-lg">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Monitor size={20} className="text-gray-600" />
-                        <span className="text-sm font-medium text-gray-700">
-                          Debug Instructions
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <p>• Open browser Developer Tools (F12)</p>
-                        <p>• Go to Console tab</p>
-                        <p>• Run diagnostics and tests above</p>
-                        <p>• Look for detailed logs with 🔍, ✅, ❌ icons</p>
-                        <p>• Check for any error messages or upload progress</p>
-                      </div>
                     </div>
                   </div>
                 </div>

@@ -368,16 +368,16 @@ export default function POS() {
     <div className="bg-white p-8 rounded-2xl shadow-lg">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-blue-100">
-              <ShoppingCart size={24} className="text-blue-600" />
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-6 border-b border-gray-100">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm">
+              <ShoppingCart size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 Point of Sale
               </h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 mt-1 leading-relaxed">
                 Process sales and manage transactions
               </p>
             </div>

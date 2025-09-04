@@ -1,4 +1,6 @@
 import { supabase } from "../config/supabase.js";
+import { normalizeProductData, getStockStatus, isLowStock, getEffectiveStock, isExpiringSoon, getExpiryStatus } from "./stockService.js";
+import { STOCK_THRESHOLDS } from "../utils/constants.js";
 
 /**
  * Enhanced Product Service - Implements improved backend architecture
@@ -6,59 +8,40 @@ import { supabase } from "../config/supabase.js";
  */
 
 /**
- * Fetch all products using enhanced database view with fallback
- * @returns {Promise<Array>} Array of enhanced product objects
+ * Fetch all products with consistent data normalization
+ * @returns {Promise<Array>} Array of normalized product objects
  */
 export async function getProducts() {
   try {
-    // Try to use products_enhanced view first (should already filter non-archived)
-    let { data, error } = await supabase
-      .from("products_enhanced")
+    console.log("🔍 Fetching all products...");
+    
+    // Use products table directly for consistency
+    const { data, error } = await supabase
+      .from("products")
       .select("*")
       .eq("is_archived", false)
       .order("name", { ascending: true });
 
-    // If products_enhanced doesn't exist, fallback to products table
-    if (error && error.message?.includes("products_enhanced")) {
-      console.warn(
-        "products_enhanced view not found, falling back to products table"
-      );
+    if (error) throw error;
 
-      const fallbackResult = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_archived", false)
-        .order("name", { ascending: true });
+    // Use centralized stock service for consistent data normalization
+    const normalizedProducts = (data || []).map(product => {
+      const normalized = normalizeProductData(product);
+      
+      // Add expiry status calculation
+      normalized.expiry_status = !product.expiry_date
+        ? "No Expiry Data"
+        : new Date(product.expiry_date) <= new Date()
+        ? "Expired"
+        : new Date(product.expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        ? "Expiring Soon"
+        : "Good";
+      
+      return normalized;
+    });
 
-      if (fallbackResult.error) throw fallbackResult.error;
-
-      // Add calculated fields that would normally come from products_enhanced view
-      data = (fallbackResult.data || []).map((product) => ({
-        ...product,
-        stock_status:
-          product.stock <= 0
-            ? "Out of Stock"
-            : product.stock <= (product.reorder_level || 10)
-            ? "Low Stock"
-            : "In Stock",
-        current_stock: product.stock || product.total_stock || 0,
-        total_stock: product.total_stock || product.stock || 0,
-        expiry_status: !product.expiry_date
-          ? "No Expiry Data"
-          : new Date(product.expiry_date) <= new Date()
-          ? "Expired"
-          : new Date(product.expiry_date) <=
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          ? "Expiring Soon"
-          : "Good",
-      }));
-    } else if (error) {
-      throw error;
-    }
-
-    // Products now come with calculated fields from the database view
-    // No need for frontend manipulation - data integrity handled by DB
-    return data || [];
+    console.log(`✅ Fetched ${normalizedProducts.length} products`);
+    return normalizedProducts;
   } catch (error) {
     console.error("Error fetching products:", error);
     throw new Error("Failed to fetch products");
@@ -427,50 +410,31 @@ export async function bulkAddProducts(products) {
 }
 
 /**
- * Get products with low stock using enhanced view
+ * Get products with low stock using centralized stock logic
+ * @param {number} threshold - Stock threshold (default: 10)
  * @returns {Promise<Array>} Array of low-stock products
  */
-export async function getLowStockProducts() {
+export async function getLowStockProducts(threshold = STOCK_THRESHOLDS.DEFAULT_THRESHOLD) {
   try {
-    // Try to use products_enhanced view first
-    let { data, error } = await supabase
-      .from("products_enhanced")
+    console.log(`🔍 Fetching low stock products with threshold: ${threshold}`);
+    
+    // Get all non-archived products
+    const { data: products, error } = await supabase
+      .from("products")
       .select("*")
-      .or(`stock_status.eq.Low Stock,stock_status.eq.Out of Stock`)
+      .eq("is_archived", false)
       .order("total_stock", { ascending: true });
 
-    // If products_enhanced doesn't exist, fallback to products table
-    if (error && error.message?.includes("products_enhanced")) {
-      console.warn(
-        "products_enhanced view not found for low stock, falling back to products table"
-      );
+    if (error) throw error;
 
-      const fallbackResult = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_archived", false)
-        .lte("stock", 10) // Consider anything <= 10 as low stock
-        .order("stock", { ascending: true });
+    // Use centralized stock service to filter and normalize
+    const normalizedProducts = (products || []).map(normalizeProductData);
+    const lowStockProducts = normalizedProducts.filter(product => 
+      isLowStock(product, threshold)
+    );
 
-      if (fallbackResult.error) throw fallbackResult.error;
-
-      // Add calculated fields that would normally come from products_enhanced view
-      data = (fallbackResult.data || []).map((product) => ({
-        ...product,
-        stock_status:
-          product.stock <= 0
-            ? "Out of Stock"
-            : product.stock <= (product.reorder_level || 10)
-            ? "Low Stock"
-            : "In Stock",
-        current_stock: product.stock || product.total_stock || 0,
-        total_stock: product.total_stock || product.stock || 0,
-      }));
-    } else if (error) {
-      throw error;
-    }
-
-    return data || [];
+    console.log(`✅ Found ${lowStockProducts.length} low stock products`);
+    return lowStockProducts;
   } catch (error) {
     console.error("Error fetching low stock products:", error);
     throw new Error("Failed to fetch low stock products");
@@ -624,22 +588,32 @@ export async function getProductCount() {
   }
 }
 
-// Get products expiring soon (within 30 days)
+// Get products expiring soon using centralized expiry logic
 export async function getExpiringSoonProducts(days = 30) {
   try {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + days);
-
-    const { data, error } = await supabase
+    console.log(`🔍 Fetching products expiring within ${days} days...`);
+    
+    // Get all non-archived products
+    const { data: products, error } = await supabase
       .from("products")
-      .select("id, name, expiration_date, stock, total_stock, reorder_level")
-      .eq("is_archived", false)
-      .not("expiration_date", "is", null)
-      .lte("expiration_date", futureDate.toISOString())
-      .order("expiration_date", { ascending: true });
+      .select("*")
+      .eq("is_archived", false);
 
     if (error) throw error;
-    return data || [];
+
+    // Use centralized stock and expiry services
+    const normalizedProducts = (products || []).map(normalizeProductData);
+    const expiringProducts = normalizedProducts
+      .filter(product => isExpiringSoon(product, days))
+      .map(product => ({
+        ...product,
+        expiryStatus: getExpiryStatus(product),
+        daysUntilExpiry: Math.ceil((new Date(product.expiry_date) - new Date()) / (1000 * 60 * 60 * 24))
+      }))
+      .sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+
+    console.log(`✅ Found ${expiringProducts.length} products expiring within ${days} days`);
+    return expiringProducts;
   } catch (error) {
     console.error("Error fetching expiring products:", error);
     throw error;

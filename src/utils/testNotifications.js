@@ -9,7 +9,7 @@ export async function testNotificationSystem() {
   try {
     // Test 1: Check if notifications table exists
     console.log("1️⃣ Testing table access...");
-    const { error: testError } = await supabase
+    const { data: testQuery, error: testError } = await supabase
       .from("notifications")
       .select("id")
       .limit(1);

@@ -207,7 +207,7 @@ export async function cleanupOldProfilePictures(userId) {
     }
 
     // Keep only the latest file, delete the rest
-    const sortedFiles = [...files].sort(
+    const sortedFiles = files.sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
     const filesToDelete = sortedFiles

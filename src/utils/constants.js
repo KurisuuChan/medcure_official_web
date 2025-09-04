@@ -25,11 +25,28 @@ export const PAYMENT_METHODS = [
   { value: "gcash", label: "GCash" },
 ];
 
-// Stock thresholds
+// Stock thresholds - Centralized configuration
 export const STOCK_THRESHOLDS = {
-  LOW_STOCK: 10,
-  CRITICAL_STOCK: 5,
+  CRITICAL: 3,
+  LOW: 10,
+  REORDER_POINT: 15,
   OUT_OF_STOCK: 0,
+  DEFAULT_THRESHOLD: 10,
+};
+
+// Stock status definitions
+export const STOCK_STATUS = {
+  OUT_OF_STOCK: "Out of Stock",
+  CRITICAL: "Critical Stock",
+  LOW: "Low Stock",
+  MEDIUM: "Medium Stock",
+  IN_STOCK: "In Stock",
+};
+
+// Stock field mapping - Single source of truth
+export const STOCK_FIELDS = {
+  PRIMARY: "total_stock", // Use total_stock as primary field
+  FALLBACK: "stock", // Fallback to stock if total_stock not available
 };
 
 // Dashboard refresh intervals (in milliseconds)

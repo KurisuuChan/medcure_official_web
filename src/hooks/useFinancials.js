@@ -39,12 +39,44 @@ export const useFinancials = (initialPeriod = "month") => {
           setIsRefreshing(true);
         }
         setError(null);
-
+        
+        console.log(`Loading dashboard data for period: ${period}`);
         const dashboardData = await getFinancialDashboard(period);
-        setData(dashboardData);
+        console.log('Dashboard data loaded:', dashboardData);
+        
+        // Ensure all required data is present
+        const sanitizedData = {
+          revenueSummary: dashboardData.revenueSummary || { totalRevenue: 0, salesCount: 0, averageOrderValue: 0 },
+          costAnalysis: dashboardData.costAnalysis || { totalCosts: 0, grossProfit: 0, profitMargin: 0 },
+          topProducts: dashboardData.topProducts || [],
+          monthlyTrends: dashboardData.monthlyTrends || [],
+          paymentBreakdown: dashboardData.paymentBreakdown || { breakdown: [] },
+          categoryPerformance: dashboardData.categoryPerformance || [],
+          lastUpdated: new Date().toISOString()
+        };
+        
+        setData(sanitizedData);
       } catch (err) {
         console.error("Error loading financial dashboard:", err);
-        setError(err.message || "Failed to load financial data");
+        const errorMessage = err.response?.data?.message || err.message || "Failed to load financial data";
+        console.error("Error details:", {
+          message: errorMessage,
+          status: err.status,
+          code: err.code,
+          stack: err.stack
+        });
+        setError(errorMessage);
+        
+        // Set empty data state on error
+        setData({
+          revenueSummary: { totalRevenue: 0, salesCount: 0, averageOrderValue: 0 },
+          costAnalysis: { totalCosts: 0, grossProfit: 0, profitMargin: 0 },
+          topProducts: [],
+          monthlyTrends: [],
+          paymentBreakdown: { breakdown: [] },
+          categoryPerformance: [],
+          lastUpdated: null
+        });
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);

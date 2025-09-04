@@ -162,10 +162,10 @@ export default function Reports() {
               <BarChart3 size={24} className="text-blue-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 Analytics & Reports
               </h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 mt-1 leading-relaxed">
                 Generate comprehensive business insights and export data for
                 analysis.
               </p>

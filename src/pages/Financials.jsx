@@ -15,12 +15,12 @@ import useFinancials from "@/hooks/useFinancials";
 
 export default function Financials() {
   const {
-    data,
+    data = {},
     isLoading,
     error,
-    selectedPeriod,
+    selectedPeriod = "month",
     isRefreshing,
-    computedMetrics,
+    computedMetrics = {},
     refresh,
     changePeriod,
     formatCurrency,
@@ -28,11 +28,20 @@ export default function Financials() {
     formatNumber,
   } = useFinancials("month");
 
+  // Provide default empty values to prevent undefined errors
   const {
-    revenueSummary,
-    costAnalysis,
-    topProducts,
-    monthlyTrends,
+    revenueSummary = {
+      totalRevenue: 0,
+      salesCount: 0,
+      averageOrderValue: 0,
+    },
+    costAnalysis = {
+      totalCosts: 0,
+      grossProfit: 0,
+      profitMargin: 0,
+    },
+    topProducts = [],
+    monthlyTrends = [],
     // paymentBreakdown,
     // categoryPerformance,
   } = data;
@@ -48,10 +57,10 @@ export default function Financials() {
                 <BarChart size={24} className="text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                   Financial Overview
                 </h1>
-                <p className="text-gray-600 mt-1">
+                <p className="text-sm sm:text-base text-gray-600 mt-1 leading-relaxed">
                   Track revenue, costs, and financial performance
                 </p>
               </div>
@@ -229,47 +238,70 @@ export default function Financials() {
             </div>
           ) : (
             <div className="h-64 flex items-end gap-2">
-              {(monthlyTrends || []).slice(-12).map((data, index) => {
-                const maxRevenue = Math.max(
-                  ...(monthlyTrends || []).map((m) => m.revenue)
-                );
-                const maxProfit = Math.max(
-                  ...(monthlyTrends || []).map((m) => m.profit)
-                );
-                return (
-                  <div
-                    key={`trend-${data.month || index}`}
-                    className="flex-1 flex flex-col items-center gap-1"
-                  >
-                    <div className="w-full flex flex-col gap-1">
-                      <div
-                        className="bg-blue-500 rounded-t"
-                        style={{
-                          height: `${
-                            maxRevenue > 0
-                              ? (data.revenue / maxRevenue) * 180
-                              : 0
-                          }px`,
-                        }}
-                      ></div>
-                      <div
-                        className="bg-green-500 rounded-b"
-                        style={{
-                          height: `${
-                            maxProfit > 0 ? (data.profit / maxProfit) * 60 : 0
-                          }px`,
-                        }}
-                      ></div>
+              {monthlyTrends && monthlyTrends.length > 0 ? (
+                monthlyTrends.map((data, index) => {
+                  // Calculate max values for scaling
+                  const maxRevenue = Math.max(
+                    ...monthlyTrends.map((m) => Math.max(1, m.revenue || 0))
+                  );
+                  const maxProfit = Math.max(
+                    ...monthlyTrends.map((m) => Math.max(1, m.profit || 0))
+                  );
+                  
+                  // Calculate bar heights (with minimum height for visibility)
+                  const revenueHeight = Math.max(
+                    4, // Minimum height in pixels for visibility
+                    (data.revenue / maxRevenue) * 120 // Scale to max 120px
+                  );
+                  
+                  const profitHeight = Math.max(
+                    4, // Minimum height in pixels for visibility
+                    (data.profit / maxProfit) * 80 // Scale to max 80px
+                  );
+
+                  return (
+                    <div
+                      key={`trend-${data.monthKey || index}`}
+                      className="flex-1 flex flex-col items-center gap-1 group relative"
+                    >
+                      {/* Hover tooltip */}
+                      <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 
+                                 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap transition-opacity">
+                        <div>Revenue: ${data.revenue?.toFixed(2) || '0.00'}</div>
+                        <div>Profit: ${data.profit?.toFixed(2) || '0.00'}</div>
+                        <div>Sales: {data.salesCount || 0}</div>
+                      </div>
+                      
+                      {/* Bars */}
+                      <div className="w-full flex flex-col gap-0.5 items-center">
+                        <div
+                          className="bg-blue-500 rounded-t w-5/6 transition-all duration-300 hover:bg-blue-600"
+                          style={{
+                            height: `${revenueHeight}px`,
+                            minHeight: '4px',
+                          }}
+                          title={`Revenue: $${data.revenue?.toFixed(2) || '0.00'}`}
+                        ></div>
+                        <div
+                          className="bg-green-500 rounded-b w-5/6 transition-all duration-300 hover:bg-green-600"
+                          style={{
+                            height: `${profitHeight}px`,
+                            minHeight: '4px',
+                          }}
+                          title={`Profit: $${data.profit?.toFixed(2) || '0.00'}`}
+                        ></div>
+                      </div>
+                      
+                      {/* X-axis labels */}
+                      <span className="text-xs text-gray-600 mt-2 text-center">
+                        {data.month?.split(' ')[0] || 'N/A'}
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-600 mt-2">
-                      {data.month?.substring(0, 3) || "N/A"}
-                    </span>
-                  </div>
-                );
-              })}
-              {(!monthlyTrends || monthlyTrends.length === 0) && (
+                  );
+                })
+              ) : (
                 <div className="w-full text-center text-gray-500 py-20">
-                  No monthly data available
+                  No sales data available for the selected period
                 </div>
               )}
             </div>
@@ -479,7 +511,7 @@ export default function Financials() {
                       </td>
                     </tr>
                   ))}
-              {!isLoading && (!topProducts || topProducts.length === 0) && (
+              {!isLoading && topProducts.length === 0 && (
                 <tr>
                   <td colSpan="5" className="py-8 text-center text-gray-500">
                     No product data available for the selected period
